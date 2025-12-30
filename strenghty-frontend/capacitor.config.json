@@ -1,0 +1,9 @@
+{
+  "appId": "com.strengthy.app",
+  "appName": "Strengthy",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "http"
+  }
+}
