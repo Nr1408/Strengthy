@@ -18,6 +18,18 @@ try {
   // ignore URL parse errors and keep resolvedBase as-is
 }
 
+// Defensive: ensure the API base actually points at the API namespace
+// (some deploys or envs may provide just the host without the '/api' path)
+try {
+  // strip trailing slashes, then append '/api' if missing
+  resolvedBase = resolvedBase.replace(/\/+$/g, "");
+  if (!/\/api(?:$|\/)/.test(resolvedBase)) {
+    resolvedBase = resolvedBase + "/api";
+  }
+} catch (e) {
+  // ignore errors and keep resolvedBase
+}
+
 // Helpful runtime logs to debug incorrect API_BASE during development
 try {
   // eslint-disable-next-line no-console
