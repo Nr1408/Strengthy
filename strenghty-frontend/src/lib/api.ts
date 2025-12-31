@@ -354,7 +354,13 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Create set failed: ${res.status}`);
+  if (!res.ok) {
+    let body = "";
+    try {
+      body = await res.text();
+    } catch (e) {}
+    throw new Error(`Create set failed: ${res.status} ${body}`);
+  }
   const data = (await res.json()) as ApiWorkoutSet;
   return mapWorkoutSet(data);
 }
