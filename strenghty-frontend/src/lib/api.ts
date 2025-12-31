@@ -2,7 +2,9 @@
 // Prefer explicit env vars; fall back to the local backend IP used in this dev setup.
 const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL ?? "").toString().trim();
 // Normalize common bad values (some build systems may inject the string 'undefined')
-let resolvedBase = _envBase && _envBase !== "undefined" ? _envBase : "http://127.0.0.1:8000/api";
+// Default to the deployed backend when no VITE_API_BASE is provided so local
+// dev automatically uses the live API instead of a non-listening local host.
+let resolvedBase = _envBase && _envBase !== "undefined" ? _envBase : "https://strengthy-backend.onrender.com/api";
 
 // If a dev frontend host/port leaked into API_BASE (vite dev server like :8080 or :8081),
 // prefer the backend port 8000 on the same host. This prevents requests from being sent
