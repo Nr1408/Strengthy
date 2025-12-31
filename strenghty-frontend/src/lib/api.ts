@@ -9,17 +9,50 @@ const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL 
 const DEPLOYED_API = "https://strengthy-backend.onrender.com/api";
 const LOCAL_API = "http://127.0.0.1:8000/api";
 
-let resolvedBase = _envBase && _envBase !== "undefined" ? _envBase : DEPLOYED_API;
+// Support multiple entries in VITE_API_BASE separated by comma. This allows
+// specifying both a local and deployed backend, e.g.
+// VITE_API_BASE=http://127.0.0.1:8000/api,https://strengthy-backend.onrender.com/api
+// Runtime selection rules:
+// - If the env provided multiple candidates, and we're in DEV or
+//   localStorage `USE_LOCAL_API` is set to "1", prefer a candidate that
+//   looks local (localhost/127.0.0.1 or 192.168.*). Otherwise pick the
+//   first candidate.
+function pickFromCandidates(list: string[]): string {
+  // normalize
+  const trimmed = list.map((s) => s.trim()).filter(Boolean);
+  if (trimmed.length === 0) return DEPLOYED_API;
 
-// If we're in development and no explicit env provided, prefer local API
-// so running `npm run dev` + `python manage.py runserver` works out-of-the-box.
-try {
-  const wantLocal = typeof window !== "undefined" && (localStorage.getItem("USE_LOCAL_API") === "1");
-  if (!(_envBase && _envBase !== "undefined") && (import.meta.env.DEV || wantLocal)) {
-    resolvedBase = LOCAL_API;
-  }
-} catch (e) {
-  // ignore localStorage errors
+  try {
+    const wantLocal = typeof window !== "undefined" && (localStorage.getItem("USE_LOCAL_API") === "1");
+    if (import.meta.env.DEV || wantLocal) {
+      for (const c of trimmed) {
+        try {
+          const u = new URL(c);
+          if (u.hostname === "localhost" || u.hostname === "127.0.0.1" || /^192\.168\./.test(u.hostname)) {
+            return c;
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+      }
+    }
+  } catch (e) {}
+
+  return trimmed[0];
+}
+
+if (_envBase && _envBase !== "undefined" && /[,;|]/.test(_envBase)) {
+  const parts = _envBase.split(/[,;|]/);
+  resolvedBase = pickFromCandidates(parts);
+} else {
+  resolvedBase = _envBase && _envBase !== "undefined" ? _envBase : DEPLOYED_API;
+  // If no explicit env provided and we're in DEV, prefer local by default.
+  try {
+    const wantLocal = typeof window !== "undefined" && (localStorage.getItem("USE_LOCAL_API") === "1");
+    if (!(_envBase && _envBase !== "undefined") && (import.meta.env.DEV || wantLocal)) {
+      resolvedBase = LOCAL_API;
+    }
+  } catch (e) {}
 }
 
 // If a dev frontend host/port leaked into API_BASE (vite dev server like :8080 or :8081),
