@@ -9,6 +9,9 @@ const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL 
 const DEPLOYED_API = "https://strengthy-backend.onrender.com/api";
 const LOCAL_API = "http://127.0.0.1:8000/api";
 
+// mutable resolved base (computed below)
+let resolvedBase: string;
+
 // Support multiple entries in VITE_API_BASE separated by comma. This allows
 // specifying both a local and deployed backend, e.g.
 // VITE_API_BASE=http://127.0.0.1:8000/api,https://strengthy-backend.onrender.com/api
