@@ -4,7 +4,23 @@ const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL 
 // Normalize common bad values (some build systems may inject the string 'undefined')
 // Default to the deployed backend when no VITE_API_BASE is provided so local
 // dev automatically uses the live API instead of a non-listening local host.
-let resolvedBase = _envBase && _envBase !== "undefined" ? _envBase : "https://strengthy-backend.onrender.com/api";
+// Candidates: explicit env, local dev, deployed. Allow manual override via
+// localStorage key `USE_LOCAL_API=1` when you want to force local usage.
+const DEPLOYED_API = "https://strengthy-backend.onrender.com/api";
+const LOCAL_API = "http://127.0.0.1:8000/api";
+
+let resolvedBase = _envBase && _envBase !== "undefined" ? _envBase : DEPLOYED_API;
+
+// If we're in development and no explicit env provided, prefer local API
+// so running `npm run dev` + `python manage.py runserver` works out-of-the-box.
+try {
+  const wantLocal = typeof window !== "undefined" && (localStorage.getItem("USE_LOCAL_API") === "1");
+  if (!(_envBase && _envBase !== "undefined") && (import.meta.env.DEV || wantLocal)) {
+    resolvedBase = LOCAL_API;
+  }
+} catch (e) {
+  // ignore localStorage errors
+}
 
 // If a dev frontend host/port leaked into API_BASE (vite dev server like :8080 or :8081),
 // prefer the backend port 8000 on the same host. This prevents requests from being sent
