@@ -218,7 +218,7 @@ export function SetRow({
             !readOnly && onUpdate({ weight: Number(e.target.value) })
           }
           disabled={readOnly}
-          className="h-8 w-full px-1 text-center text-[11px] leading-none sm:text-[12.5px]"
+          className="h-8 w-full px-0 text-center text-[11px] leading-none sm:text-[12.5px]"
         />
       </Cell>
 
@@ -299,7 +299,7 @@ export function SetRow({
             !readOnly && onUpdate({ reps: Number(e.target.value) })
           }
           disabled={readOnly}
-          className="h-8 w-full px-1 text-center text-[11px] leading-none sm:text-[12.5px]"
+          className="h-8 w-full px-0 text-center text-[11px] leading-none sm:text-[12.5px]"
         />
       </Cell>
 
