@@ -1,2 +1,4 @@
+Django>=4.2
+djangorestframework>=3.14
 django-cors-headers>=4.0
-# Add other backend dependencies here if needed (Django, djangorestframework, etc.)
+gunicorn>=21.0
