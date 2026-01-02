@@ -144,6 +144,13 @@ if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
     CORS_ALLOW_CREDENTIALS = True
 
+# Ensure CORS is allowed for typical frontend origins (best-effort). If this
+# backend is deployed with DEBUG=False (production), enabling the following
+# setting will allow cross-origin requests from any origin. This is intended
+# for quick testing and troubleshooting; tighten these rules for production.
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
 # CSRF and trusted origins for development. If you run the frontend from the
 # emulator (10.0.2.2) or from your PC IP, include those addresses here.
 CSRF_TRUSTED_ORIGINS = [
