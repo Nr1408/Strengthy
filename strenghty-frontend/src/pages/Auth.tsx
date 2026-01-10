@@ -137,8 +137,8 @@ export default function Auth() {
           notification?.isSkippedMoment?.()
         ) {
 const BACKEND_ORIGIN = new URL(API_BASE).origin;
+const redirectUri = `${BACKEND_ORIGIN}/api/auth/google/redirect/`;
 
-const redirectUri = `${API_BASE.replace(/\/api$/, "")}/api/auth/google/redirect/`;
 
 window.location.href =
   "https://accounts.google.com/o/oauth2/v2/auth" +
