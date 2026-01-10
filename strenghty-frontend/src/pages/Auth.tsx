@@ -98,11 +98,10 @@ export default function Auth() {
         setDialogMessage("Google Client ID still loading. Please try again.");
         setErrorDialogOpen(true);
         return;
-      }   
+      }
 
       const clientId = googleClientId.trim();
 
-      
       const loaded = await waitForGsi();
       if (!loaded) {
         setDialogMessage("Google Identity Services failed to load.");
@@ -119,7 +118,7 @@ export default function Auth() {
           ux_mode: "popup",
 
           // REQUIRED for Chrome 2025+ and Incognito
-          use_fedcm_for_prompt: true,
+          use_fedcm_for_prompt: false,
 
           auto_select: false,
           cancel_on_tap_outside: false,
@@ -130,22 +129,21 @@ export default function Auth() {
 
       window.google.accounts.id.disableAutoSelect();
 
-window.google.accounts.id.prompt((notification: any) => {
-  if (notification.isNotDisplayed?.()) {
-    console.warn(
-      "Google Sign-In not displayed:",
-      notification.getNotDisplayedReason?.()
-    );
-  }
+      window.google.accounts.id.prompt((notification: any) => {
+        if (notification.isNotDisplayed?.()) {
+          console.warn(
+            "Google Sign-In not displayed:",
+            notification.getNotDisplayedReason?.()
+          );
+        }
 
-  if (notification.isSkippedMoment?.()) {
-    console.warn(
-      "Google Sign-In skipped:",
-      notification.getSkippedReason?.()
-    );
-  }
-});
-
+        if (notification.isSkippedMoment?.()) {
+          console.warn(
+            "Google Sign-In skipped:",
+            notification.getSkippedReason?.()
+          );
+        }
+      });
     } catch (e: any) {
       setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
       setErrorDialogOpen(true);
