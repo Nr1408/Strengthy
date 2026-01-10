@@ -369,9 +369,11 @@ def GoogleRedirectReceiver(request):
     if origin == "http://localhost":
         frontend_base = "http://localhost"
     else:
-        frontend_base = getattr(settings, "FRONTEND_URL", "").rstrip("/")
-        if not frontend_base:
-            frontend_base = request.build_absolute_uri("/").rstrip("/")
+        frontend_base = (
+            getattr(settings, "FRONTEND_URL", "").rstrip("/")
+            or "https://strengthy-strengthy-frontend.vercel.app"
+            )
+
 
     # If no credential was provided, this may be the client's fallback
     # redirect that includes diagnostic params like `reason` and `origin`.
@@ -412,6 +414,8 @@ def GoogleRedirectReceiver(request):
             auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(auth_params)
 
             return redirect(auth_url)
+        
+    print("FRONTEND_URL setting:", getattr(settings, "FRONTEND_URL", None))
 
-    target = f"{frontend_base}/#credential={quote(credential or '')}"
+    target = f"{frontend_base}/auth/google/redirect/#credential={quote(credential or '')}"
     return redirect(target)

@@ -28,6 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*',]
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 
 # Application definition
 
