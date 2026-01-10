@@ -38,7 +38,7 @@ def public_config(request):
     # fall back to the known web client ID used by the frontend.
     configured = getattr(settings, "GOOGLE_CLIENT_ID", "") or ""
     if not configured:
-        configured = "682920475586-0bnefgubrh71iaggulq8hst86h8bn93g.apps.googleusercontent.com"
+        configured = "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com"
     return Response({"google_client_id": configured})
 
 class IsOwner(permissions.BasePermission):
@@ -395,7 +395,7 @@ def GoogleRedirectReceiver(request):
             redirect_uri = request.build_absolute_uri(request.path)
 
             # Use configured client id or fallback constant used elsewhere
-            client_id = getattr(settings, "GOOGLE_CLIENT_ID", "") or "682920475586-0bnefgubrh71iaggulq8hst86h8bn93g.apps.googleusercontent.com"
+            client_id = getattr(settings, "GOOGLE_CLIENT_ID", "") or "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com"
 
             # Construct the Google OAuth2/OIDC authorization URL requesting an id_token
             # and instruct Google to send it via form_post to our redirect_uri.
