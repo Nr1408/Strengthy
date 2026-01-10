@@ -1,0 +1,12 @@
+# Node
+node_modules/
+
+# Python
+**/__pycache__/
+*.pyc
+
+# Local Django DB
+backend/strenghty_backend/db.sqlite3
+
+# Frontend build output
+strenghty-frontend/dist/

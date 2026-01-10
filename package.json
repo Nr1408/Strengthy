@@ -1,0 +1,17 @@
+{
+  "name": "strengthy",
+  "private": true,
+  "workspaces": [
+    "strenghty-frontend",
+    "strenghty-expo",
+    "expo-wrapper"
+  ],
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "scripts": {
+    "build": "npm --workspace=strenghty-frontend run build",
+    "dev": "npm --workspace=strenghty-frontend run dev"
+  }
+}
