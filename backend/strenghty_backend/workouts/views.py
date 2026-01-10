@@ -413,5 +413,5 @@ def GoogleRedirectReceiver(request):
 
             return redirect(auth_url)
 
-    target = f"{frontend_base}/auth/google/redirect/#credential={quote(credential or '')}"
+    target = f"{frontend_base}/#credential={quote(credential or '')}"
     return redirect(target)
