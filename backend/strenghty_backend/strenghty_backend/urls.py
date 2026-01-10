@@ -18,10 +18,9 @@ from django.contrib import admin
 from django.urls import path, include
 from workouts import views as workout_views
 
-
-
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path("api/public-config/", workout_views.public_config, name="public-config"),
-    path("api/", include("workouts.urls")),
+    path("admin/", admin.site.urls),
+    path("public-config/", workout_views.public_config, name="public-config"),
+    path("", include("workouts.urls")),
 ]
+
