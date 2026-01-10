@@ -130,27 +130,22 @@ export default function Auth() {
 
       window.google.accounts.id.disableAutoSelect();
 
-      // Works in normal + incognito
-      window.google.accounts.id.prompt((notification: any) => {
-        if (
-          notification?.isNotDisplayed?.() ||
-          notification?.isSkippedMoment?.()
-        ) {
-const BACKEND_ORIGIN = new URL(API_BASE).origin;
-const redirectUri = `${BACKEND_ORIGIN}/api/auth/google/redirect/`;
+window.google.accounts.id.prompt((notification: any) => {
+  if (notification.isNotDisplayed?.()) {
+    console.warn(
+      "Google Sign-In not displayed:",
+      notification.getNotDisplayedReason?.()
+    );
+  }
 
+  if (notification.isSkippedMoment?.()) {
+    console.warn(
+      "Google Sign-In skipped:",
+      notification.getSkippedReason?.()
+    );
+  }
+});
 
-window.location.href =
-  "https://accounts.google.com/o/oauth2/v2/auth" +
-  `?client_id=${clientId}` +
-  `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-  "&response_type=id_token" +
-  "&scope=openid%20email%20profile" +
-  "&nonce=" +
-  Math.random().toString(36).slice(2);
-
-        }
-      });
     } catch (e: any) {
       setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
       setErrorDialogOpen(true);
