@@ -232,7 +232,10 @@ const openGoogleOAuthPopup = () => {
     }
   };
 
+  
+
   const handleGoogleCredential = async (response: any) => {
+    if (window.opener) return;
     const credential = response?.credential || response?.id_token;
     if (!credential) {
       setAuthError("No credential returned from Google.");
