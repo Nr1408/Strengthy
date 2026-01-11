@@ -24,10 +24,6 @@ import EditWorkout from "./pages/EditWorkout";
 import ViewWorkout from "./pages/ViewWorkout";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
-import GoogleRedirect from "./pages/GoogleRedirect";
-import { AppLayout } from "@/components/layout/AppLayout";
-
-
 
 const queryClient = new QueryClient();
 
@@ -42,33 +38,27 @@ const App = () => (
           <SwipeNavigator />
           <BackButtonHandler />
           <WorkoutNotificationHandler />
-<Routes>
-  {/* Public routes */}
-  <Route path="/" element={<Index />} />
-  <Route path="/auth" element={<Auth />} />
-  <Route path="/auth/google/redirect" element={<GoogleRedirect />} />
-  <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-
-  {/* Protected routes with layout */}
-  <Route element={<AppLayout />}>
-    <Route path="/onboarding" element={<Onboarding />} />
-    <Route path="/dashboard" element={<Dashboard />} />
-    <Route path="/exercises" element={<Exercises />} />
-    <Route path="/workouts" element={<Workouts />} />
-    <Route path="/workouts/new" element={<NewWorkout />} />
-    <Route path="/workouts/:id/view" element={<ViewWorkout />} />
-    <Route path="/workouts/:id/edit" element={<EditWorkout />} />
-    <Route path="/routines" element={<Routines />} />
-    <Route path="/routines/explore" element={<ExploreRoutines />} />
-    <Route path="/routines/:id/view" element={<ViewRoutine />} />
-    <Route path="/profile" element={<Profile />} />
-    <Route path="/profile/account" element={<AccountSettings />} />
-    <Route path="/settings" element={<Settings />} />
-  </Route>
-  {/* Fallback */}
-  <Route path="*" element={<NotFound />} />
-</Routes>
-
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/google/redirect" element={<Auth />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/exercises" element={<Exercises />} />
+            <Route path="/workouts" element={<Workouts />} />
+            <Route path="/workouts/new" element={<NewWorkout />} />
+            <Route path="/workouts/:id/view" element={<ViewWorkout />} />
+            <Route path="/workouts/:id/edit" element={<EditWorkout />} />
+            <Route path="/routines" element={<Routines />} />
+            <Route path="/routines/explore" element={<ExploreRoutines />} />
+            <Route path="/routines/:id/view" element={<ViewRoutine />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/account" element={<AccountSettings />} />
+            <Route path="/settings" element={<Settings />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </div>
     </TooltipProvider>
