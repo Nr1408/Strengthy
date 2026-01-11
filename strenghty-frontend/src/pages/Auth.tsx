@@ -136,10 +136,16 @@ window.google.accounts.id.prompt((notification: any) => {
     console.warn("Google Sign-In not displayed:", reason);
 
     if (reason === "opt_out_or_no_session" || reason === "unknown_reason") {
-      setDialogMessage(
-        "Google sign-in isn’t available in this browser session. Please sign in with email and password, or open a normal browser window."
-      );
-      setErrorDialogOpen(true);
+      toast({
+        title: "Continue with email",
+        description: "Google sign-in isn’t available in this session."
+      });
+
+      setShowSignup(false);
+
+      setTimeout(() => {
+        document.getElementById("email")?.focus();
+      }, 100);
     }
   }
 
@@ -147,6 +153,7 @@ window.google.accounts.id.prompt((notification: any) => {
     console.warn("Google Sign-In skipped:", notification.getSkippedReason?.());
   }
 });
+
 
     } catch (e: any) {
       setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
