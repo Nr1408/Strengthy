@@ -118,7 +118,7 @@ export default function Auth() {
           ux_mode: "popup",
 
           // REQUIRED for Chrome 2025+ and Incognito
-          use_fedcm_for_prompt: false,
+          use_fedcm_for_prompt: true,
 
           auto_select: false,
           cancel_on_tap_outside: false,
