@@ -9,7 +9,7 @@ from django.http import HttpResponse
 def emergency_admin_reset(request):
     User = get_user_model()
     user = User.objects.get(username="nr")
-    user.set_password("TempPass@123")
+    user.set_password("140808")
     user.save()
     return HttpResponse("Password reset successful")
 
