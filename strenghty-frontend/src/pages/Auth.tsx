@@ -122,12 +122,17 @@ const openGoogleOAuthPopup = () => {
   const y = window.top!.outerHeight / 2 + window.top!.screenY - h / 2;
   const x = window.top!.outerWidth / 2 + window.top!.screenX - w / 2;
 
-  window.open(
-    `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
-    "google_oauth",
-    `width=${w},height=${h},left=${x},top=${y}`
-  );
-};
+const popup = window.open(
+  `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
+  "google_oauth",
+  `width=${w},height=${h},left=${x},top=${y},noopener=false`
+);
+
+// Fallback in case opener gets stripped
+if (popup) {
+  (popup as any).opener = window;
+}
+
 
 
   const handleGoogleLogin = async () => {
