@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { API_BASE, setToken } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
+console.log("🔥 GoogleRedirect mounted", window.location.href);
+
 export default function GoogleRedirect() {
   const navigate = useNavigate();
   const { toast } = useToast();
