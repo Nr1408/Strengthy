@@ -129,21 +129,25 @@ export default function Auth() {
 
       window.google.accounts.id.disableAutoSelect();
 
-      window.google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed?.()) {
-          console.warn(
-            "Google Sign-In not displayed:",
-            notification.getNotDisplayedReason?.()
-          );
-        }
+window.google.accounts.id.prompt((notification: any) => {
+  const reason = notification.getNotDisplayedReason?.();
 
-        if (notification.isSkippedMoment?.()) {
-          console.warn(
-            "Google Sign-In skipped:",
-            notification.getSkippedReason?.()
-          );
-        }
-      });
+  if (notification.isNotDisplayed?.()) {
+    console.warn("Google Sign-In not displayed:", reason);
+
+    if (reason === "opt_out_or_no_session" || reason === "unknown_reason") {
+      setDialogMessage(
+        "Google sign-in isn’t available in this browser session. Please sign in with email and password, or open a normal browser window."
+      );
+      setErrorDialogOpen(true);
+    }
+  }
+
+  if (notification.isSkippedMoment?.()) {
+    console.warn("Google Sign-In skipped:", notification.getSkippedReason?.());
+  }
+});
+
     } catch (e: any) {
       setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
       setErrorDialogOpen(true);
