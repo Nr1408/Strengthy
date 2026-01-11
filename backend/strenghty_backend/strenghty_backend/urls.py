@@ -8,10 +8,21 @@ from django.http import HttpResponse
 
 def emergency_admin_reset(request):
     User = get_user_model()
-    user = User.objects.get(username="nr")
-    user.set_password("140808")
+
+    user, created = User.objects.get_or_create(
+        username="nr",
+        defaults={"is_staff": True, "is_superuser": True},
+    )
+
+    user.set_password("TempPass@123")
+    user.is_staff = True
+    user.is_superuser = True
     user.save()
-    return HttpResponse("Password reset successful")
+
+    if created:
+        return HttpResponse("Admin user CREATED and password set.")
+    else:
+        return HttpResponse("Admin password reset successful.")
 
 
 urlpatterns = [
