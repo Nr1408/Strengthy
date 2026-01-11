@@ -304,14 +304,25 @@ try {
   (window as any).Capacitor?.isNativePlatform?.() === true;
 ;
     if (isNative) {
-      // Attempt to sync token from Preferences -> localStorage on startup
+      // Attempt to sync token, profile and onboarding from Preferences -> localStorage on startup
       (async () => {
         try {
-          const stored = await Preferences.get({ key: "token" });
-          if (stored && stored.value) {
+          const keys = ["token", "user:profile", "user:onboarding", "user:monthlyGoal", "google:credential"];
+          for (const k of keys) {
             try {
-              localStorage.setItem("token", stored.value);
-            } catch (e) {}
+              const stored = await Preferences.get({ key: k });
+              if (stored && typeof stored.value === "string" && stored.value.length > 0) {
+                try {
+                  // Only set if localStorage doesn't already have a value to avoid overwriting
+                  const existing = localStorage.getItem(k);
+                  if (!existing) {
+                    localStorage.setItem(k, stored.value);
+                  }
+                } catch (e) {}
+              }
+            } catch (e) {
+              // ignore per-key errors
+            }
           }
         } catch (e) {
           // ignore if Preferences not available at runtime
@@ -689,12 +700,92 @@ export async function loginWithGoogle(idToken: string) {
         email: data.email || null,
       };
       if (profile.name || profile.email) {
-        localStorage.setItem("user:profile", JSON.stringify(profile));
+        try {
+          localStorage.setItem("user:profile", JSON.stringify(profile));
+        } catch (e) {}
+        // If running in a native Capacitor environment, also persist
+        // profile into Capacitor Preferences so native apps can read it
+        try {
+          const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
+          const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
+          if (isNative) {
+            await Preferences.set({ key: 'user:profile', value: JSON.stringify(profile) });
+          }
+        } catch (e) {}
       }
     } catch (e) {
       // ignore storage errors
     }
+    // After storing token/profile, try to fetch onboarding/profile details
+    try {
+      const t = getToken();
+      if (t) {
+        const r = await fetch(`${API_BASE}/profile/`, { headers: { ...authHeaders() } });
+        if (r.ok) {
+          const p = await r.json();
+          try {
+            // Persist onboarding-like shape used by the SPA
+            const onboarding = {
+              goals: p.goals || [],
+              age: p.age != null ? String(p.age) : "",
+              height: p.height != null ? String(p.height) : "",
+              heightUnit: p.height_unit || "cm",
+              currentWeight: p.current_weight != null ? String(p.current_weight) : "",
+              goalWeight: p.goal_weight != null ? String(p.goal_weight) : "",
+              experience: p.experience || "",
+              monthlyWorkouts: p.monthly_workouts != null ? String(p.monthly_workouts) : "",
+            };
+            try { localStorage.setItem("user:onboarding", JSON.stringify(onboarding)); } catch (e) {}
+            try { if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true) Preferences.set({ key: 'user:onboarding', value: JSON.stringify(onboarding) }); } catch (e) {}
+            if (onboarding.monthlyWorkouts) {
+              try { localStorage.setItem('user:monthlyGoal', String(onboarding.monthlyWorkouts)); } catch (e) {}
+              try { if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true) Preferences.set({ key: 'user:monthlyGoal', value: String(onboarding.monthlyWorkouts) }); } catch (e) {}
+            }
+          } catch (e) {}
+        }
+      }
+    } catch (e) {}
     return data;
+}
+
+export async function signOut() {
+  try {
+    clearToken();
+  } catch (e) {}
+
+  try {
+    localStorage.removeItem("user:profile");
+    localStorage.removeItem("user:onboarding");
+    localStorage.removeItem("user:monthlyGoal");
+    localStorage.removeItem("google:credential");
+  } catch (e) {}
+
+  try {
+    const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
+    if (isNative) {
+      try { await Preferences.remove({ key: 'user:profile' }); } catch (e) {}
+      try { await Preferences.remove({ key: 'user:onboarding' }); } catch (e) {}
+      try { await Preferences.remove({ key: 'user:monthlyGoal' }); } catch (e) {}
+      try { await Preferences.remove({ key: 'google:credential' }); } catch (e) {}
+      // Try to sign out via the native Google plugin if available
+      try {
+        // Dynamically import to avoid bundling native-only plugin into web builds
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        if (GoogleAuth && typeof GoogleAuth.signOut === 'function') {
+          try { await GoogleAuth.signOut(); } catch (e) {}
+        }
+      } catch (e) {}
+    } else {
+      // Web: attempt to disable auto-select and clear any stored credential
+      try {
+        if (typeof window !== 'undefined' && window.google?.accounts?.id?.disableAutoSelect) {
+          try { window.google.accounts.id.disableAutoSelect(); } catch (e) {}
+        }
+        localStorage.removeItem('google:credential');
+      } catch (e) {}
+    }
+  } catch (e) {}
 }
 
 export async function getExercises(): Promise<UiExercise[]> {

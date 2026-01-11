@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.db import models
 from .models import Exercise, Workout, WorkoutSet, CardioSet
+from .models import Profile
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -425,6 +426,45 @@ class CardioSetSerializer(serializers.ModelSerializer):
                         flags["is_split_pr"] = True
 
         return flags
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = [
+            "goals",
+            "age",
+            "height",
+            "height_unit",
+            "current_weight",
+            "goal_weight",
+            "experience",
+            "monthly_workouts",
+        ]
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        # `goals` stored as JSON string server-side; expose as list in API
+        try:
+            import json as _json
+            rep_goals = []
+            if rep.get("goals"):
+                rep_goals = _json.loads(rep["goals"]) if isinstance(rep["goals"], str) else rep["goals"]
+            rep["goals"] = rep_goals
+        except Exception:
+            rep["goals"] = []
+        return rep
+
+    def to_internal_value(self, data):
+        # Accept `goals` as list from client, serialize as JSON string
+        if isinstance(data.get("goals"), list):
+            try:
+                import json as _json
+                data = dict(data)
+                data["goals"] = _json.dumps(data.get("goals") or [])
+            except Exception:
+                pass
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         workout = validated_data["workout"]

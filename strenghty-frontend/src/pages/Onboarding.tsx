@@ -12,15 +12,13 @@ import {
   Trophy,
   Heart,
   Zap,
-  CheckCircle2,
-  Ruler,
-  User,
   Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { API_BASE, authHeaders } from "@/lib/api";
 
 const fitnessGoals = [
   {
@@ -132,7 +130,7 @@ export default function Onboarding() {
         setIsAnimating(false);
       }, 300);
     } else {
-      // Complete onboarding: persist onboarding data and go to dashboard
+      // Complete onboarding: persist onboarding data locally and to server
       try {
         localStorage.setItem("user:onboarding", JSON.stringify(userData));
         const monthly = Number(userData.monthlyWorkouts);
@@ -140,6 +138,37 @@ export default function Onboarding() {
           localStorage.setItem("user:monthlyGoal", String(monthly));
         }
       } catch {}
+
+      // Attempt to persist onboarding server-side so other clients (APK/web)
+      // can fetch it after login. Ignore errors so offline flow still works.
+      (async () => {
+        try {
+          const payload = {
+            goals: userData.goals,
+            age: userData.age ? Number(userData.age) : null,
+            height: userData.height ? Number(userData.height) : null,
+            height_unit: userData.heightUnit,
+            current_weight: userData.currentWeight
+              ? Number(userData.currentWeight)
+              : null,
+            goal_weight: userData.goalWeight
+              ? Number(userData.goalWeight)
+              : null,
+            experience: userData.experience || "",
+            monthly_workouts: userData.monthlyWorkouts
+              ? Number(userData.monthlyWorkouts)
+              : null,
+          };
+          await fetch(`${API_BASE}/profile/`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...authHeaders() },
+            body: JSON.stringify(payload),
+          });
+        } catch (e) {
+          // ignore server errors
+        }
+      })();
+
       navigate("/dashboard");
     }
   };

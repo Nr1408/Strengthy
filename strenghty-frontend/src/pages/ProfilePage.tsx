@@ -25,7 +25,7 @@ import {
   startOfMonth,
 } from "date-fns";
 import {
-  clearToken,
+  signOut,
   getSets,
   getWorkouts,
   type UiWorkout,
@@ -254,10 +254,13 @@ export default function Profile() {
     } catch {}
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     try {
-      clearToken();
-    } catch {}
+      // centralized sign-out to clear both localStorage and native Preferences
+      // and attempt to sign out from Google SDKs
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      await signOut();
+    } catch (e) {}
     navigate("/auth");
   };
 

@@ -141,3 +141,25 @@ class PasswordResetCode(models.Model):
 
     def __str__(self):
         return f"Password reset code for {self.user.username} ({self.code})"
+
+
+class Profile(models.Model):
+    """Per-user onboarding/profile data persisted on the server.
+
+    Stored values mirror the client `user:onboarding` shape so the SPA
+    and native apps can fetch and populate their local storage from the
+    server after login.
+    """
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    goals = models.TextField(blank=True, help_text="JSON-encoded list of goal ids")
+    age = models.PositiveIntegerField(null=True, blank=True)
+    height = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    height_unit = models.CharField(max_length=4, default="cm")
+    current_weight = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    goal_weight = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    experience = models.CharField(max_length=50, blank=True)
+    monthly_workouts = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Profile for {self.user.username}"

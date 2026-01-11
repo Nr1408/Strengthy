@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef,  useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { getToken, API_BASE, login, register, setToken } from "@/lib/api";
+import {
+  getToken,
+  API_BASE,
+  login,
+  register,
+  loginWithGoogle,
+} from "@/lib/api";
 import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import {
   Dialog,
@@ -36,11 +42,10 @@ declare global {
 }
 
 export default function Auth() {
-  
-    if (window.opener && window.location.pathname === "/auth/google/redirect") {
+  if (window.opener && window.location.pathname === "/auth/google/redirect") {
     return null;
   }
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
@@ -56,31 +61,30 @@ export default function Auth() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-useEffect(() => {
-  const handler = async (e: MessageEvent) => {
-    if (e.origin !== window.location.origin) return;
-    if (e.data?.type !== "google-credential") return;
+  useEffect(() => {
+    const handler = async (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== "google-credential") return;
 
-    await processGoogleCredential(e.data.credential);
-  };
+      await processGoogleCredential(e.data.credential);
+    };
 
-  window.addEventListener("message", handler);
+    window.addEventListener("message", handler);
 
-  // 🛟 Brave fallback polling
-  const interval = setInterval(async () => {
-    const stored = localStorage.getItem("google:credential");
-    if (stored) {
-      localStorage.removeItem("google:credential");
-      await processGoogleCredential(stored);
-    }
-  }, 500);
+    // 🛟 Brave fallback polling
+    const interval = setInterval(async () => {
+      const stored = localStorage.getItem("google:credential");
+      if (stored) {
+        localStorage.removeItem("google:credential");
+        await processGoogleCredential(stored);
+      }
+    }, 500);
 
-  return () => {
-    window.removeEventListener("message", handler);
-    clearInterval(interval);
-  };
-}, []);
-
+    return () => {
+      window.removeEventListener("message", handler);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Ref to ensure GSI is initialized only once
   const gsiInitializedRef = useRef(false);
@@ -92,10 +96,9 @@ useEffect(() => {
     }
     return false;
   };
-  
-  
+
   useEffect(() => {
-    try {      
+    try {
     } catch (e) {}
     // fetch public config (google client id)
     (async () => {
@@ -111,37 +114,38 @@ useEffect(() => {
     })();
   }, []);
 
-const openGoogleOAuthPopup = () => {
-  if (!googleClientId) return;
+  const openGoogleOAuthPopup = () => {
+    if (!googleClientId) return;
 
-  const nonce = crypto.randomUUID();
+    const nonce = crypto.randomUUID();
 
-  const params = new URLSearchParams({
-    client_id: googleClientId,
-    redirect_uri: "https://strengthy-backend.onrender.com/api/auth/google/redirect/",
-    response_type: "id_token",
-    response_mode: "form_post",
-    scope: "openid email profile",
-    prompt: "select_account",
-    nonce,
-  });
+    const params = new URLSearchParams({
+      client_id: googleClientId,
+      redirect_uri:
+        "https://strengthy-backend.onrender.com/api/auth/google/redirect/",
+      response_type: "id_token",
+      response_mode: "form_post",
+      scope: "openid email profile",
+      prompt: "select_account",
+      nonce,
+    });
 
-  const w = 500, h = 600;
-  const y = window.top!.outerHeight / 2 + window.top!.screenY - h / 2;
-  const x = window.top!.outerWidth / 2 + window.top!.screenX - w / 2;
+    const w = 500,
+      h = 600;
+    const y = window.top!.outerHeight / 2 + window.top!.screenY - h / 2;
+    const x = window.top!.outerWidth / 2 + window.top!.screenX - w / 2;
 
-const popup = window.open(
-  `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
-  "google_oauth",
-  `width=${w},height=${h},left=${x},top=${y},noopener=false`
-);
+    const popup = window.open(
+      `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
+      "google_oauth",
+      `width=${w},height=${h},left=${x},top=${y},noopener=false`
+    );
 
-// Fallback in case opener gets stripped
-if (popup) {
-  (popup as any).opener = window;
-}
-};
-
+    // Fallback in case opener gets stripped
+    if (popup) {
+      (popup as any).opener = window;
+    }
+  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -217,87 +221,51 @@ if (popup) {
     }
   };
 
-  
+  const handleGoogleCredential = async (response: any) => {
+    // If this runs inside popup — do NOTHING here
+    if (window.opener) {
+      console.log("Credential received inside popup — ignoring.");
+      return;
+    }
 
-const handleGoogleCredential = async (response: any) => {
-  // If this runs inside popup — do NOTHING here
-  if (window.opener) {
-    console.log("Credential received inside popup — ignoring.");
-    return;
-  }
+    const credential = response?.credential || response?.id_token;
+    if (!credential) {
+      setAuthError("No credential returned from Google.");
+      return;
+    }
 
-  const credential = response?.credential || response?.id_token;
-  if (!credential) {
-    setAuthError("No credential returned from Google.");
-    return;
-  }
+    setIsLoading(true);
 
-  setIsLoading(true);
-
-  try {
-    const data = await handleGoogleSuccess(credential);
-
-    toast({ title: "Welcome!", description: "Signed in with Google." });
-
-    const target = data?.created ? "/onboarding" : "/dashboard";
-    navigate(target);
-  } catch (err: any) {
-    const msg = String(err?.message || err || "Google sign-in failed");
-    setDialogMessage(msg);
-    setErrorDialogOpen(true);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  // POST the Google credential to the backend, store token and profile
-  const handleGoogleSuccess = async (credential: string) => {
     try {
-      const res = await fetch(`${API_BASE}/auth/google/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Send the credential under multiple key names to tolerate backend
-        // variations (some servers expect `credential`, others `token` or `access_token`).
-        body: JSON.stringify({
-          credential,
-          token: credential,
-          access_token: credential,
-        }),
-      });
+      const data = await handleGoogleSuccess(credential);
 
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(`Google login failed: ${res.status} ${txt}`);
-      }
-      const data = await res.json();
-      if (data.token) {
-        try {
-          setToken(data.token);
-        } catch (e) {}
-      }
-      try {
-        const profile = {
-          name: data.name || data.username || null,
-          email: data.email || null,
-        };
-        if (profile.name || profile.email) {
-          localStorage.setItem("user:profile", JSON.stringify(profile));
-        }
-      } catch (e) {}
-      return data;
-    } catch (e) {
-      // rethrow to be handled by caller
-      throw e;
+      toast({ title: "Welcome!", description: "Signed in with Google." });
+
+      const target = data?.created ? "/onboarding" : "/dashboard";
+      navigate(target);
+    } catch (err: any) {
+      const msg = String(err?.message || err || "Google sign-in failed");
+      setDialogMessage(msg);
+      setErrorDialogOpen(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const processGoogleCredential = useCallback(async (credential: string) => {
-  const data = await handleGoogleSuccess(credential);
-  toast({ title: "Welcome!", description: "Signed in with Google." });
-  const target = data.created ? "/onboarding" : "/dashboard";
-  navigate(target);
-}, []);
+  // POST the Google credential to the backend, store token and profile
+  const handleGoogleSuccess = async (credential: string) => {
+    // Use centralized helper so profile is persisted into Capacitor Preferences
+    // for native builds as well.
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    return await loginWithGoogle(credential);
+  };
 
+  const processGoogleCredential = useCallback(async (credential: string) => {
+    const data = await handleGoogleSuccess(credential);
+    toast({ title: "Welcome!", description: "Signed in with Google." });
+    const target = data.created ? "/onboarding" : "/dashboard";
+    navigate(target);
+  }, []);
 
   const onClickContinueWithGoogle = async () => {
     const isNative =
@@ -324,17 +292,10 @@ const handleGoogleCredential = async (response: any) => {
       const idToken = res?.authentication?.idToken || res?.idToken;
 
       if (idToken) {
-        const r = await fetch(`${API_BASE}/auth/google/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: idToken }),
-        });
-        if (!r.ok) throw new Error("Native login failed");
-
-        const data = await r.json();
-        if (data.token) setToken(data.token);
+        const data = await loginWithGoogle(idToken);
         toast({ title: "Welcome!", description: "Signed in with Google" });
-        navigate("/dashboard");
+        const target = data?.created ? "/onboarding" : "/dashboard";
+        navigate(target);
       }
     } catch (e) {
       console.warn("Native GoogleAuth failed", e);

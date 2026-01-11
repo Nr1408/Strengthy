@@ -14,7 +14,7 @@ from django.shortcuts import redirect
 from urllib.parse import quote
 import json
 
-from .models import Exercise, Workout, WorkoutSet, CardioSet, PasswordResetCode
+from .models import Exercise, Workout, WorkoutSet, CardioSet, PasswordResetCode, Profile
 from django.db import IntegrityError
 from rest_framework.exceptions import ValidationError
 from .serializers import (
@@ -24,6 +24,7 @@ from .serializers import (
     CardioSetSerializer,
     RegisterSerializer,
     AccountUpdateSerializer,
+    ProfileSerializer,
 )
 
 # Simple function-based view alias for public config, if needed by older
@@ -252,6 +253,22 @@ class PublicConfigView(APIView):
     def get(self, request, *args, **kwargs):
         # Return minimal public config. Expose Google client id (may be empty).
         return Response({"google_client_id": getattr(settings, "GOOGLE_CLIENT_ID", "")})
+
+
+class ProfileView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update the authenticated user's profile/onboarding data.
+
+    GET returns the profile fields. PATCH updates the provided fields.
+    """
+
+    serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        user = self.request.user
+        # Ensure a Profile exists
+        profile, _ = Profile.objects.get_or_create(user=user)
+        return profile
 
 
 class GoogleLoginView(APIView):
