@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef,  useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,8 @@ useEffect(() => {
     window.removeEventListener("message", handler);
     clearInterval(interval);
   };
-}, [processGoogleCredential]);
+}, []);
+
 
   // Ref to ensure GSI is initialized only once
   const gsiInitializedRef = useRef(false);
@@ -290,12 +291,13 @@ const handleGoogleCredential = async (response: any) => {
     }
   };
 
-  const processGoogleCredential = async (credential: string) => {
+  const processGoogleCredential = useCallback(async (credential: string) => {
   const data = await handleGoogleSuccess(credential);
   toast({ title: "Welcome!", description: "Signed in with Google." });
   const target = data.created ? "/onboarding" : "/dashboard";
   navigate(target);
-};
+}, []);
+
 
   const onClickContinueWithGoogle = async () => {
     const isNative =
