@@ -36,6 +36,11 @@ declare global {
 }
 
 export default function Auth() {
+  
+    if (window.opener && window.location.pathname === "/auth/google/redirect") {
+    return null;
+  }
+  
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
