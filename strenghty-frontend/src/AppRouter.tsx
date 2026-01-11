@@ -24,6 +24,8 @@ import EditWorkout from "./pages/EditWorkout";
 import ViewWorkout from "./pages/ViewWorkout";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
+import GoogleRedirect from "./pages/GoogleRedirect";
+
 
 const queryClient = new QueryClient();
 
@@ -41,7 +43,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/google/redirect" element={<Auth />} />
+            <Route path="/auth/google/redirect" element={<GoogleRedirect />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<Dashboard />} />
