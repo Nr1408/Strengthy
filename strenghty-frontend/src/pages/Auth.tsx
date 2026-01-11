@@ -37,7 +37,6 @@ declare global {
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
 
@@ -129,7 +128,7 @@ navigate(target);
         }
       } catch (e) {}
     })();
-  }, [navigate]);
+  }, []);
 
 const openGoogleOAuthPopup = () => {
   if (!googleClientId) return;
@@ -235,7 +234,6 @@ const openGoogleOAuthPopup = () => {
   
 
   const handleGoogleCredential = async (response: any) => {
-    if (window.opener) return;
     const credential = response?.credential || response?.id_token;
     if (!credential) {
       setAuthError("No credential returned from Google.");
