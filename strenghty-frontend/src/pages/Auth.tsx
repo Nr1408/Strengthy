@@ -56,25 +56,31 @@ export default function Auth() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => {
+useEffect(() => {
   const handler = async (e: MessageEvent) => {
     if (e.origin !== window.location.origin) return;
     if (e.data?.type !== "google-credential") return;
 
-    const credential = e.data.credential;
-
-    const data = await handleGoogleSuccess(credential);
-
-    toast({ title: "Welcome!", description: "Signed in with Google." });
-
-    const target = data.created ? "/onboarding" : "/dashboard";
-    navigate(target);
+    await processGoogleCredential(e.data.credential);
   };
 
   window.addEventListener("message", handler);
-  return () => window.removeEventListener("message", handler);
-}, []);
-  
+
+  // 🛟 Brave fallback polling
+  const interval = setInterval(async () => {
+    const stored = localStorage.getItem("google:credential");
+    if (stored) {
+      localStorage.removeItem("google:credential");
+      await processGoogleCredential(stored);
+    }
+  }, 500);
+
+  return () => {
+    window.removeEventListener("message", handler);
+    clearInterval(interval);
+  };
+}, [processGoogleCredential]);
+
   // Ref to ensure GSI is initialized only once
   const gsiInitializedRef = useRef(false);
   const waitForGsi = async (timeoutMs = 8000) => {
@@ -85,7 +91,8 @@ export default function Auth() {
     }
     return false;
   };
-
+  
+  
   useEffect(() => {
     try {      
     } catch (e) {}
@@ -132,7 +139,7 @@ const popup = window.open(
 if (popup) {
   (popup as any).opener = window;
 }
-
+};
 
 
   const handleGoogleLogin = async () => {
@@ -256,6 +263,7 @@ const handleGoogleCredential = async (response: any) => {
           access_token: credential,
         }),
       });
+
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
         throw new Error(`Google login failed: ${res.status} ${txt}`);
@@ -281,6 +289,13 @@ const handleGoogleCredential = async (response: any) => {
       throw e;
     }
   };
+
+  const processGoogleCredential = async (credential: string) => {
+  const data = await handleGoogleSuccess(credential);
+  toast({ title: "Welcome!", description: "Signed in with Google." });
+  const target = data.created ? "/onboarding" : "/dashboard";
+  navigate(target);
+};
 
   const onClickContinueWithGoogle = async () => {
     const isNative =
