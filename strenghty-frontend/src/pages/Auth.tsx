@@ -52,6 +52,46 @@ export default function Auth() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const hash = window.location.hash;
+
+    if (hash.startsWith("#credential=")) {
+      const credential = decodeURIComponent(hash.replace("#credential=", ""));
+
+      console.log("🧾 Received Google credential:", credential.slice(0, 30));
+
+      // Clean URL
+      window.history.replaceState(null, "", window.location.pathname);
+
+      (async () => {
+        try {
+          const res = await fetch(`${API_BASE}/auth/google/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credential }),
+          });
+
+          if (!res.ok) throw new Error("Backend rejected Google login");
+
+          const data = await res.json();
+          setToken(data.token);
+
+          toast({ title: "Welcome!", description: "Signed in with Google" });
+
+          navigate(data.created ? "/onboarding" : "/dashboard");
+        } catch (err) {
+          console.error(err);
+          toast({
+            title: "Google login failed",
+            description: "Please try again",
+            variant: "destructive",
+          });
+        }
+      })();
+    }
+  }, []);
+
+  
   // Ref to ensure GSI is initialized only once
   const gsiInitializedRef = useRef(false);
   const waitForGsi = async (timeoutMs = 8000) => {
