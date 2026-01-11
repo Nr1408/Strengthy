@@ -52,55 +52,23 @@ export default function Auth() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const hash = window.location.hash;
+  const handler = async (e: MessageEvent) => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type !== "google-credential") return;
 
-    if (hash.startsWith("#credential=")) {
-      const credential = decodeURIComponent(hash.replace("#credential=", ""));
+    const credential = e.data.credential;
 
-      console.log("🧾 Received Google credential:", credential.slice(0, 30));
+    const data = await handleGoogleSuccess(credential);
 
-      // Clean URL
-      window.history.replaceState(null, "", window.location.pathname);
+    toast({ title: "Welcome!", description: "Signed in with Google." });
 
-      (async () => {
-        try {
-          const res = await fetch(`${API_BASE}/auth/google/`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ credential }),
-          });
+    const target = data.created ? "/onboarding" : "/dashboard";
+    navigate(target);
+  };
 
-          if (!res.ok) throw new Error("Backend rejected Google login");
-
-          const data = await res.json();
-          setToken(data.token);
-
-toast({ title: "Welcome!", description: "Signed in with Google" });
-
-const target = data.created ? "/onboarding" : "/dashboard";
-
-// If this is running inside the popup, control the main window
-if (window.opener) {
-  window.opener.location.href = target;
-  window.close();
-  return;
-}
-
-// Normal navigation (not popup)
-navigate(target);
-
-        } catch (err) {
-          console.error(err);
-          toast({
-            title: "Google login failed",
-            description: "Please try again",
-            variant: "destructive",
-          });
-        }
-      })();
-    }
-  }, []);
-
+  window.addEventListener("message", handler);
+  return () => window.removeEventListener("message", handler);
+}, []);
   
   // Ref to ensure GSI is initialized only once
   const gsiInitializedRef = useRef(false);
@@ -233,77 +201,36 @@ const openGoogleOAuthPopup = () => {
 
   
 
-  const handleGoogleCredential = async (response: any) => {
-    const credential = response?.credential || response?.id_token;
-    if (!credential) {
-      setAuthError("No credential returned from Google.");
-      return;
-    }
-    // Debug: verify we actually received a JWT-like credential
-    try {
-      console.log("Google credential length:", String(credential).length);
-      // Temporary APK aid: comment out if too noisy
-      // alert(`Google credential length: ${String(credential).length}`);
-    } catch (e) {}
-    setIsLoading(true);
-    try {
-      // Small delay to ensure any state updates settle before we
-      // perform the network request. Helpful in some WebView flows.
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      // Exchange credential with backend and store returned JWT
-      const data = await handleGoogleSuccess(credential);
-      toast({ title: "Welcome!", description: "Signed in with Google." });
-      // If the backend reports this account was just created, send user to onboarding
-      try {
-const target = data?.created ? "/onboarding" : "/dashboard";
+const handleGoogleCredential = async (response: any) => {
+  // If this runs inside popup — do NOTHING here
+  if (window.opener) {
+    console.log("Credential received inside popup — ignoring.");
+    return;
+  }
 
-if (window.opener) {
-  window.opener.location.href = target;
-  window.close();
-  return;
-}
-navigate(target);
+  const credential = response?.credential || response?.id_token;
+  if (!credential) {
+    setAuthError("No credential returned from Google.");
+    return;
+  }
 
-      } catch (e) {
-        navigate("/dashboard");
-      }
-    } catch (err: any) {
-      try {
-        window.alert(
-          "Backend Error: " +
-            JSON.stringify((err as any)?.response?.data || err.message)
-        );
-      } catch (e) {}
-      const msg = String(err?.message || err || "Google sign-in failed");
-      // Provide deep diagnostics in dialog: error | path | API
-      try {
-        setDialogMessage(
-          "Error: " +
-            msg +
-            " | Path: " +
-            window.location.href +
-            " | API: " +
-            API_BASE
-        );
-      } catch (e) {
-        setDialogMessage("Error: " + msg + " | API: " + API_BASE);
-      }
-      setAuthError(msg);
-      setErrorDialogOpen(true);
-      // Log rich details to console for debugging 401/403 or token rejections
-      try {
-        // eslint-disable-next-line no-console
-        console.error("Google sign-in error details:", err, {
-          fragment: typeof window !== "undefined" ? window.location.hash : null,
-          href: typeof window !== "undefined" ? window.location.href : null,
-          api_base: API_BASE,
-        });
-      } catch (e) {}
-      toast({ title: "Error", description: msg, variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  setIsLoading(true);
+
+  try {
+    const data = await handleGoogleSuccess(credential);
+
+    toast({ title: "Welcome!", description: "Signed in with Google." });
+
+    const target = data?.created ? "/onboarding" : "/dashboard";
+    navigate(target);
+  } catch (err: any) {
+    const msg = String(err?.message || err || "Google sign-in failed");
+    setDialogMessage(msg);
+    setErrorDialogOpen(true);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // POST the Google credential to the backend, store token and profile
   const handleGoogleSuccess = async (credential: string) => {

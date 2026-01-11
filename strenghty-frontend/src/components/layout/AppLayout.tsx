@@ -12,10 +12,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Outlet } from "react-router-dom";
 
-interface AppLayoutProps {
-  children: ReactNode;
-}
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/workouts", label: "Workouts", icon: ListChecks },
@@ -23,7 +21,7 @@ const navItems = [
   { href: "/routines", label: "Routines", icon: FolderOpen },
 ];
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showPausedDialog, setShowPausedDialog] = useState(false);
@@ -150,7 +148,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main Content */}
       <main className="w-full max-w-screen-lg mx-auto px-3 pb-24 pt-[50px] md:pb-6">
-        {children}
+      <Outlet />
       </main>
       {/* Paused workout small dialog (top) */}
       {showPausedDialog && (
