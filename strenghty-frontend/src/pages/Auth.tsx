@@ -124,29 +124,29 @@ export default function Auth() {
 const openGoogleOAuthPopup = () => {
   if (!googleClientId) return;
 
-const nonce = crypto.randomUUID();
+  const nonce = crypto.randomUUID();
 
-const params = new URLSearchParams({
-  client_id: googleClientId,
-  redirect_uri: "https://strengthy-backend.onrender.com/api/auth/google/redirect/",
-  response_type: "id_token",
-  response_mode: "form_post",
-  scope: "openid email profile",
-  prompt: "select_account",
-  nonce,
-});
-
+  const params = new URLSearchParams({
+    client_id: googleClientId,
+    redirect_uri: "https://strengthy-backend.onrender.com/api/auth/google/redirect/",
+    response_type: "id_token",
+    response_mode: "form_post",
+    scope: "openid email profile",
+    prompt: "select_account",
+    nonce,
+  });
 
   const w = 500, h = 600;
   const y = window.top!.outerHeight / 2 + window.top!.screenY - h / 2;
   const x = window.top!.outerWidth / 2 + window.top!.screenX - w / 2;
 
   window.open(
-    `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+    `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
     "google_oauth",
     `width=${w},height=${h},left=${x},top=${y}`
   );
 };
+
 
   const handleGoogleLogin = async () => {
     try {
