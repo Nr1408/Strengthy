@@ -37,9 +37,9 @@ declare global {
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
-
   const [showSignup, setShowSignup] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const [formData, setFormData] = useState<AuthFormData>({
