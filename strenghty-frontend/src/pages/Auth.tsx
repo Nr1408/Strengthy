@@ -76,9 +76,20 @@ export default function Auth() {
           const data = await res.json();
           setToken(data.token);
 
-          toast({ title: "Welcome!", description: "Signed in with Google" });
+toast({ title: "Welcome!", description: "Signed in with Google" });
 
-          navigate(data.created ? "/onboarding" : "/dashboard");
+const target = data.created ? "/onboarding" : "/dashboard";
+
+// If this is running inside the popup, control the main window
+if (window.opener) {
+  window.opener.location.href = target;
+  window.close();
+  return;
+}
+
+// Normal navigation (not popup)
+navigate(target);
+
         } catch (err) {
           console.error(err);
           toast({
@@ -104,8 +115,7 @@ export default function Auth() {
   };
 
   useEffect(() => {
-    try {
-      if (getToken()) navigate("/dashboard");
+    try {      
     } catch (e) {}
     // fetch public config (google client id)
     (async () => {
@@ -244,11 +254,15 @@ const openGoogleOAuthPopup = () => {
       toast({ title: "Welcome!", description: "Signed in with Google." });
       // If the backend reports this account was just created, send user to onboarding
       try {
-        if (data && data.created) {
-          navigate("/onboarding");
-        } else {
-          navigate("/dashboard");
-        }
+const target = data?.created ? "/onboarding" : "/dashboard";
+
+if (window.opener) {
+  window.opener.location.href = target;
+  window.close();
+  return;
+}
+navigate(target);
+
       } catch (e) {
         navigate("/dashboard");
       }
