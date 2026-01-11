@@ -81,6 +81,30 @@ export default function Auth() {
     })();
   }, [navigate]);
 
+  const openGoogleOAuthPopup = () => {
+    if (!googleClientId) return;
+
+    const params = new URLSearchParams({
+      client_id: googleClientId,
+      redirect_uri: `${window.location.origin}/auth/google/callback`,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      prompt: "select_account",
+    });
+
+    const w = 500,
+      h = 600;
+    const y = window.top!.outerHeight / 2 + window.top!.screenY - h / 2;
+    const x = window.top!.outerWidth / 2 + window.top!.screenX - w / 2;
+
+    window.open(
+      `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+      "google_oauth",
+      `width=${w},height=${h},left=${x},top=${y}`
+    );
+  };
+
   const handleGoogleLogin = async () => {
     try {
       setAuthError(null);
@@ -129,32 +153,26 @@ export default function Auth() {
 
       window.google.accounts.id.disableAutoSelect();
 
-window.google.accounts.id.prompt((notification: any) => {
-  const reason = notification.getNotDisplayedReason?.();
+      window.google.accounts.id.prompt((notification: any) => {
+        const reason = notification.getNotDisplayedReason?.();
 
-  if (notification.isNotDisplayed?.()) {
-    console.warn("Google Sign-In not displayed:", reason);
+        if (notification.isNotDisplayed?.()) {
+          console.warn("Google Sign-In not displayed:", reason);
+          if (
+            reason === "opt_out_or_no_session" ||
+            reason === "unknown_reason"
+          ) {
+            openGoogleOAuthPopup();
+          }
+        }
 
-    if (reason === "opt_out_or_no_session" || reason === "unknown_reason") {
-      toast({
-        title: "Continue with email",
-        description: "Google sign-in isn’t available in this session."
+        if (notification.isSkippedMoment?.()) {
+          console.warn(
+            "Google Sign-In skipped:",
+            notification.getSkippedReason?.()
+          );
+        }
       });
-
-      setShowSignup(false);
-
-      setTimeout(() => {
-        document.getElementById("email")?.focus();
-      }, 100);
-    }
-  }
-
-  if (notification.isSkippedMoment?.()) {
-    console.warn("Google Sign-In skipped:", notification.getSkippedReason?.());
-  }
-});
-
-
     } catch (e: any) {
       setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
       setErrorDialogOpen(true);
