@@ -357,7 +357,14 @@ def GoogleRedirectReceiver(request):
     that client-side code can complete the login.
     """
 
-    credential = request.POST.get("credential", "") or request.GET.get("credential", "")
+    credential = (
+    request.POST.get("credential")
+    or request.POST.get("id_token")
+    or request.GET.get("credential")
+    or request.GET.get("id_token")
+    or ""
+)
+
 
     # Determine the base frontend URL. Prefer an explicit FRONTEND_URL setting
     # but fall back to the same origin as this backend. When the request
