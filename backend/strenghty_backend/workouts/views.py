@@ -65,28 +65,6 @@ def debug_echo_auth(request):
     return Response(summary)
 
 
-@api_view(["GET"])
-@drf_permission_classes([permissions.AllowAny])
-def debug_check_token(request):
-    """Temporary debug endpoint: check whether a token exists in the DB.
-
-    Query parameter: ?token=<token>
-    Returns minimal info about the token's user if found.
-    """
-    token_val = request.query_params.get("token", "").strip()
-    if not token_val:
-        return Response({"error": "token query parameter is required"}, status=400)
-    try:
-        t = Token.objects.get(key=token_val)
-        return Response({
-            "exists": True,
-            "user_id": t.user.id,
-            "username": t.user.username,
-            "is_active": t.user.is_active,
-        })
-    except Token.DoesNotExist:
-        return Response({"exists": False})
-
 class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return getattr(obj, "owner", None) == request.user
