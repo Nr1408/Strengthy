@@ -745,6 +745,23 @@ export async function loginWithGoogle(idToken: string) {
         }
       }
     } catch (e) {}
+      // Warm-sync key resources from the server so newly-logged-in clients
+      // immediately pull any server-side data (workouts, exercises, sets).
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("loginWithGoogle: warming server sync");
+        try { await getExercises(); } catch (e) { /* ignore */ }
+        try {
+          const workouts = await getWorkouts();
+          for (const w of workouts) {
+            try { await getSets(w.id); } catch (e) { /* ignore */ }
+            try { await getCardioSetsForWorkout(w.id); } catch (e) { /* ignore */ }
+          }
+        } catch (e) {
+          // ignore errors fetching workouts
+        }
+        try { localStorage.setItem('lastServerSync', String(Date.now())); } catch (e) {}
+      } catch (e) {}
     return data;
 }
 
