@@ -502,19 +502,15 @@ export default function Onboarding() {
                   <div className="flex items-center justify-center gap-2 text-muted-foreground animate-fade-in">
                     <TrendingUp className="h-4 w-4" />
                     <span>
-                      {Number(userData.currentWeight) >
-                      Number(userData.goalWeight)
-                        ? `${
-                            Number(userData.currentWeight) -
-                            Number(userData.goalWeight)
-                          } kg to lose`
-                        : Number(userData.currentWeight) <
-                          Number(userData.goalWeight)
-                        ? `${
-                            Number(userData.goalWeight) -
-                            Number(userData.currentWeight)
-                          } kg to gain`
-                        : "Maintain your current weight"}
+                      {(() => {
+                        const current = Number(userData.currentWeight);
+                        const goal = Number(userData.goalWeight);
+                        if (current > goal)
+                          return `${(current - goal).toFixed(1)} kg to lose`;
+                        if (current < goal)
+                          return `${(goal - current).toFixed(1)} kg to gain`;
+                        return "Maintain your current weight";
+                      })()}
                     </span>
                   </div>
                 )}

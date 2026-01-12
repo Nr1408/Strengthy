@@ -182,7 +182,9 @@ export function SetRow({
   type PrLine = { label: string; value: string };
   const prLines: PrLine[] = [];
   if (isCardio && set.cardioMode) {
-    const distanceKm = cardioDistance / 1000;
+    // `cardioDistance` is stored in user-facing units (km or miles).
+    // Treat it as kilometers when the unit is `km`.
+    const distanceKm = cardioDistance;
 
     if (
       (set.cardioMode === "treadmill" ||

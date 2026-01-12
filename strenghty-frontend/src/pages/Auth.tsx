@@ -61,6 +61,34 @@ export default function Auth() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Prevent page-level scrolling while on the auth route. This guards against
+  // programmatic focus or mobile browser UI adjustments causing the body to
+  // scroll up/down while the auth card is visible.
+  useEffect(() => {
+    try {
+      const html = document.documentElement;
+      const body = document.body;
+      const prevHtmlOverflow = html.style.overflow;
+      const prevBodyOverflow = body.style.overflow;
+      const prevHtmlHeight = html.style.height;
+      const prevBodyHeight = body.style.height;
+
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      html.style.height = "100vh";
+      body.style.height = "100vh";
+
+      return () => {
+        html.style.overflow = prevHtmlOverflow;
+        body.style.overflow = prevBodyOverflow;
+        html.style.height = prevHtmlHeight;
+        body.style.height = prevBodyHeight;
+      };
+    } catch (e) {
+      // ignore in non-browser environments
+    }
+  }, []);
+
   useEffect(() => {
     const handler = async (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
@@ -346,9 +374,9 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col bg-background overflow-hidden">
       <header className="border-b border-border">
-        <div className="flex h-12 items-center px-4">
+        <div className="flex h-10 items-center px-4">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg">
               <img

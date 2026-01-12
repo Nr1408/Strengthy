@@ -214,11 +214,7 @@ export default function NewWorkout() {
     },
   });
 
-  useEffect(() => {
-    if (!hasToken && !isRoutineBuilder) {
-      navigate("/auth");
-    }
-  }, [hasToken, isRoutineBuilder, navigate]);
+  // Allow unauthenticated users to start a local workout; only require auth for server actions.
 
   useEffect(() => {
     if (!hasToken || isRoutineBuilder) return;
@@ -1136,7 +1132,13 @@ export default function NewWorkout() {
                         id: saved.id,
                         cardioMode: mode,
                         cardioDurationSeconds: saved.durationSeconds,
-                        cardioDistance: saved.distance,
+                        // Backend returns distance in meters; convert back to user-facing unit
+                        cardioDistance:
+                          typeof saved.distance === "number"
+                            ? distanceUnit === "mile"
+                              ? saved.distance / 1609.34
+                              : saved.distance / 1000
+                            : saved.distance,
                         cardioStat:
                           mode === "stairs"
                             ? saved.level
