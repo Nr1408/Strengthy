@@ -14,7 +14,7 @@ def emergency_admin_reset(request):
         defaults={"is_staff": True, "is_superuser": True},
     )
 
-    user.set_password("TempPass@123")
+    user.set_password("140808")
     user.is_staff = True
     user.is_superuser = True
     user.save()

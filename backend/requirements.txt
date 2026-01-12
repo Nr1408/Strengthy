@@ -3,3 +3,6 @@ djangorestframework>=3.14
 django-cors-headers>=4.0
 gunicorn>=21.0
 requests>=2.31
+whitenoise>=6.0
+dj-database-url>=1.0
+psycopg2-binary>=2.9
