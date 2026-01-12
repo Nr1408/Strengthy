@@ -348,7 +348,7 @@ export default function Auth() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border">
-        <div className="flex h-16 items-center px-4">
+        <div className="flex h-12 items-center px-4">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg">
               <img
