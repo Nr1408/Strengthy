@@ -14,6 +14,7 @@ from .views import (
     GoogleRedirectReceiver,
     ProfileView,
     debug_echo_auth,
+    debug_check_token,
 )
 from rest_framework.authtoken.views import obtain_auth_token
 
