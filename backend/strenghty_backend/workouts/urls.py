@@ -37,5 +37,6 @@ urlpatterns = [
     path("profile/", ProfileView.as_view(), name="user_profile"),
     # Temporary debug endpoint to inspect incoming Authorization headers
     path("debug/echo-auth/", debug_echo_auth, name="debug_echo_auth"),
+    path("debug/check-token/", debug_check_token, name="debug_check_token"),
 ]
 
