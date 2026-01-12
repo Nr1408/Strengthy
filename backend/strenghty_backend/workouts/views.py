@@ -42,6 +42,28 @@ def public_config(request):
         configured = "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com"
     return Response({"google_client_id": configured})
 
+
+@api_view(["GET", "POST"])
+@drf_permission_classes([permissions.AllowAny])
+def debug_echo_auth(request):
+    """Temporary debug endpoint: returns the incoming Authorization header.
+
+    Useful to verify whether clients are sending the `Authorization` header
+    through proxies or during CORS requests. This endpoint is intended to
+    be temporary and removed after debugging is complete.
+    """
+    auth_hdr = request.META.get("HTTP_AUTHORIZATION")
+    try:
+        # include a short request summary to help troubleshooting
+        summary = {
+            "method": request.method,
+            "path": request.path,
+            "authorization": auth_hdr,
+        }
+    except Exception:
+        summary = {"authorization": auth_hdr}
+    return Response(summary)
+
 class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return getattr(obj, "owner", None) == request.user
