@@ -318,6 +318,11 @@ class GoogleLoginView(APIView):
         # Find or create the user
         try:
             user = User.objects.get(email__iexact=email)
+            # If the admin has disabled/deactivated this account (is_active=False)
+            # treat it as deleted for the purposes of Google sign-in and create
+            # a fresh user instead of re-using the inactive record.
+            if not getattr(user, "is_active", True):
+                raise User.DoesNotExist()
             created = False
         except User.DoesNotExist:
             # Create a simple user with an unusable password

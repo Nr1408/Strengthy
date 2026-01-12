@@ -47,28 +47,7 @@ export function ExerciseCard({
                 {exercise.description}
               </p>
             )}
-            {exercise.muscleGroup === "cardio" && (
-              <div className="mt-2 flex gap-3 text-sm text-muted-foreground">
-                <div className="flex flex-col">
-                  <span className="text-[11px] text-white font-medium">
-                    Distance
-                  </span>
-                  <span className="text-xs">-</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[11px] text-white font-medium">
-                    Duration
-                  </span>
-                  <span className="text-xs">-</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[11px] text-white font-medium">
-                    Pace
-                  </span>
-                  <span className="text-xs">-</span>
-                </div>
-              </div>
-            )}
+            {/* Cardio stats intentionally removed for library view */}
           </div>
         </div>
 

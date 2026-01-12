@@ -99,7 +99,7 @@ class CardioSet(models.Model):
 
     workout = models.ForeignKey(Workout, on_delete=models.CASCADE, related_name="cardio_sets")
     exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name="cardio_sets")
-    set_number = models.PositiveIntegerField()
+    set_number = models.PositiveIntegerField(default=1)
     mode = models.CharField(max_length=16, choices=CARDIO_MODE_CHOICES)
 
     # Core metrics
