@@ -31,6 +31,10 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',') if os.environ.ge
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 
+# Optional secret used for one-off admin operations (like data export).
+# When set in the environment, it is used by ExportDataView.
+EXPORT_SECRET = os.environ.get("EXPORT_SECRET", None)
+
 # Application definition
 
 INSTALLED_APPS = [
