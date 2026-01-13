@@ -1,1 +1,1 @@
-web: gunicorn strenghty_backend.wsgi --bind 0.0.0.0:$PORT
+web: gunicorn strenghty_backend.wsgi --chdir strenghty_backend --bind 0.0.0.0:$PORT

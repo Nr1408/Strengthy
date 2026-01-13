@@ -13,7 +13,6 @@ from .views import (
     GoogleLoginView,
     GoogleRedirectReceiver,
     ProfileView,
-    ExportDataView,
 )
 from rest_framework.authtoken.views import obtain_auth_token
 
@@ -35,6 +34,5 @@ urlpatterns = [
     path("auth/google/redirect/", GoogleRedirectReceiver, name="auth_google_redirect"),
     path("public-config/", PublicConfigView.as_view(), name="public_config"),
     path("profile/", ProfileView.as_view(), name="user_profile"),
-    path("admin/export-data/", ExportDataView.as_view(), name="export_data"),
 ]
 

@@ -5,7 +5,6 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.mail import send_mail
-from django.core.management import call_command
 import random
 from rest_framework.authtoken.models import Token
 import requests
@@ -14,7 +13,6 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from urllib.parse import quote
 import json
-import io
 
 from .models import Exercise, Workout, WorkoutSet, CardioSet, PasswordResetCode, Profile
 from django.db import IntegrityError
@@ -43,39 +41,6 @@ def public_config(request):
     if not configured:
         configured = "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com"
     return Response({"google_client_id": configured})
-
-
-class ExportDataView(APIView):
-    """Temporarily export the entire database using Django's dumpdata.
-
-    This view is protected by an EXPORT_SECRET environment variable. To use it:
-    - Set EXPORT_SECRET on Render to a long random string and redeploy.
-    - Call /api/admin/export-data/?secret=EXPORT_SECRET to download JSON.
-    - Remove EXPORT_SECRET and this view after migration.
-    """
-
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request, *args, **kwargs):
-        expected = getattr(settings, "EXPORT_SECRET", None)
-        provided = request.GET.get("secret") or request.headers.get("X-Export-Secret")
-
-        if not expected or provided != expected:
-            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
-
-        buffer = io.StringIO()
-        try:
-            call_command("dumpdata", stdout=buffer)
-        except Exception as exc:
-            return Response(
-                {"detail": f"Error during dumpdata: {exc}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        data = buffer.getvalue()
-        response = HttpResponse(data, content_type="application/json")
-        response["Content-Disposition"] = "attachment; filename=strenghty_dump.json"
-        return response
 
 
 @api_view(["GET", "POST"])
