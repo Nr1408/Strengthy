@@ -27,7 +27,15 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-@8n+shrh=_)yjahwc@#7c
 # Allow toggling DEBUG via env var on Render (set to 'False' in production).
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',') if os.environ.get('ALLOWED_HOSTS') else ['*']
+raw_hosts = os.environ.get("ALLOWED_HOSTS", "")
+if raw_hosts:
+    ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(",") if h.strip()]
+else:
+    ALLOWED_HOSTS = ["*"]
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 

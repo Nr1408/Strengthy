@@ -27,12 +27,15 @@
     <meta name="twitter:image" content="/icons/logo.png" />
 
     <!-- ✅ REQUIRED for Google FedCM & Incognito -->
-    <meta http-equiv="Permissions-Policy" content="identity-credentials-get=*" />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="identity-credentials-get=*"
+    />
 
     <!-- ✅ Required CSP for Google Identity -->
-<meta
-  http-equiv="Content-Security-Policy"
-  content="
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
     default-src 'self' https:;
     script-src 'self' https://accounts.google.com https://apis.google.com 'unsafe-inline';
     frame-src https://accounts.google.com;
@@ -41,8 +44,7 @@
     style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
   "
-/>
-
+    />
   </head>
 
   <body>
