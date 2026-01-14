@@ -1,10 +1,3 @@
-const GRID_TEMPLATE =
-  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
-
-// Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
-
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -56,6 +49,13 @@ import {
 } from "@/lib/api";
 import { triggerHaptic } from "@/lib/haptics";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
+
+const GRID_TEMPLATE =
+  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
+
+// Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
+const GRID_TEMPLATE_CARDIO =
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
 
 export default function NewWorkout() {
   const navigate = useNavigate();
