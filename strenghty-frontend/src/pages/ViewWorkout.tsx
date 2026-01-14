@@ -557,7 +557,10 @@ export default function ViewWorkout() {
                     <div
                       className="mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
                       style={{
-                        gridTemplateColumns: GRID_TEMPLATE,
+                        gridTemplateColumns:
+                          we.exercise.muscleGroup === "cardio"
+                            ? GRID_TEMPLATE_CARDIO
+                            : GRID_TEMPLATE,
                       }}
                     >
                       {/* Column 1: SET */}
@@ -595,7 +598,7 @@ export default function ViewWorkout() {
                                 .toLowerCase()
                                 .trim();
                               if (name.includes("treadmill")) return "INCLINE";
-                              if (name.includes("row")) return "PACE";
+                              if (name.includes("row")) return "SPLIT TIME";
                               return "LEVEL";
                             })()
                           : "REPS"}
