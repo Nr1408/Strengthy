@@ -1,18 +1,10 @@
 {
-  "outputDirectory": "dist",
-
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin-allow-popups"
-        },
-        {
-          "key": "Cross-Origin-Embedder-Policy",
-          "value": "unsafe-none"
-        },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+        { "key": "Cross-Origin-Embedder-Policy", "value": "unsafe-none" },
         {
           "key": "Content-Security-Policy",
           "value": "default-src 'self' https:; connect-src 'self' https://strengthy-backend.onrender.com https://strengthy-backend.up.railway.app https://accounts.google.com; script-src 'self' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src https://accounts.google.com"
@@ -20,10 +12,7 @@
       ]
     }
   ],
-
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/" }
   ]
 }
-
-
