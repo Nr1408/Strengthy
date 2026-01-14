@@ -1,3 +1,10 @@
+const GRID_TEMPLATE =
+  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
+
+// Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
+const GRID_TEMPLATE_CARDIO =
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
+
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -50,14 +57,18 @@ import {
 import { triggerHaptic } from "@/lib/haptics";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 
-const GRID_TEMPLATE =
-  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
-
-// Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
-
 export default function NewWorkout() {
+  
+  const getCardioModeForExercise = (exercise: Exercise): CardioMode => {
+  const name = exercise.name.toLowerCase();
+  if (name.includes("treadmill")) return "treadmill";
+  if (name.includes("bike") || name.includes("cycle")) return "bike";
+  if (name.includes("elliptical")) return "elliptical";
+  if (name.includes("stair") || name.includes("step")) return "stairs";
+  if (name.includes("row")) return "row";
+  return "treadmill";
+};
+
   const navigate = useNavigate();
   const location = useLocation() as {
     state?: { routine?: Routine; fromNewRoutine?: boolean; forceNew?: boolean };
@@ -195,16 +206,6 @@ export default function NewWorkout() {
     userExercises.forEach((e) => map.set(e.name.toLowerCase(), normalize(e)));
     return Array.from(map.values());
   }, [userExercises]);
-
-  const getCardioModeForExercise = (exercise: Exercise): CardioMode => {
-    const name = exercise.name.toLowerCase();
-    if (name.includes("treadmill")) return "treadmill";
-    if (name.includes("bike") || name.includes("cycle")) return "bike";
-    if (name.includes("elliptical")) return "elliptical";
-    if (name.includes("stair") || name.includes("step")) return "stairs";
-    if (name.includes("row")) return "row";
-    return "treadmill";
-  };
 
   const createWorkoutMutation = useMutation({
     mutationFn: (name: string) => createWorkout(name),
