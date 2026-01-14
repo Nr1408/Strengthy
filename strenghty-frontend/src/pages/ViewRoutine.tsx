@@ -53,7 +53,8 @@ export default function ViewRoutine() {
         unit: getUnit(),
         isPR: false,
         completed: false,
-        type: "S",
+        type: re.exercise?.muscleGroup === "cardio" ? "C" : "S",
+
         rpe: undefined,
       })),
     }));
@@ -127,54 +128,53 @@ export default function ViewRoutine() {
 
                 {/* Sets Header */}
                 {we.exercise.muscleGroup === "cardio" ? (
-  <div
-    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
-  >
-    <>
-      <span className="flex justify-center">SET</span>
-      <span className="flex justify-center">DURATION</span>
+                  <div
+                    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
+                  >
+                    <>
+                      <span className="flex justify-center">SET</span>
+                      <span className="flex justify-center">DURATION</span>
 
-      <span className="flex justify-center">
-        {we.exercise.name.toLowerCase().includes("stair")
-          ? "FLOORS"
-          : "DISTANCE"}
-      </span>
+                      <span className="flex justify-center">
+                        {we.exercise.name.toLowerCase().includes("stair")
+                          ? "FLOORS"
+                          : "DISTANCE"}
+                      </span>
 
-      <span className="flex justify-center">
-        {we.exercise.name.toLowerCase().includes("treadmill")
-          ? "INCLINE"
-          : we.exercise.name.toLowerCase().includes("row")
-          ? "SPLIT"
-          : "LEVEL"}
-      </span>
+                      <span className="flex justify-center">
+                        {we.exercise.name.toLowerCase().includes("treadmill")
+                          ? "INCLINE"
+                          : we.exercise.name.toLowerCase().includes("row")
+                          ? "SPLIT"
+                          : "LEVEL"}
+                      </span>
 
-      <span className="flex justify-center">
-        <Trophy className="h-3.5 w-3.5" />
-      </span>
+                      <span className="flex justify-center">
+                        <Trophy className="h-3.5 w-3.5" />
+                      </span>
 
-      <div />
-    </>
-  </div>
-
-) : (
-  <div
-    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-    style={{ gridTemplateColumns: GRID_TEMPLATE }}
-  >
-    <>
-      <span className="flex justify-center">SET</span>
-      <span className="flex justify-center">WEIGHT</span>
-      <span />
-      <span className="flex justify-center">REPS</span>
-      <span className="flex justify-center">RPE</span>
-      <span className="flex justify-center">
-        <Trophy className="h-3.5 w-3.5" />
-      </span>
-      <div />
-    </>
-  </div>
-)}
+                      <div />
+                    </>
+                  </div>
+                ) : (
+                  <div
+                    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    style={{ gridTemplateColumns: GRID_TEMPLATE }}
+                  >
+                    <>
+                      <span className="flex justify-center">SET</span>
+                      <span className="flex justify-center">WEIGHT</span>
+                      <span />
+                      <span className="flex justify-center">REPS</span>
+                      <span className="flex justify-center">RPE</span>
+                      <span className="flex justify-center">
+                        <Trophy className="h-3.5 w-3.5" />
+                      </span>
+                      <div />
+                    </>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   {we.sets.map((s: any, idx: number) => (
