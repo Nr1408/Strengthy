@@ -46,17 +46,28 @@ export default function ViewRoutine() {
     return routine.exercises.map((re: any) => ({
       id: re.id,
       exercise: re.exercise,
-      sets: Array.from({ length: re.targetSets }).map(() => ({
-        id: `local-${crypto.randomUUID()}`,
-        reps: 0,
-        weight: 0,
-        unit: getUnit(),
-        isPR: false,
-        completed: false,
-        type: re.exercise?.muscleGroup === "cardio" ? "C" : "S",
+sets: Array.from({ length: re.targetSets }).map(() => {
+  const isCardio = re.exercise?.muscleGroup === "cardio";
 
-        rpe: undefined,
-      })),
+  return {
+    id: `local-${crypto.randomUUID()}`,
+    reps: 0,
+    weight: 0,
+    unit: getUnit(),
+    isPR: false,
+    completed: false,
+    type: isCardio ? "C" : "S",
+    rpe: undefined,
+
+    ...(isCardio && {
+      cardioMode: "run",
+cardioDurationSeconds: 1,
+cardioDistance: 0,
+cardioStat: 0,
+    }),
+  };
+}),
+
     }));
   }, [routine]);
 
