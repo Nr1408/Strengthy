@@ -127,85 +127,55 @@ export default function ViewRoutine() {
 
                 {/* Sets Header */}
                 {we.exercise.muscleGroup === "cardio" ? (
-                  <div
-                    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
-                  >
-                    {/* Column 1: SET */}
-                    <span className="flex items-center justify-center text-center">
-                      SET
-                    </span>
+  <div
+    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
+  >
+    <>
+      <span className="flex justify-center">SET</span>
+      <span className="flex justify-center">DURATION</span>
 
-                    {/* Column 2: DURATION */}
-                    <span className="flex items-center justify-center text-center">
-                      DURATION
-                    </span>
+      <span className="flex justify-center">
+        {we.exercise.name.toLowerCase().includes("stair")
+          ? "FLOORS"
+          : "DISTANCE"}
+      </span>
 
-                    {/* Column 3: DISTANCE or FLOORS */}
-                    <span className="flex items-center justify-center text-center">
-                      {(() => {
-                        const name = we.exercise.name.toLowerCase().trim();
-                        return name.includes("stair") || name.includes("step")
-                          ? "FLOORS"
-                          : "DISTANCE";
-                      })()}
-                    </span>
+      <span className="flex justify-center">
+        {we.exercise.name.toLowerCase().includes("treadmill")
+          ? "INCLINE"
+          : we.exercise.name.toLowerCase().includes("row")
+          ? "SPLIT"
+          : "LEVEL"}
+      </span>
 
-                    {/* Column 4: machine-specific STAT */}
-                    <span className="flex items-center justify-center text-center">
-                      {(() => {
-                        const name = we.exercise.name.toLowerCase().trim();
-                        if (name.includes("treadmill")) return "INCLINE";
-                        if (name.includes("row")) return "SPLIT TIME";
-                        return "LEVEL";
-                      })()}
-                    </span>
+      <span className="flex justify-center">
+        <Trophy className="h-3.5 w-3.5" />
+      </span>
 
-                    {/* Column 5: Trophy Icon */}
-                    <span className="flex items-center justify-center text-center">
-                      <Trophy className="mx-auto h-3.5 w-3.5" />
-                    </span>
+      <div />
+    </>
+  </div>
 
-                    {/* Column 6: Placeholder for Checkmark button column */}
-                    <div />
-                  </div>
-                ) : (
-                  <div
-                    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE }}
-                  >
-                    {/* Column 1: SET */}
-                    <span className="flex items-center justify-center text-center">
-                      SET
-                    </span>
+) : (
+  <div
+    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+    style={{ gridTemplateColumns: GRID_TEMPLATE }}
+  >
+    <>
+      <span className="flex justify-center">SET</span>
+      <span className="flex justify-center">WEIGHT</span>
+      <span />
+      <span className="flex justify-center">REPS</span>
+      <span className="flex justify-center">RPE</span>
+      <span className="flex justify-center">
+        <Trophy className="h-3.5 w-3.5" />
+      </span>
+      <div />
+    </>
+  </div>
+)}
 
-                    {/* Column 2: WEIGHT */}
-                    <span className="flex items-center justify-center text-center">
-                      WEIGHT
-                    </span>
-
-                    {/* Column 3: Spacer (6px) */}
-                    <div className="flex items-center justify-center" />
-
-                    {/* Column 4: REPS */}
-                    <span className="flex items-center justify-center text-center">
-                      REPS
-                    </span>
-
-                    {/* Column 5: RPE */}
-                    <span className="flex items-center justify-center text-center">
-                      RPE
-                    </span>
-
-                    {/* Column 6: Trophy Icon */}
-                    <span className="flex items-center justify-center text-center">
-                      <Trophy className="mx-auto h-3.5 w-3.5" />
-                    </span>
-
-                    {/* Column 7: Placeholder for Checkmark button column */}
-                    <div />
-                  </div>
-                )}
                 <div className="space-y-2">
                   {we.sets.map((s: any, idx: number) => (
                     <SetRow
