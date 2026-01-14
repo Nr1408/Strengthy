@@ -58,16 +58,15 @@ import { triggerHaptic } from "@/lib/haptics";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 
 export default function NewWorkout() {
-  
   const getCardioModeForExercise = (exercise: Exercise): CardioMode => {
-  const name = exercise.name.toLowerCase();
-  if (name.includes("treadmill")) return "treadmill";
-  if (name.includes("bike") || name.includes("cycle")) return "bike";
-  if (name.includes("elliptical")) return "elliptical";
-  if (name.includes("stair") || name.includes("step")) return "stairs";
-  if (name.includes("row")) return "row";
-  return "treadmill";
-};
+    const name = exercise.name.toLowerCase();
+    if (name.includes("treadmill")) return "treadmill";
+    if (name.includes("bike") || name.includes("cycle")) return "bike";
+    if (name.includes("elliptical")) return "elliptical";
+    if (name.includes("stair") || name.includes("step")) return "stairs";
+    if (name.includes("row")) return "row";
+    return "treadmill";
+  };
 
   const navigate = useNavigate();
   const location = useLocation() as {
@@ -493,20 +492,20 @@ export default function NewWorkout() {
         // Keep the same number of sets but reset them so the user
         // re-enters weight/reps for the new exercise.
         const resetSets: WorkoutSet[] = we.sets.map(() => ({
-  id: crypto.randomUUID(),
-  reps: 0,
-  weight: 0,
-  unit: getUnit(),
-  isPR: false,
-  completed: false,
-  type: "S" as const,
-  rpe: undefined,
-  cardioMode,
-  cardioDistanceUnit: isCardio ? "km" : undefined,
-  cardioDurationSeconds: isCardio ? 0 : undefined,
-  cardioDistance: isCardio ? 0 : undefined,
-  cardioStat: isCardio ? 0 : undefined,
-}));
+          id: crypto.randomUUID(),
+          reps: 0,
+          weight: 0,
+          unit: getUnit(),
+          isPR: false,
+          completed: false,
+          type: "S" as const,
+          rpe: undefined,
+          cardioMode,
+          cardioDistanceUnit: isCardio ? "km" : undefined,
+          cardioDurationSeconds: isCardio ? 0 : undefined,
+          cardioDistance: isCardio ? 0 : undefined,
+          cardioStat: isCardio ? 0 : undefined,
+        }));
 
         return {
           ...we,

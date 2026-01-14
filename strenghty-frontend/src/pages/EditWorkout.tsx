@@ -233,17 +233,63 @@ export default function EditWorkout() {
             notes: exerciseNotes,
             sets: sets
               .slice()
-              .sort((a: any, b: any) => a.setNumber - b.setNumber)
-              .map((s: any) => ({
-                id: String(s.id),
-                reps: s.reps,
-                weight: s.weight || 0,
-                unit: s.unit || getUnit(),
-                isPR: s.isPR,
-                completed: true,
-                type: s.type || "S",
-                rpe: s.rpe,
-              })),
+              .sort((a: any, b: any) => (a.setNumber || 0) - (b.setNumber || 0))
+              .map((s: any) => {
+                if (s.__kind === "strength") {
+                  return {
+                    id: String(s.id),
+                    reps: s.reps,
+                    weight: s.weight || 0,
+                    unit: s.unit || getUnit(),
+                    isPR: s.isPR,
+                    completed: true,
+                    type: s.type || "S",
+                    rpe: s.rpe,
+                  } as WorkoutSet;
+                }
+
+                // Cardio set mapping: convert backend meters -> km for UI
+                const mode = s.mode as any;
+                const durationSeconds = typeof s.durationSeconds === "number" ? s.durationSeconds : (s.duration_seconds ?? 0);
+                const distanceMeters = typeof s.distance === "number" ? s.distance : (s.distance_meters ?? undefined);
+                const floors = typeof s.floors === "number" ? s.floors : (s.floors ?? undefined);
+                const level = typeof s.level === "number" ? s.level : (s.level ?? undefined);
+                const splitSeconds = typeof s.splitSeconds === "number" ? s.splitSeconds : (s.split_seconds ?? undefined);
+
+                let uiDistance: number | undefined = undefined;
+                if (mode === "stairs") {
+                  uiDistance = typeof floors === "number" ? floors : distanceMeters;
+                } else {
+                  uiDistance = typeof distanceMeters === "number" ? distanceMeters / 1000 : undefined;
+                }
+
+                let uiStat = 0;
+                if (mode === "row") uiStat = typeof splitSeconds === "number" ? splitSeconds : (level ?? 0);
+                else if (mode === "stairs") uiStat = typeof level === "number" ? level : 0;
+                else uiStat = typeof level === "number" ? level : 0;
+
+                return {
+                  id: String(s.id),
+                  reps: 0,
+                  weight: 0,
+                  unit: getUnit(),
+                  isPR: !!s.isPR,
+                  completed: true,
+                  type: "S",
+                  rpe: undefined,
+                  cardioMode: mode,
+                  cardioDurationSeconds: durationSeconds,
+                  cardioDistanceUnit: "km",
+                  cardioDistance: typeof uiDistance === "number" ? uiDistance : 0,
+                  cardioStat: uiStat,
+                  // preserve PR flags
+                  cardioDistancePR: !!s.distancePR,
+                  cardioPacePR: !!s.pacePR,
+                  cardioAscentPR: !!s.ascentPR,
+                  cardioIntensityPR: !!s.intensityPR,
+                  cardioSplitPR: !!s.splitPR,
+                } as WorkoutSet;
+              }),
           } as WorkoutExercise;
         });
         setExercises(grouped as WorkoutExercise[]);

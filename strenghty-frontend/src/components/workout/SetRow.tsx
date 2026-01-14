@@ -200,10 +200,24 @@ export function SetRow({
       }
 
       if (set.cardioPacePR && cardioDurationSeconds > 0) {
-        const paceSecondsPerKm =
-          cardioDistance > 0
-            ? (cardioDurationSeconds / cardioDistance) * 1000
-            : 0;
+        // `cardioDistance` here is stored in user-facing units (km or miles).
+        // Compute seconds-per-kilometer correctly:
+        // - if unit is km: secondsPerKm = duration / distance(km)
+        // - if unit is mile: convert miles -> km then secondsPerKm = duration / (distance_miles * 1.60934)
+        let paceSecondsPerKm = 0;
+        try {
+          if (cardioDistance > 0) {
+            if (cardioDistanceUnit === "mile") {
+              const km = cardioDistance * 1.60934;
+              paceSecondsPerKm = cardioDurationSeconds / km;
+            } else {
+              paceSecondsPerKm = cardioDurationSeconds / cardioDistance;
+            }
+          }
+        } catch (e) {
+          paceSecondsPerKm = 0;
+        }
+
         if (paceSecondsPerKm > 0) {
           prLines.push({
             label: "Best Pace",
