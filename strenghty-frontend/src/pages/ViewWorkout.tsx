@@ -554,89 +554,72 @@ export default function ViewWorkout() {
 
                 <div className="relative w-full overflow-hidden">
                   <div className="w-full">
-                    <div
-                      className="mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-                      style={{
-                        gridTemplateColumns:
-                          we.exercise.muscleGroup === "cardio"
-                            ? GRID_TEMPLATE_CARDIO
-                            : GRID_TEMPLATE,
-                      }}
-                    >
-                      {/* Column 1: SET */}
-                      <span className="flex items-center justify-center text-center">
-                        SET
-                      </span>
+  <div
+    className="mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+    style={{
+      gridTemplateColumns:
+        we.exercise.muscleGroup === "cardio"
+          ? GRID_TEMPLATE_CARDIO
+          : GRID_TEMPLATE,
+    }}
+  >
+    {we.exercise.muscleGroup === "cardio" ? (
+      <>
+        <span className="flex justify-center">SET</span>
+        <span className="flex justify-center">DURATION</span>
 
-                      {/* Column 2: WEIGHT or DURATION */}
-                      <span className="flex items-center justify-center text-center">
-                        {we.exercise.muscleGroup === "cardio"
-                          ? "DURATION"
-                          : "WEIGHT"}
-                      </span>
+        <span className="flex justify-center">
+          {we.exercise.name.toLowerCase().includes("stair")
+            ? "FLOORS"
+            : "DISTANCE"}
+        </span>
 
-                      {/* Column 3: Spacer or DISTANCE/FLOORS */}
-                      <span className="flex items-center justify-center text-center">
-                        {we.exercise.muscleGroup === "cardio"
-                          ? (() => {
-                              const name = we.exercise.name
-                                .toLowerCase()
-                                .trim();
-                              return name.includes("stair") ||
-                                name.includes("step")
-                                ? "FLOORS"
-                                : "DISTANCE";
-                            })()
-                          : ""}
-                      </span>
+        <span className="flex justify-center">
+          {we.exercise.name.toLowerCase().includes("treadmill")
+            ? "INCLINE"
+            : we.exercise.name.toLowerCase().includes("row")
+            ? "SPLIT"
+            : "LEVEL"}
+        </span>
 
-                      {/* Column 4: REPS or machine-specific STAT */}
-                      <span className="flex items-center justify-center text-center">
-                        {we.exercise.muscleGroup === "cardio"
-                          ? (() => {
-                              const name = we.exercise.name
-                                .toLowerCase()
-                                .trim();
-                              if (name.includes("treadmill")) return "INCLINE";
-                              if (name.includes("row")) return "SPLIT TIME";
-                              return "LEVEL";
-                            })()
-                          : "REPS"}
-                      </span>
+        <span className="flex justify-center">
+          <Trophy className="h-3.5 w-3.5" />
+        </span>
 
-                      {/* Column 5: RPE (strength only) */}
-                      {we.exercise.muscleGroup === "cardio" ? (
-                        <span />
-                      ) : (
-                        <span className="flex items-center justify-center text-center">
-                          RPE
-                        </span>
-                      )}
+        <div />
+      </>
+    ) : (
+      <>
+        <span className="flex justify-center">SET</span>
+        <span className="flex justify-center">WEIGHT</span>
+        <span />
+        <span className="flex justify-center">REPS</span>
+        <span className="flex justify-center">RPE</span>
+        <span className="flex justify-center">
+          <Trophy className="h-3.5 w-3.5" />
+        </span>
+        <div />
+      </>
+    )}
+  </div>
 
-                      {/* Column 6: Trophy Icon */}
-                      <span className="flex items-center justify-center text-center">
-                        <Trophy className="mx-auto h-3.5 w-3.5" />
-                      </span>
+  <div className="space-y-2">
+    {we.sets.map((s: any, idx: number) => (
+      <SetRow
+        key={s.id}
+        set={s}
+        exerciseName={we.exercise.name}
+        unit={s.unit}
+        setNumber={idx + 1}
+        onUpdate={() => {}}
+        onUnitChange={() => {}}
+        onComplete={() => {}}
+        readOnly
+      />
+    ))}
+  </div>
+</div>
 
-                      {/* Column 7: Placeholder for Checkmark button column */}
-                      <div />
-                    </div>
-                    <div className="space-y-2">
-                      {we.sets.map((s: any, idx: number) => (
-                        <SetRow
-                          key={s.id}
-                          set={s}
-                          exerciseName={we.exercise.name}
-                          unit={s.unit}
-                          setNumber={idx + 1}
-                          onUpdate={() => {}}
-                          onUnitChange={() => {}}
-                          onComplete={() => {}}
-                          readOnly
-                        />
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
