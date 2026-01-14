@@ -80,16 +80,26 @@ export default function NewWorkout() {
         id: crypto.randomUUID(),
         exercise: re.exercise,
         notes: "",
-        sets: Array.from({ length: re.targetSets }).map(() => ({
-          id: crypto.randomUUID(),
-          reps: 0,
-          weight: 0,
-          unit: getUnit(),
-          isPR: false,
-          completed: false,
-          type: "S" as const,
-          rpe: undefined,
-        })),
+        sets: Array.from({ length: re.targetSets }).map(() => {
+          const isCardio = re.exercise.muscleGroup === "cardio";
+          return {
+            id: crypto.randomUUID(),
+            reps: 0,
+            weight: 0,
+            unit: getUnit(),
+            isPR: false,
+            completed: false,
+            type: "S" as const,
+            rpe: undefined,
+            cardioMode: isCardio
+              ? getCardioModeForExercise(re.exercise)
+              : undefined,
+            cardioDistanceUnit: isCardio ? "km" : undefined,
+            cardioDurationSeconds: isCardio ? 0 : undefined,
+            cardioDistance: isCardio ? 0 : undefined,
+            cardioStat: isCardio ? 0 : undefined,
+          };
+        }),
       }));
   });
   type PrBanner = {
@@ -458,6 +468,9 @@ export default function NewWorkout() {
           rpe: undefined,
           cardioMode,
           cardioDistanceUnit: isCardio ? "km" : undefined,
+          cardioDurationSeconds: isCardio ? 0 : undefined,
+          cardioDistance: isCardio ? 0 : undefined,
+          cardioStat: isCardio ? 0 : undefined,
         },
       ],
     };
@@ -479,17 +492,21 @@ export default function NewWorkout() {
         // Keep the same number of sets but reset them so the user
         // re-enters weight/reps for the new exercise.
         const resetSets: WorkoutSet[] = we.sets.map(() => ({
-          id: crypto.randomUUID(),
-          reps: 0,
-          weight: 0,
-          unit: getUnit(),
-          isPR: false,
-          completed: false,
-          type: "S" as const,
-          rpe: undefined,
-          cardioMode,
-          cardioDistanceUnit: isCardio ? "km" : undefined,
-        }));
+  id: crypto.randomUUID(),
+  reps: 0,
+  weight: 0,
+  unit: getUnit(),
+  isPR: false,
+  completed: false,
+  type: "S" as const,
+  rpe: undefined,
+  cardioMode,
+  cardioDistanceUnit: isCardio ? "km" : undefined,
+  cardioDurationSeconds: isCardio ? 0 : undefined,
+  cardioDistance: isCardio ? 0 : undefined,
+  cardioStat: isCardio ? 0 : undefined,
+}));
+
         return {
           ...we,
           exercise: newExercise,
@@ -522,8 +539,32 @@ export default function NewWorkout() {
                   typeof (lastSet as any)?.rpe === "number"
                     ? (lastSet as any).rpe
                     : undefined,
-                cardioMode: (lastSet as any)?.cardioMode,
-                cardioDistanceUnit: (lastSet as any)?.cardioDistanceUnit,
+
+                cardioMode:
+                  ex.exercise.muscleGroup === "cardio"
+                    ? (lastSet as any)?.cardioMode ??
+                      getCardioModeForExercise(ex.exercise)
+                    : undefined,
+
+                cardioDistanceUnit:
+                  ex.exercise.muscleGroup === "cardio"
+                    ? (lastSet as any)?.cardioDistanceUnit ?? "km"
+                    : undefined,
+
+                cardioDurationSeconds:
+                  ex.exercise.muscleGroup === "cardio"
+                    ? (lastSet as any)?.cardioDurationSeconds ?? 0
+                    : undefined,
+
+                cardioDistance:
+                  ex.exercise.muscleGroup === "cardio"
+                    ? (lastSet as any)?.cardioDistance ?? 0
+                    : undefined,
+
+                cardioStat:
+                  ex.exercise.muscleGroup === "cardio"
+                    ? (lastSet as any)?.cardioStat ?? 0
+                    : undefined,
               },
             ],
           };
