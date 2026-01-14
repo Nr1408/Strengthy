@@ -1203,10 +1203,25 @@ export default function NewWorkout() {
       if (saved.isPR) {
         const banners: PrBanner[] = [];
         if (saved.distancePR) {
+          // Backend returns distance in meters; convert to user-facing unit
+          let disp = "";
+          try {
+            if (typeof saved.distance === "number") {
+              if (distanceUnit === "mile") {
+                disp = `${(saved.distance / 1609.34).toFixed(2)} mi`;
+              } else {
+                disp = `${(saved.distance / 1000).toFixed(2)} km`;
+              }
+            } else if (saved.distance != null) {
+              disp = String(saved.distance);
+            }
+          } catch (e) {
+            disp = saved.distance != null ? String(saved.distance) : "";
+          }
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Distance PR",
-            value: saved.distance != null ? String(saved.distance) : "",
+            value: disp,
           });
         }
         if (saved.pacePR) {
