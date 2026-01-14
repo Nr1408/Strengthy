@@ -2,10 +2,6 @@
 const GRID_TEMPLATE =
   "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
 
-// Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
-
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -1051,64 +1047,39 @@ export default function EditWorkout() {
                 <div
                   className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
                   style={{
-                    gridTemplateColumns:
-                      workoutExercise.exercise.muscleGroup === "cardio"
-                        ? GRID_TEMPLATE_CARDIO
-                        : GRID_TEMPLATE,
+                    gridTemplateColumns: GRID_TEMPLATE,
                   }}
                 >
-                  {workoutExercise.exercise.muscleGroup === "cardio" ? (
-                    <>
-                      <span className="flex items-center justify-center text-center">
-                        SET
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        DURATION
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        {workoutExercise.exercise.name
-                          .toLowerCase()
-                          .includes("stair")
-                          ? "FLOORS"
-                          : "DISTANCE"}
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        {workoutExercise.exercise.name
-                          .toLowerCase()
-                          .includes("treadmill")
-                          ? "INCLINE"
-                          : workoutExercise.exercise.name
-                              .toLowerCase()
-                              .includes("row")
-                          ? "SPLIT TIME"
-                          : "LEVEL"}
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        <Trophy className="h-3.5 w-3.5" />
-                      </span>
-                      <div />
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex items-center justify-center text-center">
-                        SET
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        WEIGHT
-                      </span>
-                      <div />
-                      <span className="flex items-center justify-center text-center">
-                        REPS
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        RPE
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        <Trophy className="h-3.5 w-3.5" />
-                      </span>
-                      <div />
-                    </>
-                  )}
+                  {/* Column 1: SET */}
+                  <span className="flex items-center justify-center text-center">
+                    SET
+                  </span>
+
+                  {/* Column 2: WEIGHT (Merged box is centered here) */}
+                  <span className="flex items-center justify-center text-center">
+                    WEIGHT
+                  </span>
+
+                  {/* Column 3: The '×' spacer (6px) */}
+                  <div className="flex items-center justify-center" />
+
+                  {/* Column 4: REPS */}
+                  <span className="flex items-center justify-center text-center">
+                    REPS
+                  </span>
+
+                  {/* Column 5: RPE */}
+                  <span className="flex items-center justify-center text-center">
+                    RPE
+                  </span>
+
+                  {/* Column 6: PR Trophy */}
+                  <span className="flex items-center justify-center text-center">
+                    <Trophy className="h-3.5 w-3.5" />
+                  </span>
+
+                  {/* Column 7: Checkmark Spacer */}
+                  <div />
                 </div>
 
                 <div className="space-y-2">
