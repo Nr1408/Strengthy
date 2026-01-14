@@ -1,6 +1,10 @@
 // In EditWorkout.tsx (or ViewWorkout.tsx)
 const GRID_TEMPLATE =
   "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
+  
+const GRID_TEMPLATE_CARDIO =
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
+
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -250,22 +254,44 @@ export default function EditWorkout() {
 
                 // Cardio set mapping: convert backend meters -> km for UI
                 const mode = s.mode as any;
-                const durationSeconds = typeof s.durationSeconds === "number" ? s.durationSeconds : (s.duration_seconds ?? 0);
-                const distanceMeters = typeof s.distance === "number" ? s.distance : (s.distance_meters ?? undefined);
-                const floors = typeof s.floors === "number" ? s.floors : (s.floors ?? undefined);
-                const level = typeof s.level === "number" ? s.level : (s.level ?? undefined);
-                const splitSeconds = typeof s.splitSeconds === "number" ? s.splitSeconds : (s.split_seconds ?? undefined);
+                const durationSeconds =
+                  typeof s.durationSeconds === "number"
+                    ? s.durationSeconds
+                    : s.duration_seconds ?? 0;
+                const distanceMeters =
+                  typeof s.distance === "number"
+                    ? s.distance
+                    : s.distance_meters ?? undefined;
+                const floors =
+                  typeof s.floors === "number"
+                    ? s.floors
+                    : s.floors ?? undefined;
+                const level =
+                  typeof s.level === "number" ? s.level : s.level ?? undefined;
+                const splitSeconds =
+                  typeof s.splitSeconds === "number"
+                    ? s.splitSeconds
+                    : s.split_seconds ?? undefined;
 
                 let uiDistance: number | undefined = undefined;
                 if (mode === "stairs") {
-                  uiDistance = typeof floors === "number" ? floors : distanceMeters;
+                  uiDistance =
+                    typeof floors === "number" ? floors : distanceMeters;
                 } else {
-                  uiDistance = typeof distanceMeters === "number" ? distanceMeters / 1000 : undefined;
+                  uiDistance =
+                    typeof distanceMeters === "number"
+                      ? distanceMeters / 1000
+                      : undefined;
                 }
 
                 let uiStat = 0;
-                if (mode === "row") uiStat = typeof splitSeconds === "number" ? splitSeconds : (level ?? 0);
-                else if (mode === "stairs") uiStat = typeof level === "number" ? level : 0;
+                if (mode === "row")
+                  uiStat =
+                    typeof splitSeconds === "number"
+                      ? splitSeconds
+                      : level ?? 0;
+                else if (mode === "stairs")
+                  uiStat = typeof level === "number" ? level : 0;
                 else uiStat = typeof level === "number" ? level : 0;
 
                 return {
@@ -280,7 +306,8 @@ export default function EditWorkout() {
                   cardioMode: mode,
                   cardioDurationSeconds: durationSeconds,
                   cardioDistanceUnit: "km",
-                  cardioDistance: typeof uiDistance === "number" ? uiDistance : 0,
+                  cardioDistance:
+                    typeof uiDistance === "number" ? uiDistance : 0,
                   cardioStat: uiStat,
                   // preserve PR flags
                   cardioDistancePR: !!s.distancePR,
@@ -1090,43 +1117,36 @@ export default function EditWorkout() {
                   />
                 </div>
 
-                <div
-                  className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-                  style={{
-                    gridTemplateColumns: GRID_TEMPLATE,
-                  }}
-                >
-                  {/* Column 1: SET */}
-                  <span className="flex items-center justify-center text-center">
-                    SET
-                  </span>
-
-                  {/* Column 2: WEIGHT (Merged box is centered here) */}
-                  <span className="flex items-center justify-center text-center">
-                    WEIGHT
-                  </span>
-
-                  {/* Column 3: The '×' spacer (6px) */}
-                  <div className="flex items-center justify-center" />
-
-                  {/* Column 4: REPS */}
-                  <span className="flex items-center justify-center text-center">
-                    REPS
-                  </span>
-
-                  {/* Column 5: RPE */}
-                  <span className="flex items-center justify-center text-center">
-                    RPE
-                  </span>
-
-                  {/* Column 6: PR Trophy */}
-                  <span className="flex items-center justify-center text-center">
-                    <Trophy className="h-3.5 w-3.5" />
-                  </span>
-
-                  {/* Column 7: Checkmark Spacer */}
-                  <div />
-                </div>
+                {workoutExercise.exercise.muscleGroup === "cardio" ? (
+  <div
+    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
+  >
+    <span className="flex items-center justify-center">SET</span>
+    <span className="flex items-center justify-center">DURATION</span>
+    <span className="flex items-center justify-center">DISTANCE</span>
+    <span className="flex items-center justify-center">LEVEL</span>
+    <span className="flex items-center justify-center">
+      <Trophy className="h-3.5 w-3.5" />
+    </span>
+    <div />
+  </div>
+) : (
+  <div
+    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+    style={{ gridTemplateColumns: GRID_TEMPLATE }}
+  >
+    <span className="flex items-center justify-center">SET</span>
+    <span className="flex items-center justify-center">WEIGHT</span>
+    <div />
+    <span className="flex items-center justify-center">REPS</span>
+    <span className="flex items-center justify-center">RPE</span>
+    <span className="flex items-center justify-center">
+      <Trophy className="h-3.5 w-3.5" />
+    </span>
+    <div />
+  </div>
+)}
 
                 <div className="space-y-2">
                   {workoutExercise.sets.map((set, index) => (
