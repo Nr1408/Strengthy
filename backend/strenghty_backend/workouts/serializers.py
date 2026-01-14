@@ -427,45 +427,6 @@ class CardioSetSerializer(serializers.ModelSerializer):
 
         return flags
 
-
-class ProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Profile
-        fields = [
-            "goals",
-            "age",
-            "height",
-            "height_unit",
-            "current_weight",
-            "goal_weight",
-            "experience",
-            "monthly_workouts",
-        ]
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        # `goals` stored as JSON string server-side; expose as list in API
-        try:
-            import json as _json
-            rep_goals = []
-            if rep.get("goals"):
-                rep_goals = _json.loads(rep["goals"]) if isinstance(rep["goals"], str) else rep["goals"]
-            rep["goals"] = rep_goals
-        except Exception:
-            rep["goals"] = []
-        return rep
-
-    def to_internal_value(self, data):
-        # Accept `goals` as list from client, serialize as JSON string
-        if isinstance(data.get("goals"), list):
-            try:
-                import json as _json
-                data = dict(data)
-                data["goals"] = _json.dumps(data.get("goals") or [])
-            except Exception:
-                pass
-        return super().to_internal_value(data)
-
     def create(self, validated_data):
         workout = validated_data["workout"]
         exercise = validated_data["exercise"]
@@ -518,6 +479,45 @@ class ProfileSerializer(serializers.ModelSerializer):
         validated_data["is_pr"] = any(flags.values())
 
         return super().update(instance, validated_data)
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = [
+            "goals",
+            "age",
+            "height",
+            "height_unit",
+            "current_weight",
+            "goal_weight",
+            "experience",
+            "monthly_workouts",
+        ]
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        # `goals` stored as JSON string server-side; expose as list in API
+        try:
+            import json as _json
+            rep_goals = []
+            if rep.get("goals"):
+                rep_goals = _json.loads(rep["goals"]) if isinstance(rep["goals"], str) else rep["goals"]
+            rep["goals"] = rep_goals
+        except Exception:
+            rep["goals"] = []
+        return rep
+
+    def to_internal_value(self, data):
+        # Accept `goals` as list from client, serialize as JSON string
+        if isinstance(data.get("goals"), list):
+            try:
+                import json as _json
+                data = dict(data)
+                data["goals"] = _json.dumps(data.get("goals") or [])
+            except Exception:
+                pass
+        return super().to_internal_value(data)
         
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
