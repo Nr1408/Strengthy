@@ -179,10 +179,14 @@ export default function ViewWorkout() {
           const mode = s.mode;
           const durationSeconds =
             typeof s.durationSeconds === "number" ? s.durationSeconds : 0;
-          const distance =
+          const rawDistance =
             typeof s.distance === "number" && !isNaN(s.distance)
               ? s.distance
               : 0;
+
+          // Backend stores distance in meters for non-stairs cardio.
+          // Convert to km for display so 6000 -> 6.0 km in read-only view.
+          const distance = mode === "stairs" ? rawDistance : rawDistance / 1000;
 
           let cardioStat: number | undefined;
           if (mode === "stairs") {

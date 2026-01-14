@@ -53,16 +53,22 @@ if (_envBase && _envBase !== "undefined" && /[,;|]/.test(_envBase)) {
   const parts = _envBase.split(/[,;|]/);
   resolvedBase = pickFromCandidates(parts);
 } else {
+  // Start from explicit env or fall back to deployed backend.
   resolvedBase = _envBase && _envBase !== "undefined" ? _envBase : DEPLOYED_API;
-  // If no explicit env provided and we're in DEV, prefer local by default.
-  try {
-    // Never force local API outside DEV; it causes "Failed to fetch" in APKs.
-    const wantLocal = import.meta.env.DEV && typeof window !== "undefined" && (localStorage.getItem("USE_LOCAL_API") === "1");
-    if (!(_envBase && _envBase !== "undefined") && (import.meta.env.DEV || wantLocal)) {
-      resolvedBase = DEPLOYED_API;
-    }
-  } catch (e) {}
 }
+
+// In local Vite dev, default to the deployed backend so you can
+// run `npm run dev` without a local Django server. If you want
+// to force the local API instead, set
+//   localStorage.setItem("USE_LOCAL_API", "1")
+// in your browser devtools; any other value (or missing key)
+// will make dev use the deployed backend.
+try {
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    const useLocal = localStorage.getItem("USE_LOCAL_API") === "1";
+    resolvedBase = useLocal ? LOCAL_API : DEPLOYED_API;
+  }
+} catch (e) {}
 
 // For Capacitor/Android native builds, always prefer the deployed API
 // base so the APK connects to the public backend instead of any local
