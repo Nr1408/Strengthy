@@ -248,85 +248,14 @@ export default function EditWorkout() {
         });
         setExercises(grouped as WorkoutExercise[]);
       } catch (err: any) {
-          // sort by setNumber where present (cardio and strength share set_number)
-          const sorted = sets.slice().sort((a: any, b: any) => {
-            const aNum = typeof a.setNumber === "number" ? a.setNumber : 0;
-            const bNum = typeof b.setNumber === "number" ? b.setNumber : 0;
-            return aNum - bNum;
-          });
-
-          const mappedSets = sorted.map((s: any) => {
-            if (s.__kind === "cardio" || s.mode) {
-              const mode = s.mode;
-              const durationSeconds =
-                typeof s.durationSeconds === "number" ? s.durationSeconds : 0;
-              const rawDistance =
-                typeof s.distance === "number" && !isNaN(s.distance)
-                  ? s.distance
-                  : 0;
-              // convert backend meters -> km for editing UI
-              const distance = mode === "stairs" ? rawDistance : rawDistance / 1000;
-
-              let cardioStat: number | undefined;
-              if (mode === "stairs") {
-                cardioStat = typeof s.level === "number" ? s.level : undefined;
-              } else if (mode === "row") {
-                cardioStat = typeof s.splitSeconds === "number" ? s.splitSeconds : undefined;
-              } else {
-                cardioStat = typeof s.level === "number" ? s.level : undefined;
-              }
-
-              return {
-                id: String(s.id),
-                reps: 0,
-                weight: 0,
-                unit: getUnit(),
-                isPR: !!s.isPR,
-                completed: true,
-                absWeightPR: false,
-                e1rmPR: false,
-                volumePR: false,
-                type: "S",
-                rpe: undefined,
-                cardioMode: mode,
-                cardioDurationSeconds: durationSeconds,
-                cardioDistance: distance,
-                cardioDistanceUnit: "km",
-                cardioStat,
-                cardioDistancePR: !!s.distancePR,
-                cardioPacePR: !!s.pacePR,
-                cardioAscentPR: !!s.ascentPR,
-                cardioIntensityPR: !!s.intensityPR,
-                cardioSplitPR: !!s.splitPR,
-              } as WorkoutSet;
-            }
-
-            // strength set
-            return {
-              id: String(s.id),
-              reps: s.reps,
-              weight: s.weight || 0,
-              unit: s.unit || getUnit(),
-              isPR: s.isPR,
-              completed: true,
-              type: s.type || "S",
-              rpe: s.rpe,
-            } as WorkoutSet;
-          });
-
-          return {
-            id: crypto.randomUUID(),
-            exercise: {
-              id: exerciseId,
-              name: exerciseName,
-              muscleGroup: exerciseMuscle,
-            } as Exercise,
-            notes: exerciseNotes,
-            sets: mappedSets,
-          } as WorkoutExercise;
+        toast({
+          title: "Failed to load workout",
+          description: String(err),
+          variant: "destructive",
         });
-    setShowStartPicker(false);
-  }, [isDurationDialogOpen, durationMinutes]);
+      }
+    })();
+  }, [workoutId, userExercises]);
 
   // PR banner queue handling (show next banner when available)
   useEffect(() => {
