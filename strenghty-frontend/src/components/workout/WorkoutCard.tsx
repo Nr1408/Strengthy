@@ -209,21 +209,15 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
           {totalDistanceMeters > 0 && (
             <span>{(totalDistanceMeters / 1000).toFixed(2)} km</span>
           )}
-          {/* PRs: show inline when not only-cardio; when only-cardio render on its own line below */}
-          {!onlyCardio && totalPRs > 0 && (
+          {/* PRs: always show inline on the stats line */}
+          {totalPRs > 0 && (
             <span className="flex items-center gap-1 text-yellow-500">
               <Trophy className="h-3.5 w-3.5" />
               {totalPRs} PR{totalPRs > 1 ? "s" : ""}
             </span>
           )}
         </div>
-        {/* For cardio-only workouts, show PRs on a separate line for clarity */}
-        {onlyCardio && totalPRs > 0 && (
-          <div className="mt-2 text-xs text-yellow-500 flex items-center gap-2">
-            <Trophy className="h-3.5 w-3.5" />
-            <span>{totalPRs} PR{totalPRs > 1 ? "s" : ""}</span>
-          </div>
-        )}
+        {/* PRs are shown on the same line for all workouts (no separate line for cardio-only) */}
       </CardContent>
     </Card>
   );

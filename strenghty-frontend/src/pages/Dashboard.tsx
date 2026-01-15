@@ -112,7 +112,9 @@ export default function Dashboard() {
     queryKey: ["cardioSetsByWorkoutThis", workoutsThisWeek.map((w) => w.id)],
     queryFn: async () => {
       const entries = await Promise.all(
-        workoutsThisWeek.map(async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const)
+        workoutsThisWeek.map(
+          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const
+        )
       );
       return Object.fromEntries(entries) as Record<string, any[]>;
     },
@@ -134,7 +136,9 @@ export default function Dashboard() {
     queryKey: ["cardioSetsByWorkoutPrev", workoutsPrevWeek.map((w) => w.id)],
     queryFn: async () => {
       const entries = await Promise.all(
-        workoutsPrevWeek.map(async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const)
+        workoutsPrevWeek.map(
+          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const
+        )
       );
       return Object.fromEntries(entries) as Record<string, any[]>;
     },
@@ -145,7 +149,9 @@ export default function Dashboard() {
     queryKey: ["cardioSetsByWorkout", workoutsLastWeek.map((w) => w.id)],
     queryFn: async () => {
       const entries = await Promise.all(
-        workoutsLastWeek.map(async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const)
+        workoutsLastWeek.map(
+          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const
+        )
       );
       return Object.fromEntries(entries) as Record<string, any[]>;
     },
