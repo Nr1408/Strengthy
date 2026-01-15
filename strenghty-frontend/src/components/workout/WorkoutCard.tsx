@@ -136,14 +136,20 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
     }, 0);
   }
   const onlyCardio = hasCardio && !hasStrength;
-  const displayedExercisesCount =
-    workout.exercises && workout.exercises.length > 0
-      ? workout.exercises.length
-      : setsQuery.data
-      ? Array.from(
-          new Set((setsQuery.data as UiWorkoutSet[]).map((s) => s.exercise))
-        ).length
-      : undefined;
+  let displayedExercisesCount: number | undefined;
+  if (workout.exercises && workout.exercises.length > 0) {
+    displayedExercisesCount = workout.exercises.length;
+  } else {
+    const strengthSets = (setsQuery.data || []) as UiWorkoutSet[];
+    const cardioSets = (cardioQuery.data || []) as any[];
+    const uniqueIds = Array.from(
+      new Set([
+        ...strengthSets.map((s) => s.exercise),
+        ...cardioSets.map((c) => c.exercise),
+      ])
+    );
+    displayedExercisesCount = uniqueIds.length;
+  }
 
   return (
     <Card
