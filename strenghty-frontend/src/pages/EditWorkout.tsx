@@ -48,6 +48,7 @@ import {
   getWorkouts,
   createExercise,
   createSet,
+  createCardioSet,
   updateSet,
   updateWorkout,
   deleteSet,
@@ -848,16 +849,61 @@ export default function EditWorkout() {
         for (let i = 0; i < ex.sets.length; i++) {
           const s = ex.sets[i];
           try {
-            const created = await createSet({
-              workoutId: curWorkoutId as string,
-              exerciseId: exId,
-              setNumber: i + 1,
-              reps: s.reps || 0,
-              weight: s.weight,
-              unit: s.unit || getUnit(),
-              type: s.type,
-              rpe: s.rpe,
-            });
+            // If this exercise is a cardio exercise, call the cardio endpoint
+            let created: any;
+            if (ex.exercise.muscleGroup === "cardio") {
+              const mode = s.cardioMode || "treadmill";
+              const durationSeconds = s.cardioDurationSeconds ?? 0;
+              const rawDistance = s.cardioDistance ?? 0;
+              const rawStat = s.cardioStat ?? 0;
+              const distanceUnit = (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
+
+              let distance: number | undefined;
+              let floors: number | undefined;
+              let level: number | undefined;
+              let splitSeconds: number | undefined;
+
+              if (mode === "stairs") {
+                floors = rawDistance || undefined;
+                level = rawStat || undefined;
+              } else {
+                const distanceMeters =
+                  rawDistance && distanceUnit === "mile"
+                    ? Math.round(rawDistance * 1609.34)
+                    : rawDistance
+                    ? Math.round(rawDistance * 1000)
+                    : undefined;
+                if (mode === "row") {
+                  distance = distanceMeters || undefined;
+                  splitSeconds = rawStat || undefined;
+                } else {
+                  distance = distanceMeters || undefined;
+                  level = rawStat || undefined;
+                }
+              }
+
+              created = await createCardioSet({
+                workoutId: curWorkoutId as string,
+                exerciseId: exId,
+                mode: mode as any,
+                durationSeconds,
+                distance,
+                floors,
+                level,
+                splitSeconds,
+              });
+            } else {
+              created = await createSet({
+                workoutId: curWorkoutId as string,
+                exerciseId: exId,
+                setNumber: i + 1,
+                reps: s.reps || 0,
+                weight: s.weight,
+                unit: s.unit || getUnit(),
+                type: s.type,
+                rpe: s.rpe,
+              });
+            }
             try {
               if (
                 !allowPrForWorkout &&
@@ -907,16 +953,60 @@ export default function EditWorkout() {
               }
 
               // retry once
-              const createdRetry = await createSet({
-                workoutId: curWorkoutId as string,
-                exerciseId: exId,
-                setNumber: i + 1,
-                reps: s.reps || 0,
-                weight: s.weight,
-                unit: s.unit || getUnit(),
-                type: s.type,
-                rpe: s.rpe,
-              });
+              let createdRetry: any;
+              if (ex.exercise.muscleGroup === "cardio") {
+                const mode = s.cardioMode || "treadmill";
+                const durationSeconds = s.cardioDurationSeconds ?? 0;
+                const rawDistance = s.cardioDistance ?? 0;
+                const rawStat = s.cardioStat ?? 0;
+                const distanceUnit = (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
+
+                let distance: number | undefined;
+                let floors: number | undefined;
+                let level: number | undefined;
+                let splitSeconds: number | undefined;
+
+                if (mode === "stairs") {
+                  floors = rawDistance || undefined;
+                  level = rawStat || undefined;
+                } else {
+                  const distanceMeters =
+                    rawDistance && distanceUnit === "mile"
+                      ? Math.round(rawDistance * 1609.34)
+                      : rawDistance
+                      ? Math.round(rawDistance * 1000)
+                      : undefined;
+                  if (mode === "row") {
+                    distance = distanceMeters || undefined;
+                    splitSeconds = rawStat || undefined;
+                  } else {
+                    distance = distanceMeters || undefined;
+                    level = rawStat || undefined;
+                  }
+                }
+
+                createdRetry = await createCardioSet({
+                  workoutId: curWorkoutId as string,
+                  exerciseId: exId,
+                  mode: mode as any,
+                  durationSeconds,
+                  distance,
+                  floors,
+                  level,
+                  splitSeconds,
+                });
+              } else {
+                createdRetry = await createSet({
+                  workoutId: curWorkoutId as string,
+                  exerciseId: exId,
+                  setNumber: i + 1,
+                  reps: s.reps || 0,
+                  weight: s.weight,
+                  unit: s.unit || getUnit(),
+                  type: s.type,
+                  rpe: s.rpe,
+                });
+              }
               try {
                 if (
                   !allowPrForWorkout &&
