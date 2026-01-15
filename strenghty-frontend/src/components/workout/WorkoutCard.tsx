@@ -56,15 +56,20 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
       .map((ex) => ex.exercise.name);
     // detect whether sets are strength or cardio
     hasStrength = workout.exercises.some((ex) =>
-      (ex.sets || []).some((s: any) =>
-        (s.weight !== undefined && Number(s.weight) > 0) ||
-        (s.reps !== undefined && Number(s.reps) > 0) ||
-        s.set_type === "S"
+      (ex.sets || []).some(
+        (s: any) =>
+          (s.weight !== undefined && Number(s.weight) > 0) ||
+          (s.reps !== undefined && Number(s.reps) > 0) ||
+          s.set_type === "S"
       )
     );
     hasCardio = workout.exercises.some((ex) =>
-      (ex.sets || []).some((s: any) =>
-        s.cardioMode || s.cardioDistance !== undefined || s.distance_meters !== undefined || s.split_seconds !== undefined
+      (ex.sets || []).some(
+        (s: any) =>
+          s.cardioMode ||
+          s.cardioDistance !== undefined ||
+          s.distance_meters !== undefined ||
+          s.split_seconds !== undefined
       )
     );
   } else {
@@ -126,7 +131,11 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
     totalDistanceMeters = workout.exercises.reduce((acc, ex) => {
       const sDist = (ex.sets || []).reduce((sd, ss: any) => {
         const d = typeof ss.cardioDistance === "number" ? ss.cardioDistance : 0;
-        if (ss.cardioMode || ss.cardioDistance !== undefined || ss.distance_meters !== undefined) {
+        if (
+          ss.cardioMode ||
+          ss.cardioDistance !== undefined ||
+          ss.distance_meters !== undefined
+        ) {
           hasCardio = true;
         }
         // ss.cardioDistance is in km for non-stairs; convert to meters
@@ -200,7 +209,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
           {totalDistanceMeters > 0 && (
             <span>{(totalDistanceMeters / 1000).toFixed(2)} km</span>
           )}
-          {/* PRs: hide when only cardio */}
+          {/* PRs: show inline when not only-cardio; when only-cardio render on its own line below */}
           {!onlyCardio && totalPRs > 0 && (
             <span className="flex items-center gap-1 text-yellow-500">
               <Trophy className="h-3.5 w-3.5" />
@@ -208,6 +217,13 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
             </span>
           )}
         </div>
+        {/* For cardio-only workouts, show PRs on a separate line for clarity */}
+        {onlyCardio && totalPRs > 0 && (
+          <div className="mt-2 text-xs text-yellow-500 flex items-center gap-2">
+            <Trophy className="h-3.5 w-3.5" />
+            <span>{totalPRs} PR{totalPRs > 1 ? "s" : ""}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

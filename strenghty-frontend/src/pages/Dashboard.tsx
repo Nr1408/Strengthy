@@ -6,7 +6,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
 import { StatsCard } from "@/components/workout/StatsCard";
 import { useQuery } from "@tanstack/react-query";
-import { getSets, getWorkouts } from "@/lib/api";
+import { getSets, getWorkouts, getCardioSetsForWorkout } from "@/lib/api";
 import type { UiWorkoutSet, UiWorkout } from "@/lib/api";
 import { startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 
@@ -108,6 +108,17 @@ export default function Dashboard() {
     enabled: workoutsThisWeek.length > 0,
   });
 
+  const { data: cardioSetsByWorkoutThisWeek = {} } = useQuery({
+    queryKey: ["cardioSetsByWorkoutThis", workoutsThisWeek.map((w) => w.id)],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        workoutsThisWeek.map(async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const)
+      );
+      return Object.fromEntries(entries) as Record<string, any[]>;
+    },
+    enabled: workoutsThisWeek.length > 0,
+  });
+
   const { data: setsByWorkoutPrevWeek = {} } = useQuery({
     queryKey: ["setsByWorkoutPrev", workoutsPrevWeek.map((w) => w.id)],
     queryFn: async () => {
@@ -119,40 +130,74 @@ export default function Dashboard() {
     enabled: workoutsPrevWeek.length > 0,
   });
 
+  const { data: cardioSetsByWorkoutPrevWeek = {} } = useQuery({
+    queryKey: ["cardioSetsByWorkoutPrev", workoutsPrevWeek.map((w) => w.id)],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        workoutsPrevWeek.map(async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const)
+      );
+      return Object.fromEntries(entries) as Record<string, any[]>;
+    },
+    enabled: workoutsPrevWeek.length > 0,
+  });
+
+  const { data: cardioSetsByWorkoutLastWeek = {} } = useQuery({
+    queryKey: ["cardioSetsByWorkout", workoutsLastWeek.map((w) => w.id)],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        workoutsLastWeek.map(async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const)
+      );
+      return Object.fromEntries(entries) as Record<string, any[]>;
+    },
+    enabled: workoutsLastWeek.length > 0,
+  });
+
   // Metrics
   const thisWeekCount = workoutsThisWeek.length;
-  const prsThisWeek =
-    workoutsThisWeek.length === 0
-      ? 0
-      : Object.values(setsByWorkoutThisWeek)
-          .flat()
-          .filter((s) => s.isPR).length;
-  const prsLastWeek =
-    workoutsLastWeek.length === 0
-      ? 0
-      : Object.values(setsByWorkoutLastWeek)
-          .flat()
-          .filter((s) => s.isPR).length;
+  const prsThisWeek = (() => {
+    if (workoutsThisWeek.length === 0) return 0;
+    const strength = Object.values(setsByWorkoutThisWeek).flat();
+    const cardio = Object.values(cardioSetsByWorkoutThisWeek).flat();
+    return [...strength, ...cardio].filter((s) => s.isPR).length;
+  })();
+
+  const prsLastWeek = (() => {
+    if (workoutsLastWeek.length === 0) return 0;
+    const strength = Object.values(setsByWorkoutLastWeek).flat();
+    const cardio = Object.values(cardioSetsByWorkoutLastWeek).flat();
+    return [...strength, ...cardio].filter((s) => s.isPR).length;
+  })();
   const prTrendPercent = (() => {
     if (prsLastWeek === 0) return prsThisWeek > 0 ? 100 : 0;
     return Math.round(((prsThisWeek - prsLastWeek) / prsLastWeek) * 100);
   })();
   const prTrendPositive = prsThisWeek >= prsLastWeek;
 
-  const setsThisWeek =
-    workoutsThisWeek.length === 0
-      ? 0
-      : Object.values(setsByWorkoutThisWeek).reduce(
-          (acc, sets) => acc + sets.length,
-          0
-        );
-  const setsLastWeek =
-    workoutsLastWeek.length === 0
-      ? 0
-      : Object.values(setsByWorkoutLastWeek).reduce(
-          (acc, sets) => acc + sets.length,
-          0
-        );
+  const setsThisWeek = (() => {
+    if (workoutsThisWeek.length === 0) return 0;
+    const strengthCount = Object.values(setsByWorkoutThisWeek).reduce(
+      (acc, sets) => acc + sets.length,
+      0
+    );
+    const cardioCount = Object.values(cardioSetsByWorkoutThisWeek).reduce(
+      (acc, sets) => acc + sets.length,
+      0
+    );
+    return strengthCount + cardioCount;
+  })();
+
+  const setsLastWeek = (() => {
+    if (workoutsLastWeek.length === 0) return 0;
+    const strengthCount = Object.values(setsByWorkoutLastWeek).reduce(
+      (acc, sets) => acc + sets.length,
+      0
+    );
+    const cardioCount = Object.values(cardioSetsByWorkoutLastWeek).reduce(
+      (acc, sets) => acc + sets.length,
+      0
+    );
+    return strengthCount + cardioCount;
+  })();
   const setsTrendPercent = (() => {
     if (setsLastWeek === 0) return setsThisWeek > 0 ? 100 : 0;
     return Math.round(((setsThisWeek - setsLastWeek) / setsLastWeek) * 100);

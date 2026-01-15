@@ -26,6 +26,7 @@ import {
 } from "date-fns";
 import {
   signOut,
+  clearToken,
   getSets,
   getWorkouts,
   type UiWorkout,
@@ -255,12 +256,40 @@ export default function Profile() {
   };
 
   const handleSignOut = async () => {
+    // Perform immediate synchronous local cleanup so the UI can navigate
+    // away without awaiting any native operations that may fail on-device.
     try {
-      // centralized sign-out to clear both localStorage and native Preferences
-      // and attempt to sign out from Google SDKs
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      await signOut();
+      try {
+        clearToken();
+      } catch (e) {}
+      try {
+        localStorage.removeItem("user:profile");
+      } catch (e) {}
+      try {
+        localStorage.removeItem("user:onboarding");
+      } catch (e) {}
+      try {
+        localStorage.removeItem("user:monthlyGoal");
+      } catch (e) {}
+      try {
+        localStorage.removeItem("google:credential");
+      } catch (e) {}
     } catch (e) {}
+
+    // Fire-and-forget the full signOut which will attempt native cleanup.
+    // Any errors are logged but do not block navigation or crash the UI.
+    try {
+      signOut().catch((err) => {
+        try {
+          console.error("signOut background error", err);
+        } catch (e) {}
+      });
+    } catch (e) {
+      try {
+        console.error("signOut invocation failed", e);
+      } catch (e) {}
+    }
+
     navigate("/auth");
   };
 

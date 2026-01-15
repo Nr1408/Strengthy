@@ -1,5 +1,6 @@
 import type { CardioMode } from "@/types/workout";
-import { Preferences } from '@capacitor/preferences';
+// Capacitor Preferences is imported dynamically where needed to avoid
+// bundling/runtime issues on some platforms.
 
 // Prefer explicit env vars; fall back to local dev URL
 // Prefer explicit env vars; fall back to the local backend IP used in this dev setup.
@@ -107,6 +108,30 @@ try {
 } catch (e) {
   // ignore errors and keep resolvedBase
 }
+
+// Runtime override: allow setting a debug API base from localStorage so
+// we can point an installed APK to a temporary/test backend without
+// rebuilding. Set `localStorage.setItem('API_BASE_OVERRIDE', 'https://host/api')`
+// via Chrome remote devtools on the device and reload the WebView.
+try {
+  if (typeof window !== 'undefined') {
+    try {
+      const o = localStorage.getItem('API_BASE_OVERRIDE');
+      if (o && typeof o === 'string' && o.trim().length > 0) {
+        let candidate = o.trim();
+        // normalize trailing slashes
+        candidate = candidate.replace(/\/+$/g, '');
+        // ensure it includes /api
+        if (!/\/api(?:$|\/)/.test(candidate)) candidate = candidate + '/api';
+        // override resolvedBase for debugging/testing only
+        resolvedBase = candidate;
+        try { console.info('API_BASE overridden at runtime ->', resolvedBase); } catch (e) {}
+      }
+    } catch (e) {
+      // ignore localStorage errors
+    }
+  }
+} catch (e) {}
 
 // Helpful runtime logs to debug incorrect API_BASE during development
 try {
@@ -310,24 +335,32 @@ try {
   (window as any).Capacitor?.isNativePlatform?.() === true;
 ;
     if (isNative) {
-      // Attempt to sync token, profile and onboarding from Preferences -> localStorage on startup
+      // Attempt to sync token/profile from Capacitor Preferences -> localStorage on startup.
       (async () => {
         try {
-          const keys = ["token", "user:profile", "user:onboarding", "user:monthlyGoal", "google:credential"];
-          for (const k of keys) {
-            try {
-              const stored = await Preferences.get({ key: k });
-              if (stored && typeof stored.value === "string" && stored.value.length > 0) {
-                try {
-                  // Only set if localStorage doesn't already have a value to avoid overwriting
-                  const existing = localStorage.getItem(k);
-                  if (!existing) {
-                    localStorage.setItem(k, stored.value);
-                  }
-                } catch (e) {}
+          let Prefs: any = null;
+          try {
+            const m = await import('@capacitor/preferences');
+            Prefs = m.Preferences || m;
+          } catch (e) {
+            Prefs = null;
+          }
+          if (Prefs) {
+            const keys = ["token", "user:profile", "user:onboarding", "user:monthlyGoal", "google:credential"];
+            for (const k of keys) {
+              try {
+                const stored = await Prefs.get({ key: k });
+                if (stored && typeof stored.value === "string" && stored.value.length > 0) {
+                  try {
+                    const existing = localStorage.getItem(k);
+                    if (!existing) {
+                      localStorage.setItem(k, stored.value);
+                    }
+                  } catch (e) {}
+                }
+              } catch (e) {
+                // ignore per-key errors
               }
-            } catch (e) {
-              // ignore per-key errors
             }
           }
         } catch (e) {
@@ -343,9 +376,13 @@ try {
         } catch (e) {}
         (async () => {
           try {
-            await Preferences.set({ key: "token", value: token });
+            const m = await import('@capacitor/preferences');
+            const Prefs = m.Preferences || m;
+            try {
+              await Prefs.set({ key: "token", value: token });
+            } catch (e) {}
           } catch (e) {
-            // ignore
+            // ignore dynamic import errors
           }
         })();
       };
@@ -357,8 +394,14 @@ try {
         } catch (e) {}
         (async () => {
           try {
-            await Preferences.remove({ key: "token" });
-          } catch (e) {}
+            const m = await import('@capacitor/preferences');
+            const Prefs = m.Preferences || m;
+            try {
+              await Prefs.remove({ key: "token" });
+            } catch (e) {}
+          } catch (e) {
+            // ignore dynamic import errors
+          }
         })();
       };
     }
@@ -715,7 +758,11 @@ export async function loginWithGoogle(idToken: string) {
           const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
           const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
           if (isNative) {
-            await Preferences.set({ key: 'user:profile', value: JSON.stringify(profile) });
+            try {
+              const m = await import('@capacitor/preferences');
+              const Prefs = m.Preferences || m;
+              try { await Prefs.set({ key: 'user:profile', value: JSON.stringify(profile) }); } catch (e) {}
+            } catch (e) {}
           }
         } catch (e) {}
       }
@@ -742,10 +789,26 @@ export async function loginWithGoogle(idToken: string) {
               monthlyWorkouts: p.monthly_workouts != null ? String(p.monthly_workouts) : "",
             };
             try { localStorage.setItem("user:onboarding", JSON.stringify(onboarding)); } catch (e) {}
-            try { if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true) Preferences.set({ key: 'user:onboarding', value: JSON.stringify(onboarding) }); } catch (e) {}
+            try {
+              if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true) {
+                try {
+                  const m = await import('@capacitor/preferences');
+                  const Prefs = m.Preferences || m;
+                  try { await Prefs.set({ key: 'user:onboarding', value: JSON.stringify(onboarding) }); } catch (e) {}
+                } catch (e) {}
+              }
+            } catch (e) {}
             if (onboarding.monthlyWorkouts) {
               try { localStorage.setItem('user:monthlyGoal', String(onboarding.monthlyWorkouts)); } catch (e) {}
-              try { if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true) Preferences.set({ key: 'user:monthlyGoal', value: String(onboarding.monthlyWorkouts) }); } catch (e) {}
+              try {
+                if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true) {
+                  try {
+                    const m = await import('@capacitor/preferences');
+                    const Prefs = m.Preferences || m;
+                    try { await Prefs.set({ key: 'user:monthlyGoal', value: String(onboarding.monthlyWorkouts) }); } catch (e) {}
+                  } catch (e) {}
+                }
+              } catch (e) {}
             }
           } catch (e) {}
         }
@@ -786,10 +849,16 @@ export async function signOut() {
   try {
     const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
     if (isNative) {
-      try { await Preferences.remove({ key: 'user:profile' }); } catch (e) {}
-      try { await Preferences.remove({ key: 'user:onboarding' }); } catch (e) {}
-      try { await Preferences.remove({ key: 'user:monthlyGoal' }); } catch (e) {}
-      try { await Preferences.remove({ key: 'google:credential' }); } catch (e) {}
+      try {
+        const m = await import('@capacitor/preferences');
+        const Prefs = m.Preferences || m;
+        try { await Prefs.remove({ key: 'user:profile' }); } catch (e) {}
+        try { await Prefs.remove({ key: 'user:onboarding' }); } catch (e) {}
+        try { await Prefs.remove({ key: 'user:monthlyGoal' }); } catch (e) {}
+        try { await Prefs.remove({ key: 'google:credential' }); } catch (e) {}
+      } catch (e) {
+        // ignore failures importing Preferences
+      }
       // Try to sign out via the native Google plugin if available
       try {
         // Dynamically import to avoid bundling native-only plugin into web builds
