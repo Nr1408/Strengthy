@@ -190,7 +190,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
           )}
         </div>
 
-        <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <span>{displayedExercisesCount ?? "?"} exercises</span>
           <span>{totalSets} sets</span>
           {!onlyCardio && workout.duration && (
@@ -210,21 +210,15 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
             <span>{(totalDistanceMeters / 1000).toFixed(2)} km</span>
           )}
           {/* PRs: always show inline on the stats line */}
-          {/* PR inline for sm+ screens */}
+          {/* PRs: single flexible element - stays inline when there's room, wraps on very small screens */}
           {totalPRs > 0 && (
-            <span className="hidden sm:flex items-center gap-1 text-yellow-500">
+            <span className="flex items-center gap-1 text-yellow-500 flex-shrink-0">
               <Trophy className="h-3.5 w-3.5" />
               {totalPRs} PR{totalPRs > 1 ? "s" : ""}
             </span>
           )}
         </div>
-        {/* On small screens show PRs on their own line so layout doesn't break */}
-        {totalPRs > 0 && (
-          <div className="flex sm:hidden mt-2 text-xs text-yellow-500 items-center gap-2">
-            <Trophy className="h-3.5 w-3.5" />
-            <span>{totalPRs} PR{totalPRs > 1 ? "s" : ""}</span>
-          </div>
-        )}
+        {/* (PR will wrap to next line automatically on very small widths) */}
       </CardContent>
     </Card>
   );
