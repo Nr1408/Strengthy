@@ -1,10 +1,9 @@
 // In EditWorkout.tsx (or ViewWorkout.tsx)
 const GRID_TEMPLATE =
   "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
-  
+
 const GRID_TEMPLATE_CARDIO =
   "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
-
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -856,7 +855,8 @@ export default function EditWorkout() {
               const durationSeconds = s.cardioDurationSeconds ?? 0;
               const rawDistance = s.cardioDistance ?? 0;
               const rawStat = s.cardioStat ?? 0;
-              const distanceUnit = (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
+              const distanceUnit =
+                (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
 
               let distance: number | undefined;
               let floors: number | undefined;
@@ -959,7 +959,8 @@ export default function EditWorkout() {
                 const durationSeconds = s.cardioDurationSeconds ?? 0;
                 const rawDistance = s.cardioDistance ?? 0;
                 const rawStat = s.cardioStat ?? 0;
-                const distanceUnit = (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
+                const distanceUnit =
+                  (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
 
                 let distance: number | undefined;
                 let floors: number | undefined;
@@ -1208,35 +1209,51 @@ export default function EditWorkout() {
                 </div>
 
                 {workoutExercise.exercise.muscleGroup === "cardio" ? (
-  <div
-    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
-  >
-    <span className="flex items-center justify-center">SET</span>
-    <span className="flex items-center justify-center">DURATION</span>
-    <span className="flex items-center justify-center">DISTANCE</span>
-    <span className="flex items-center justify-center">LEVEL</span>
-    <span className="flex items-center justify-center">
-      <Trophy className="h-3.5 w-3.5" />
-    </span>
-    <div />
-  </div>
-) : (
-  <div
-    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-    style={{ gridTemplateColumns: GRID_TEMPLATE }}
-  >
-    <span className="flex items-center justify-center">SET</span>
-    <span className="flex items-center justify-center">WEIGHT</span>
-    <div />
-    <span className="flex items-center justify-center">REPS</span>
-    <span className="flex items-center justify-center">RPE</span>
-    <span className="flex items-center justify-center">
-      <Trophy className="h-3.5 w-3.5" />
-    </span>
-    <div />
-  </div>
-)}
+                  <div
+                    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
+                  >
+                    <span className="flex items-center justify-center">
+                      SET
+                    </span>
+                    <span className="flex items-center justify-center">
+                      DURATION
+                    </span>
+                    <span className="flex items-center justify-center">
+                      DISTANCE
+                    </span>
+                    <span className="flex items-center justify-center">
+                      LEVEL
+                    </span>
+                    <span className="flex items-center justify-center">
+                      <Trophy className="h-3.5 w-3.5" />
+                    </span>
+                    <div />
+                  </div>
+                ) : (
+                  <div
+                    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    style={{ gridTemplateColumns: GRID_TEMPLATE }}
+                  >
+                    <span className="flex items-center justify-center">
+                      SET
+                    </span>
+                    <span className="flex items-center justify-center">
+                      WEIGHT
+                    </span>
+                    <div />
+                    <span className="flex items-center justify-center">
+                      REPS
+                    </span>
+                    <span className="flex items-center justify-center">
+                      RPE
+                    </span>
+                    <span className="flex items-center justify-center">
+                      <Trophy className="h-3.5 w-3.5" />
+                    </span>
+                    <div />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   {workoutExercise.sets.map((set, index) => (

@@ -4,7 +4,7 @@ import type { Workout } from "@/types/workout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { getSets, getExercises } from "@/lib/api";
+import { getSets, getExercises, getCardioSetsForWorkout } from "@/lib/api";
 import type { UiWorkoutSet, UiExercise } from "@/lib/api";
 import { getUnit, formatMinutes } from "@/lib/utils";
 
@@ -28,8 +28,18 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
       workout.exercises.every((ex) => (ex.sets || []).length === 0),
   });
 
+  const cardioQuery = useQuery({
+    queryKey: ["cardio-sets", workout.id],
+    queryFn: () => getCardioSetsForWorkout(workout.id),
+    enabled:
+      !workout.exercises ||
+      workout.exercises.length === 0 ||
+      workout.exercises.every((ex) => (ex.sets || []).length === 0),
+  });
+
   let totalSets = 0;
   let totalPRs = 0;
+  let totalDistanceMeters = 0;
   let totalVolume = 0;
   let exerciseBadges: string[] = [];
 
@@ -42,17 +52,37 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
     exerciseBadges = workout.exercises
       .slice(0, 3)
       .map((ex) => ex.exercise.name);
-  } else if (setsQuery.data) {
-    const sets = setsQuery.data as UiWorkoutSet[];
-    totalSets = sets.length;
-    totalPRs = sets.filter((s) => s.isPR).length;
-    totalVolume = sets.reduce((acc, s) => {
+  } else {
+    // If workout.exercises is empty, combine strength + cardio sets fetched from server
+    const strengthSets = (setsQuery.data || []) as UiWorkoutSet[];
+    const cardioSets = (cardioQuery.data || []) as any[];
+    totalSets = strengthSets.length + cardioSets.length;
+    totalPRs =
+      (strengthSets.filter((s) => s.isPR).length || 0) +
+      (cardioSets.filter((s) => s.isPR).length || 0);
+
+    totalVolume = strengthSets.reduce((acc, s) => {
       const w = typeof s.weight === "number" ? s.weight : Number(s.weight || 0);
       const r = typeof s.reps === "number" ? s.reps : Number(s.reps || 0);
       return acc + w * r;
     }, 0);
-    const unique = Array.from(new Set(sets.map((s) => s.exercise))).slice(0, 3);
-    exerciseBadges = unique.map((id) => {
+
+    // Sum cardio distances (distance_meters) for cardio sets
+    totalDistanceMeters = cardioSets.reduce((acc, c) => {
+      const d =
+        typeof c.distance === "number"
+          ? c.distance
+          : Number(c.distance || c.distance_meters || 0);
+      return acc + (Number.isFinite(d) ? d : 0);
+    }, 0);
+
+    const uniqueIds = Array.from(
+      new Set([
+        ...strengthSets.map((s) => s.exercise),
+        ...cardioSets.map((c) => c.exercise),
+      ])
+    ).slice(0, 3);
+    exerciseBadges = uniqueIds.map((id) => {
       const found = (exercisesList as UiExercise[]).find(
         (e) => e.id === id || String(e.id) === String(id)
       );
@@ -69,6 +99,16 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
         return sa + w * r;
       }, 0);
       return acc + sVolume;
+    }, 0);
+
+    // Also compute cardio distance from workout.exercises if present
+    totalDistanceMeters = workout.exercises.reduce((acc, ex) => {
+      const sDist = (ex.sets || []).reduce((sd, ss: any) => {
+        const d = typeof ss.cardioDistance === "number" ? ss.cardioDistance : 0;
+        // ss.cardioDistance is in km for non-stairs; convert to meters
+        return sd + (ss.cardioMode === "stairs" ? 0 : d * 1000);
+      }, 0);
+      return acc + sDist;
     }, 0);
   }
   const displayedExercisesCount =
@@ -123,6 +163,10 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
           <span>
             {totalVolume.toLocaleString()} {getUnit()}
           </span>
+          {/* Cardio distance (show km) */}
+          {totalDistanceMeters > 0 && (
+            <span>{(totalDistanceMeters / 1000).toFixed(2)} km</span>
+          )}
           {totalPRs > 0 && (
             <span className="flex items-center gap-1 text-yellow-500">
               <Trophy className="h-3.5 w-3.5" />
