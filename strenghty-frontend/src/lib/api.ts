@@ -859,15 +859,10 @@ export async function signOut() {
       } catch (e) {
         // ignore failures importing Preferences
       }
-      // Try to sign out via the native Google plugin if available
-      try {
-        // Dynamically import to avoid bundling native-only plugin into web builds
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-        if (GoogleAuth && typeof GoogleAuth.signOut === 'function') {
-          try { await GoogleAuth.signOut(); } catch (e) {}
-        }
-      } catch (e) {}
+      // NOTE: We intentionally do NOT call the native GoogleAuth.signOut here.
+      // Some Android builds/devices crash inside the native plugin during sign-out.
+      // Clearing our app token + stored credentials is sufficient to sign the user
+      // out of Strengthy.
     } else {
       // Web: attempt to disable auto-select and clear any stored credential
       try {

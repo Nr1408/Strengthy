@@ -312,7 +312,11 @@ export default function Auth() {
         const msg = `Google sign-in isn't ready (missing client id). This usually means the app can't reach the backend to load /public-config.\n\nAPI: ${API_BASE}`;
         setDialogMessage(msg);
         setErrorDialogOpen(true);
-        toast({ title: "Google sign-in unavailable", description: "Could not load Google config from server.", variant: "destructive" });
+        toast({
+          title: "Google sign-in unavailable",
+          description: "Could not load Google config from server.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -338,13 +342,19 @@ export default function Auth() {
       setDialogMessage("Google sign-in returned no token. Please try again.");
       setErrorDialogOpen(true);
     } catch (e) {
-      const msg = String((e as any)?.message || e || "Native Google sign-in failed");
+      const msg = String(
+        (e as any)?.message || e || "Native Google sign-in failed"
+      );
       try {
         console.warn("Native GoogleAuth failed", e);
       } catch {}
       setDialogMessage(`Google sign-in failed: ${msg}\n\nAPI: ${API_BASE}`);
       setErrorDialogOpen(true);
-      toast({ title: "Google sign-in failed", description: msg, variant: "destructive" });
+      toast({
+        title: "Google sign-in failed",
+        description: msg,
+        variant: "destructive",
+      });
     }
   };
 
