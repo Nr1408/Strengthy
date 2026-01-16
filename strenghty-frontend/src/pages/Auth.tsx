@@ -308,6 +308,14 @@ export default function Auth() {
 
     // --- NATIVE FLOW (Keep existing) ---
     try {
+      if (!googleClientId) {
+        const msg = `Google sign-in isn't ready (missing client id). This usually means the app can't reach the backend to load /public-config.\n\nAPI: ${API_BASE}`;
+        setDialogMessage(msg);
+        setErrorDialogOpen(true);
+        toast({ title: "Google sign-in unavailable", description: "Could not load Google config from server.", variant: "destructive" });
+        return;
+      }
+
       if (googleClientId) {
         try {
           await GoogleAuth.initialize({
@@ -324,9 +332,19 @@ export default function Auth() {
         toast({ title: "Welcome!", description: "Signed in with Google" });
         const target = data?.created ? "/onboarding" : "/dashboard";
         navigate(target);
+        return;
       }
+
+      setDialogMessage("Google sign-in returned no token. Please try again.");
+      setErrorDialogOpen(true);
     } catch (e) {
-      console.warn("Native GoogleAuth failed", e);
+      const msg = String((e as any)?.message || e || "Native Google sign-in failed");
+      try {
+        console.warn("Native GoogleAuth failed", e);
+      } catch {}
+      setDialogMessage(`Google sign-in failed: ${msg}\n\nAPI: ${API_BASE}`);
+      setErrorDialogOpen(true);
+      toast({ title: "Google sign-in failed", description: msg, variant: "destructive" });
     }
   };
 

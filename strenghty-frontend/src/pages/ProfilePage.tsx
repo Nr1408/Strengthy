@@ -276,17 +276,27 @@ export default function Profile() {
       } catch (e) {}
     } catch (e) {}
 
-    // Fire-and-forget the full signOut which will attempt native cleanup.
-    // Any errors are logged but do not block navigation or crash the UI.
+    // Defer native cleanup to the next tick so the UI can navigate away
+    // first. On some devices importing native plugins synchronously while
+    // the UI is transitioning can trigger crashes; deferring reduces that
+    // risk while still performing background cleanup.
     try {
-      signOut().catch((err) => {
+      setTimeout(() => {
         try {
-          console.error("signOut background error", err);
-        } catch (e) {}
-      });
+          signOut().catch((err) => {
+            try {
+              console.error("signOut background error", err);
+            } catch (e) {}
+          });
+        } catch (e) {
+          try {
+            console.error("signOut invocation failed", e);
+          } catch (e) {}
+        }
+      }, 150);
     } catch (e) {
       try {
-        console.error("signOut invocation failed", e);
+        console.error("failed to schedule signOut cleanup", e);
       } catch (e) {}
     }
 
