@@ -13,6 +13,8 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from urllib.parse import quote
 import json
+from django.http import JsonResponse
+
 
 from .models import Exercise, Workout, WorkoutSet, CardioSet, PasswordResetCode, Profile
 from django.db import IntegrityError
@@ -42,6 +44,10 @@ def public_config(request):
         configured = "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com"
     return Response({"google_client_id": configured})
 
+
+
+def health_check(request):
+    return JsonResponse({"status": "ok"})
 
 @api_view(["GET", "POST"])
 @drf_permission_classes([permissions.AllowAny])

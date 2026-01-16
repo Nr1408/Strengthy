@@ -1,10 +1,13 @@
 from django.contrib import admin
 from django.urls import path, include
 from workouts import views as workout_views
-
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 
+
+
+def health_check(request):
+    return JsonResponse({"status": "ok"})
 
 def emergency_admin_reset(request):
     User = get_user_model()
@@ -24,14 +27,11 @@ def emergency_admin_reset(request):
     else:
         return HttpResponse("Admin password reset successful.")
 
-
 urlpatterns = [
+    path("health/", health_check, name="health"),   # ✅ KEEP THIS
     path("admin/", admin.site.urls),
-
-    # 👇 temporary reset endpoint
     path("emergency-reset/", emergency_admin_reset),
-
-    # 👇 API routes
     path("api/", include("workouts.urls")),
     path("api/public-config/", workout_views.public_config, name="public-config"),
+    
 ]
