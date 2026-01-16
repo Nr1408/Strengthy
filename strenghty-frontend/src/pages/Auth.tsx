@@ -47,6 +47,14 @@ export default function Auth() {
   }
 
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    | null
+    | {
+        kind: "login" | "signup" | "google";
+        title: string;
+        detail: string;
+      }
+  >(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
@@ -262,6 +270,11 @@ export default function Auth() {
       return;
     }
 
+    setPendingAction({
+      kind: "google",
+      title: "Signing you in",
+      detail: "Connecting to Google and syncing your account…",
+    });
     setIsLoading(true);
 
     try {
@@ -276,6 +289,7 @@ export default function Auth() {
       setDialogMessage(msg);
       setErrorDialogOpen(true);
     } finally {
+      setPendingAction(null);
       setIsLoading(false);
     }
   };
@@ -289,6 +303,11 @@ export default function Auth() {
   };
 
   const processGoogleCredential = useCallback(async (credential: string) => {
+    setPendingAction({
+      kind: "google",
+      title: "Signing you in",
+      detail: "Finishing Google sign-in…",
+    });
     const data = await handleGoogleSuccess(credential);
     toast({ title: "Welcome!", description: "Signed in with Google." });
     const target = data.created ? "/onboarding" : "/dashboard";
@@ -302,7 +321,17 @@ export default function Auth() {
 
     // --- WEB FLOW (GIS only) ---
     if (!isNative) {
-      await handleGoogleLogin();
+      setPendingAction({
+        kind: "google",
+        title: "Starting Google sign-in",
+        detail: "Opening Google…",
+      });
+      try {
+        await handleGoogleLogin();
+      } finally {
+        // Web flow may open a Google prompt/popup; keep UI responsive if it fails.
+        setPendingAction(null);
+      }
       return;
     }
 
@@ -319,6 +348,12 @@ export default function Auth() {
         });
         return;
       }
+
+      setPendingAction({
+        kind: "google",
+        title: "Signing you in",
+        detail: "Opening Google sign-in…",
+      });
 
       if (googleClientId) {
         try {
@@ -355,11 +390,21 @@ export default function Auth() {
         description: msg,
         variant: "destructive",
       });
+    } finally {
+      setPendingAction(null);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const kind = showSignup ? "signup" : "login";
+    setPendingAction({
+      kind,
+      title: showSignup ? "Creating your account" : "Signing you in",
+      detail: showSignup
+        ? "Creating your account and preparing onboarding…"
+        : "Verifying credentials and loading your data…",
+    });
     setIsLoading(true);
     setAuthError(null);
 
@@ -393,6 +438,7 @@ export default function Auth() {
       setErrorDialogOpen(true);
       toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
+      setPendingAction(null);
       setIsLoading(false);
     }
   };
@@ -433,7 +479,24 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/** Google sign-in button */}
+            {pendingAction ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                <div className="space-y-1">
+                  <p className="text-base font-semibold text-white">
+                    {pendingAction.title}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {pendingAction.detail}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground break-words">
+                  API: {API_BASE}
+                </p>
+              </div>
+            ) : (
+              <>
+            {/* Google sign-in button */}
             <div className="mb-4 flex justify-center">
               <button
                 type="button"
@@ -474,6 +537,7 @@ export default function Auth() {
                       onChange={handleInputChange}
                       className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -492,6 +556,7 @@ export default function Auth() {
                     onChange={handleInputChange}
                     className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -510,6 +575,7 @@ export default function Auth() {
                     className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                     required
                     minLength={6}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -574,6 +640,8 @@ export default function Auth() {
                 )}
               </div>
             </div>
+              </>
+            )}
           </CardContent>
         </Card>
         <Dialog
