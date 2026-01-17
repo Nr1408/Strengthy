@@ -53,27 +53,30 @@ export default function Workouts() {
   // Only treat workouts with an end time as "logged"
   const completedWorkouts = useMemo(
     () => workouts.filter((w) => w.endedAt),
-    [workouts]
+    [workouts],
   );
 
   // Group workouts by date
   const groupedWorkouts = useMemo(() => {
-    return completedWorkouts.reduce((groups, workout) => {
-      const dateKey = format(workout.date, "yyyy-MM-dd");
-      if (!groups[dateKey]) {
-        groups[dateKey] = [] as typeof workouts;
-      }
-      groups[dateKey].push(workout);
-      return groups;
-    }, {} as Record<string, typeof workouts>);
+    return completedWorkouts.reduce(
+      (groups, workout) => {
+        const dateKey = format(workout.date, "yyyy-MM-dd");
+        if (!groups[dateKey]) {
+          groups[dateKey] = [] as typeof workouts;
+        }
+        groups[dateKey].push(workout);
+        return groups;
+      },
+      {} as Record<string, typeof workouts>,
+    );
   }, [completedWorkouts]);
 
   const sortedDates = useMemo(
     () =>
       Object.keys(groupedWorkouts).sort(
-        (a, b) => new Date(b).getTime() - new Date(a).getTime()
+        (a, b) => new Date(b).getTime() - new Date(a).getTime(),
       ),
-    [groupedWorkouts]
+    [groupedWorkouts],
   );
 
   const [selectedWorkout, setSelectedWorkout] = useState<any | null>(null);
@@ -99,10 +102,13 @@ export default function Workouts() {
   });
 
   const exerciseMap = useMemo(() => {
-    return exercises.reduce((m: Record<string, string>, e) => {
-      m[e.id] = e.name;
-      return m;
-    }, {} as Record<string, string>);
+    return exercises.reduce(
+      (m: Record<string, string>, e) => {
+        m[e.id] = e.name;
+        return m;
+      },
+      {} as Record<string, string>,
+    );
   }, [exercises]);
 
   // Edit mode state for workout detail dialog
@@ -184,7 +190,7 @@ export default function Workouts() {
         if (!m.has(s.exercise)) m.set(s.exercise, []);
         m.get(s.exercise).push(s);
         return m;
-      }, new Map<string, any[]>())
+      }, new Map<string, any[]>()),
     ).map(([exerciseId, sets]) => ({
       tempId: crypto.randomUUID(),
       exerciseId,
@@ -219,7 +225,7 @@ export default function Workouts() {
     exerciseTempId: string,
     setId: string,
     updates: any,
-    markDirty: boolean = true
+    markDirty: boolean = true,
   ) => {
     setEditableExercises((prev) =>
       prev.map((ex) =>
@@ -229,18 +235,18 @@ export default function Workouts() {
               sets: ex.sets.map((s: any) =>
                 s.id === setId
                   ? { ...s, ...updates, _dirty: markDirty ? true : s._dirty }
-                  : s
+                  : s,
               ),
             }
-          : ex
-      )
+          : ex,
+      ),
     );
   };
 
   // Persist a single set change immediately when user toggles complete in edit mode.
   const handleEditableSetComplete = async (
     exerciseTempId: string,
-    setId: string
+    setId: string,
   ) => {
     const ex = editableExercises.find((e) => e.tempId === exerciseTempId);
     if (!ex || !selectedWorkout) return;
@@ -252,7 +258,7 @@ export default function Workouts() {
       exerciseTempId,
       setId,
       { completed: !s.completed },
-      false
+      false,
     );
 
     // Only run PR-related persistence when the set is being marked
@@ -272,7 +278,7 @@ export default function Workouts() {
             .replace(/[^a-z0-9]+/g, " ")
             .trim();
         const match = (userExercises as any[]).find(
-          (ue) => normalize(ue.name) === normalize(ex.name)
+          (ue) => normalize(ue.name) === normalize(ex.name),
         );
         if (match) {
           exId = match.id;
@@ -280,14 +286,14 @@ export default function Workouts() {
           const created = await createExercise(
             ex.name,
             (ex.muscleGroup as any) || "calves",
-            ex.description || ""
+            ex.description || "",
           );
           exId = created.id;
           // update local editableExercises to swap in numeric id
           setEditableExercises((prev) =>
             prev.map((ee) =>
-              ee.tempId === exerciseTempId ? { ...ee, exerciseId: exId } : ee
-            )
+              ee.tempId === exerciseTempId ? { ...ee, exerciseId: exId } : ee,
+            ),
           );
         }
       }
@@ -351,10 +357,10 @@ export default function Workouts() {
                           // repPR removed per UX request
                           unit: saved.unit || ss.unit,
                           _dirty: false,
-                        }
+                        },
                   ),
-                }
-          )
+                },
+          ),
         );
 
         // If the saved set is not a PR but previously showed as PR, ensure UI reflects removal
@@ -414,10 +420,10 @@ export default function Workouts() {
                           // repPR removed per UX request
                           unit: created.unit || ss.unit,
                           _dirty: false,
-                        }
+                        },
                   ),
-                }
-          )
+                },
+          ),
         );
 
         // If the created set is not a PR and previously indicated PR, the UI is already updated
@@ -438,7 +444,7 @@ export default function Workouts() {
         exerciseTempId,
         setId,
         { completed: s.completed },
-        false
+        false,
       );
     }
   };
@@ -463,7 +469,7 @@ export default function Workouts() {
           _dirty: true,
         };
         return { ...ex, sets: [...ex.sets, newSet] };
-      })
+      }),
     );
   };
 
@@ -472,20 +478,20 @@ export default function Workouts() {
       prev.map((ex) =>
         ex.tempId === exerciseTempId
           ? { ...ex, sets: ex.sets.filter((s: any) => s.id !== setId) }
-          : ex
-      )
+          : ex,
+      ),
     );
   };
 
   const removeEditableExercise = (exerciseTempId: string) => {
     setEditableExercises((prev) =>
-      prev.filter((ex) => ex.tempId !== exerciseTempId)
+      prev.filter((ex) => ex.tempId !== exerciseTempId),
     );
   };
 
   const changeEditableExercise = (
     exerciseTempId: string,
-    newExerciseId: string
+    newExerciseId: string,
   ) => {
     const name =
       allExercises.find((a) => a.id === newExerciseId)?.name || newExerciseId;
@@ -493,8 +499,8 @@ export default function Workouts() {
       prev.map((ex) =>
         ex.tempId === exerciseTempId
           ? { ...ex, exerciseId: newExerciseId, name }
-          : ex
-      )
+          : ex,
+      ),
     );
   };
 
@@ -532,7 +538,7 @@ export default function Workouts() {
               .replace(/[^a-z0-9]+/g, " ")
               .trim();
           const match = userExercises.find(
-            (ue: any) => normalize(ue.name) === normalize(ex.name)
+            (ue: any) => normalize(ue.name) === normalize(ex.name),
           );
           if (match) {
             exId = match.id;
@@ -540,7 +546,7 @@ export default function Workouts() {
             const created = await createExercise(
               ex.name,
               (ex.muscleGroup as any) || "calves",
-              ex.description || ""
+              ex.description || "",
             );
             exId = created.id;
           }
@@ -815,10 +821,10 @@ export default function Workouts() {
               {isLoading
                 ? "Loading..."
                 : isError
-                ? "Failed to load"
-                : `${completedWorkouts.length} workout${
-                    completedWorkouts.length !== 1 ? "s" : ""
-                  } logged`}
+                  ? "Failed to load"
+                  : `${completedWorkouts.length} workout${
+                      completedWorkouts.length !== 1 ? "s" : ""
+                    } logged`}
             </p>
           </div>
           <Button
@@ -828,7 +834,7 @@ export default function Workouts() {
                 if (inProg) {
                   // prefer toast but fall back to alert if toast unavailable
                   alert(
-                    "You already have a workout in progress. Resume or discard it before starting another."
+                    "You already have a workout in progress. Resume or discard it before starting another.",
                   );
                   navigate("/workouts/new");
                   return;
@@ -895,7 +901,7 @@ export default function Workouts() {
                     const inProg = localStorage.getItem("workout:inProgress");
                     if (inProg) {
                       alert(
-                        "You already have a workout in progress. Resume or discard it before starting another."
+                        "You already have a workout in progress. Resume or discard it before starting another.",
                       );
                       navigate("/workouts/new");
                       return;
@@ -1012,7 +1018,7 @@ export default function Workouts() {
                             m.set(s.exercise, [] as any[]);
                           m.get(s.exercise).push(s);
                           return m;
-                        }, new Map<string, any[]>())
+                        }, new Map<string, any[]>()),
                       ).map(([exerciseId, sets]) => (
                         <div
                           key={exerciseId}
@@ -1151,6 +1157,7 @@ export default function Workouts() {
                       deleteMutation.mutate(selectedWorkout.id);
                     }
                   }}
+                  disabled={deleteMutation.isPending}
                 >
                   Delete
                 </Button>

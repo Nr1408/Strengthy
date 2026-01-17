@@ -544,8 +544,8 @@ export default function Auth() {
             <CardTitle className="font-heading text-2xl">
               {pendingAction
                 ? pendingAction.kind === "signup"
-                  ? "Creating your account"
-                  : "Signing you in"
+                  ? "Just a moment"
+                  : "Just a moment"
                 : showSignup
                   ? "Creating your account"
                   : "Welcome back"}

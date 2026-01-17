@@ -1029,6 +1029,9 @@ export async function finishWorkout(id: string): Promise<UiWorkout> {
 
 export async function deleteWorkout(id: string) {
   const res = await fetch(`${API_BASE}/workouts/${id}/`, { method: "DELETE", headers: { ...authHeaders() } });
+  // Treat 404 as a successful no-op delete so the UI stays stable when the
+  // workout was already deleted (double tap, stale list, multi-device, etc.).
+  if (res.status === 404) return;
   if (!res.ok && res.status !== 204) {
     const body = await (async () => { try { return await res.text(); } catch { return ""; } })();
     const err = new Error(`Delete workout failed: ${res.status} ${body}`);
