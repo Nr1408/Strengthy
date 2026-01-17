@@ -223,6 +223,10 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_ID_WEB = os.environ.get("GOOGLE_CLIENT_ID_WEB", "")
 GOOGLE_CLIENT_ID_ANDROID = os.environ.get("GOOGLE_CLIENT_ID_ANDROID", "")
 
+# Fallback (so your old code still works)
+if not GOOGLE_CLIENT_ID_WEB and GOOGLE_CLIENT_ID:
+    GOOGLE_CLIENT_ID_WEB = GOOGLE_CLIENT_ID
+
 
 # Allow cookies to be sent from the app during development (use token auth for
 # production/mobile use-cases where possible).

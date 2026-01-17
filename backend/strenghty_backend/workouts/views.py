@@ -33,16 +33,11 @@ from .serializers import (
 # URL patterns. It returns the same payload as PublicConfigView.
 from rest_framework.decorators import api_view, permission_classes as drf_permission_classes
 
-
 @api_view(["GET"])
 @drf_permission_classes([permissions.AllowAny])
 def public_config(request):
     web_id = getattr(settings, "GOOGLE_CLIENT_ID_WEB", "")
     android_id = getattr(settings, "GOOGLE_CLIENT_ID_ANDROID", "")
-
-    # Fallback: if you only set one variable in settings
-    if not web_id and getattr(settings, "GOOGLE_CLIENT_ID", ""):
-        web_id = getattr(settings, "GOOGLE_CLIENT_ID")
 
     return Response({
         "google_client_id_web": web_id,

@@ -30,7 +30,6 @@ urlpatterns = [
     path("health", health_check, name="health"),   # ✅ KEEP THIS
     path("admin/", admin.site.urls),
     path("emergency-reset/", emergency_admin_reset),
-    path("api/", include("workouts.urls")),
-    path("api/public-config/", workout_views.public_config, name="public-config"),
-    
+    path("api/", include("workouts.urls")), 
+    path("api/public-config/", workout_views.public_config, name="public-config"), 
 ]
