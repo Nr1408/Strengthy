@@ -366,10 +366,11 @@ export default function Auth() {
       let initialized = false;
 
       try {
-        await GoogleAuth.initialize({
-          clientId: googleClientIdAndroid,
-          scopes: ["profile", "email"],
-        });
+          await GoogleAuth.initialize({
+            clientId: googleClientIdWeb, // ✅ Use the WEB ID here!
+            scopes: ["profile", "email"],
+            grantOfflineAccess: true,
+          });
         initialized = true;
       } catch (e) {
         console.warn("GoogleAuth initialize failed:", e);
