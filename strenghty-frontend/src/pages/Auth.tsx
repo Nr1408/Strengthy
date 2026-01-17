@@ -48,14 +48,11 @@ export default function Auth() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleSelecting, setIsGoogleSelecting] = useState(false);
-  const [pendingAction, setPendingAction] = useState<
-    | null
-    | {
-        kind: "login" | "signup" | "google";
-        title: string;
-        detail: string;
-      }
-  >(null);
+  const [pendingAction, setPendingAction] = useState<null | {
+    kind: "login" | "signup" | "google";
+    title: string;
+    detail: string;
+  }>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
@@ -175,7 +172,7 @@ export default function Auth() {
     const popup = window.open(
       `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
       "google_oauth",
-      `width=${w},height=${h},left=${x},top=${y},noopener=false`
+      `width=${w},height=${h},left=${x},top=${y},noopener=false`,
     );
 
     // Fallback in case opener gets stripped
@@ -248,7 +245,7 @@ export default function Auth() {
         if (notification.isSkippedMoment?.()) {
           console.warn(
             "Google Sign-In skipped:",
-            notification.getSkippedReason?.()
+            notification.getSkippedReason?.(),
           );
         }
       });
@@ -321,7 +318,11 @@ export default function Auth() {
       const msg = String(err?.message || err || "Google sign-in failed");
       setDialogMessage(msg + `\n\nAPI: ${API_BASE}`);
       setErrorDialogOpen(true);
-      toast({ title: "Google sign-in failed", description: msg, variant: "destructive" });
+      toast({
+        title: "Google sign-in failed",
+        description: msg,
+        variant: "destructive",
+      });
     } finally {
       setPendingAction(null);
       setIsLoading(false);
@@ -395,12 +396,31 @@ export default function Auth() {
     } catch (e) {
       setIsGoogleSelecting(false);
       const msg = String(
-        (e as any)?.message || e || "Native Google sign-in failed"
+        (e as any)?.message || e || "Native Google sign-in failed",
       );
+      let extra = "";
+      try {
+        const anyErr: any = e as any;
+        const safe: any = {
+          message: anyErr?.message,
+          code: anyErr?.code,
+          details: anyErr?.details,
+        };
+        extra = JSON.stringify(safe);
+      } catch {}
       try {
         console.warn("Native GoogleAuth failed", e);
       } catch {}
-      setDialogMessage(`Google sign-in failed: ${msg}\n\nAPI: ${API_BASE}`);
+
+      const hint =
+        "If this keeps happening on Android, it's usually an OAuth config issue (missing SHA-1/SHA-256 for the debug keystore, wrong package name, or Google Play Services).";
+
+      setDialogMessage(
+        `Google sign-in failed: ${msg}` +
+          (extra ? `\n\nDetails: ${extra}` : "") +
+          `\n\nAPI: ${API_BASE}` +
+          `\n\nHint: ${hint}`,
+      );
       setErrorDialogOpen(true);
       toast({
         title: "Google sign-in failed",
@@ -444,7 +464,7 @@ export default function Auth() {
       setAuthError(msg);
       try {
         const deep = JSON.stringify(
-          (err as any)?.response?.data || (err as any)?.message || msg
+          (err as any)?.response?.data || (err as any)?.message || msg,
         );
         setDialogMessage(`Full Error: ${deep} | API: ${API_BASE}`);
       } catch (e) {
@@ -511,150 +531,152 @@ export default function Auth() {
               </div>
             ) : (
               <>
-            {/* Google sign-in button */}
-            <div className="mb-4 flex justify-center">
-              <button
-                type="button"
-                onClick={onClickContinueWithGoogle}
+                {/* Google sign-in button */}
+                <div className="mb-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={onClickContinueWithGoogle}
                     disabled={!googleClientId || isLoading || isGoogleSelecting}
-                className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
-              >
-                <img
-                  src="/google-logo.svg"
-                  alt="Google"
-                  className="mr-2 h-4 w-4"
-                />
-                    {isGoogleSelecting ? "Choose an account…" : "Continue with Google"}
-              </button>
-            </div>
-            <div className="relative mb-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  or continue with email
-                </span>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {showSignup && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <div className="relative">
-                    <User className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                    <Input
-                      id="name"
-                      name="name"
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                      required
-                      disabled={isLoading}
+                    className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
+                  >
+                    <img
+                      src="/google-logo.svg"
+                      alt="Google"
+                      className="mr-2 h-4 w-4"
                     />
+                    {isGoogleSelecting
+                      ? "Choose an account…"
+                      : "Continue with Google"}
+                  </button>
+                </div>
+                <div className="relative mb-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      or continue with email
+                    </span>
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {showSignup && (
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name</Label>
+                      <div className="relative">
+                        <User className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="John Doe"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                  )}
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    required
-                    minLength={6}
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <div className="relative">
+                      <Mail className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        required
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
-                  "Loading..."
-                ) : (
-                  <>
-                    <>{showSignup ? "Create Account" : "Log In"}</>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </form>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        required
+                        minLength={6}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
 
-            <div
-              className={
-                showSignup
-                  ? "mt-4 text-center text-sm"
-                  : "mt-4 space-y-2 text-center text-sm sm:flex sm:items-center sm:justify-between sm:space-y-0"
-              }
-            >
-              {!showSignup && (
-                <Link
-                  to="/auth/forgot-password"
-                  className="text-muted-foreground hover:text-primary hover:underline sm:text-left"
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      "Loading..."
+                    ) : (
+                      <>
+                        <>{showSignup ? "Create Account" : "Log In"}</>
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+
+                <div
+                  className={
+                    showSignup
+                      ? "mt-4 text-center text-sm"
+                      : "mt-4 space-y-2 text-center text-sm sm:flex sm:items-center sm:justify-between sm:space-y-0"
+                  }
                 >
-                  Forgot password?
-                </Link>
-              )}
+                  {!showSignup && (
+                    <Link
+                      to="/auth/forgot-password"
+                      className="text-muted-foreground hover:text-primary hover:underline sm:text-left"
+                    >
+                      Forgot password?
+                    </Link>
+                  )}
 
-              <div
-                className={
-                  showSignup
-                    ? "text-muted-foreground"
-                    : "text-muted-foreground sm:text-right sm:flex-1"
-                }
-              >
-                {showSignup ? (
-                  <>
-                    Already have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={() => setShowSignup(false)}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      Log in
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Don't have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={() => setShowSignup(true)}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      Sign up
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+                  <div
+                    className={
+                      showSignup
+                        ? "text-muted-foreground"
+                        : "text-muted-foreground sm:text-right sm:flex-1"
+                    }
+                  >
+                    {showSignup ? (
+                      <>
+                        Already have an account?{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowSignup(false)}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          Log in
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Don't have an account?{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowSignup(true)}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          Sign up
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </>
             )}
           </CardContent>

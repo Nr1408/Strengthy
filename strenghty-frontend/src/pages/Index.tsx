@@ -53,18 +53,9 @@ export default function Index() {
 
   useEffect(() => {
     try {
-      const isNative =
-        typeof window !== "undefined" &&
-        (window as any).Capacitor?.isNativePlatform?.() === true;
-
       if (getToken()) {
         navigate("/dashboard", { replace: true });
         return;
-      }
-
-      // In the APK, default to the auth screen when not signed in.
-      if (isNative) {
-        navigate("/auth", { replace: true });
       }
     } catch {
       // ignore invalid storage state
