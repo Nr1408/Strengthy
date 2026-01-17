@@ -203,8 +203,6 @@ if DEBUG:
 # backend is deployed with DEBUG=False (production), enabling the following
 # setting will allow cross-origin requests from any origin. This is intended
 # for quick testing and troubleshooting; tighten these rules for production.
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
 
 # CSRF and trusted origins for development. If you run the frontend from the
 # emulator (10.0.2.2) or from your PC IP, include those addresses here.
@@ -253,3 +251,26 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 # For quick local debugging without a real SMTP server, you can uncomment
 # the following line to print emails to the console instead of sending:
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# --------- HARD CORS SAFETY CONFIG (PRODUCTION) ---------
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+]
+
+CORS_ALLOW_HEADERS = [
+    "authorization",
+    "content-type",
+    "accept",
+    "origin",
+    "x-csrftoken",
+    "x-requested-with",
+]
+# --------------------------------------------------------
