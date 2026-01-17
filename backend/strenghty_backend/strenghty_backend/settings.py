@@ -59,10 +59,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -183,7 +183,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://10.0.2.2:8080",
     "http://10.0.2.2:5173",
     "http://localhost:8080",
-    "https://strengthy-backend.onrender.com",
+    "https://strengthy-strenghty-frontend.vercel.app",
+    "https://strengthy-backend.up.railway.app",
     # add your PC LAN IP and port when using a physical device, e.g.:
     # "http://192.168.1.23:8080",
 ]
