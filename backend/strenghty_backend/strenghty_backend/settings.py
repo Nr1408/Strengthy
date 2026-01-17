@@ -214,6 +214,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8080",
     "https://strengthy-backend.onrender.com",
     "http://10.0.2.2",
+    "https://strengthy-strengthy-frontend.vercel.app", # 👈 ADD THIS LINE
+    "https://strengthy-backend.up.railway.app"
+    
 ]
 
 # Optional Google OAuth client ID used to verify ID tokens returned by
