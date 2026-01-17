@@ -346,6 +346,38 @@ try {
             Prefs = null;
           }
           if (Prefs) {
+            // First launch after install: force the auth screen by ensuring
+            // we do NOT restore any prior token/session.
+            const FIRST_LAUNCH_KEY = "app:hasLaunched";
+            try {
+              const first = await Prefs.get({ key: FIRST_LAUNCH_KEY });
+              if (!first || !first.value) {
+                try {
+                  await Prefs.set({ key: FIRST_LAUNCH_KEY, value: "1" });
+                } catch (e) {}
+
+                // Clear any potentially restored session keys.
+                try {
+                  await Prefs.remove({ key: "token" });
+                } catch (e) {}
+                try {
+                  await Prefs.remove({ key: "google:credential" });
+                } catch (e) {}
+
+                try {
+                  clearToken();
+                } catch (e) {}
+                try {
+                  localStorage.removeItem("google:credential");
+                } catch (e) {}
+
+                // Do not mirror anything into localStorage on first launch.
+                return;
+              }
+            } catch (e) {
+              // If first-launch check fails, continue with best-effort sync.
+            }
+
             const keys = ["token", "user:profile", "user:onboarding", "user:monthlyGoal", "google:credential"];
             for (const k of keys) {
               try {

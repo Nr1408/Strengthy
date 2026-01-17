@@ -47,6 +47,7 @@ export default function Auth() {
   }
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleSelecting, setIsGoogleSelecting] = useState(false);
   const [pendingAction, setPendingAction] = useState<
     | null
     | {
@@ -303,15 +304,28 @@ export default function Auth() {
   };
 
   const processGoogleCredential = useCallback(async (credential: string) => {
+    // Only show the loading/pending UI AFTER the user has selected
+    // an account and we have a credential to exchange with the backend.
     setPendingAction({
       kind: "google",
       title: "Signing you in",
       detail: "Finishing Google sign-in…",
     });
-    const data = await handleGoogleSuccess(credential);
-    toast({ title: "Welcome!", description: "Signed in with Google." });
-    const target = data.created ? "/onboarding" : "/dashboard";
-    navigate(target);
+    setIsLoading(true);
+    try {
+      const data = await handleGoogleSuccess(credential);
+      toast({ title: "Welcome!", description: "Signed in with Google." });
+      const target = data?.created ? "/onboarding" : "/dashboard";
+      navigate(target);
+    } catch (err: any) {
+      const msg = String(err?.message || err || "Google sign-in failed");
+      setDialogMessage(msg + `\n\nAPI: ${API_BASE}`);
+      setErrorDialogOpen(true);
+      toast({ title: "Google sign-in failed", description: msg, variant: "destructive" });
+    } finally {
+      setPendingAction(null);
+      setIsLoading(false);
+    }
   }, []);
 
   const onClickContinueWithGoogle = async () => {
@@ -321,17 +335,9 @@ export default function Auth() {
 
     // --- WEB FLOW (GIS only) ---
     if (!isNative) {
-      setPendingAction({
-        kind: "google",
-        title: "Starting Google sign-in",
-        detail: "Opening Google…",
-      });
-      try {
-        await handleGoogleLogin();
-      } finally {
-        // Web flow may open a Google prompt/popup; keep UI responsive if it fails.
-        setPendingAction(null);
-      }
+      // Don't show the full-screen pending UI here; it should only show
+      // after the user selects an account and we receive a credential.
+      await handleGoogleLogin();
       return;
     }
 
@@ -349,11 +355,9 @@ export default function Auth() {
         return;
       }
 
-      setPendingAction({
-        kind: "google",
-        title: "Signing you in",
-        detail: "Opening Google sign-in…",
-      });
+      // On native, let the user pick the account first. Only show the
+      // pending screen after we have an idToken to exchange.
+      setIsGoogleSelecting(true);
 
       if (googleClientId) {
         try {
@@ -364,19 +368,32 @@ export default function Auth() {
         } catch (e) {}
       }
       const res = await GoogleAuth.signIn();
+      setIsGoogleSelecting(false);
       const idToken = res?.authentication?.idToken || res?.idToken;
 
       if (idToken) {
-        const data = await loginWithGoogle(idToken);
-        toast({ title: "Welcome!", description: "Signed in with Google" });
-        const target = data?.created ? "/onboarding" : "/dashboard";
-        navigate(target);
-        return;
+        setPendingAction({
+          kind: "google",
+          title: "Signing you in",
+          detail: "Syncing your account…",
+        });
+        setIsLoading(true);
+        try {
+          const data = await loginWithGoogle(idToken);
+          toast({ title: "Welcome!", description: "Signed in with Google" });
+          const target = data?.created ? "/onboarding" : "/dashboard";
+          navigate(target);
+          return;
+        } finally {
+          setPendingAction(null);
+          setIsLoading(false);
+        }
       }
 
       setDialogMessage("Google sign-in returned no token. Please try again.");
       setErrorDialogOpen(true);
     } catch (e) {
+      setIsGoogleSelecting(false);
       const msg = String(
         (e as any)?.message || e || "Native Google sign-in failed"
       );
@@ -390,8 +407,6 @@ export default function Auth() {
         description: msg,
         variant: "destructive",
       });
-    } finally {
-      setPendingAction(null);
     }
   };
 
@@ -501,7 +516,7 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={onClickContinueWithGoogle}
-                disabled={!googleClientId}
+                    disabled={!googleClientId || isLoading || isGoogleSelecting}
                 className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
               >
                 <img
@@ -509,7 +524,7 @@ export default function Auth() {
                   alt="Google"
                   className="mr-2 h-4 w-4"
                 />
-                Continue with Google
+                    {isGoogleSelecting ? "Choose an account…" : "Continue with Google"}
               </button>
             </div>
             <div className="relative mb-4">

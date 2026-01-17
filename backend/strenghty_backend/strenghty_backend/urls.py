@@ -2,12 +2,11 @@ from django.contrib import admin
 from django.urls import path, include
 from workouts import views as workout_views
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse, JsonResponse
-
+from django.http import HttpResponse
 
 
 def health_check(request):
-    return JsonResponse({"status": "ok"})
+    return HttpResponse("OK", status=200)
 
 def emergency_admin_reset(request):
     User = get_user_model()
@@ -28,7 +27,7 @@ def emergency_admin_reset(request):
         return HttpResponse("Admin password reset successful.")
 
 urlpatterns = [
-    path("health/", health_check, name="health"),   # ✅ KEEP THIS
+    path("health", health_check, name="health"),   # ✅ KEEP THIS
     path("admin/", admin.site.urls),
     path("emergency-reset/", emergency_admin_reset),
     path("api/", include("workouts.urls")),
