@@ -12,12 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import {  
-  API_BASE,
-  login,
-  register,
-  loginWithGoogle,
-} from "@/lib/api";
+import { API_BASE, login, register, loginWithGoogle } from "@/lib/api";
 import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import {
   Dialog,
@@ -135,7 +130,7 @@ export default function Auth() {
     return false;
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     // fetch public config (google client id)
     (async () => {
       try {
@@ -203,11 +198,11 @@ export default function Auth() {
       if (isNative) return;
 
       // ✅ ADD THIS BLOCK HERE
-        if (!googleClientIdWeb) {
-          setDialogMessage("Google Client ID still loading. Please try again.");
-          setErrorDialogOpen(true);
-          return;
-        }
+      if (!googleClientIdWeb) {
+        setDialogMessage("Google Client ID still loading. Please try again.");
+        setErrorDialogOpen(true);
+        return;
+      }
 
       const clientId = googleClientIdWeb.trim();
 
@@ -309,34 +304,37 @@ export default function Auth() {
     return await loginWithGoogle(credential);
   };
 
-  const processGoogleCredential = useCallback(async (credential: string) => {
-    // Only show the loading/pending UI AFTER the user has selected
-    // an account and we have a credential to exchange with the backend.
-    setPendingAction({
-      kind: "google",
-      title: "Signing you in",
-      detail: "Finishing Google sign-in…",
-    });
-    setIsLoading(true);
-    try {
-      const data = await handleGoogleSuccess(credential);
-      toast({ title: "Welcome!", description: "Signed in with Google." });
-      const target = data?.created ? "/onboarding" : "/dashboard";
-      navigate(target);
-    } catch (err: any) {
-      const msg = String(err?.message || err || "Google sign-in failed");
-      setDialogMessage(msg + `\n\nAPI: ${API_BASE}`);
-      setErrorDialogOpen(true);
-      toast({
-        title: "Google sign-in failed",
-        description: msg,
-        variant: "destructive",
+  const processGoogleCredential = useCallback(
+    async (credential: string) => {
+      // Only show the loading/pending UI AFTER the user has selected
+      // an account and we have a credential to exchange with the backend.
+      setPendingAction({
+        kind: "google",
+        title: "Signing you in",
+        detail: "Finishing Google sign-in…",
       });
-    } finally {
-      setPendingAction(null);
-      setIsLoading(false);
-    }
-  }, [navigate, toast]);
+      setIsLoading(true);
+      try {
+        const data = await handleGoogleSuccess(credential);
+        toast({ title: "Welcome!", description: "Signed in with Google." });
+        const target = data?.created ? "/onboarding" : "/dashboard";
+        navigate(target);
+      } catch (err: any) {
+        const msg = String(err?.message || err || "Google sign-in failed");
+        setDialogMessage(msg + `\n\nAPI: ${API_BASE}`);
+        setErrorDialogOpen(true);
+        toast({
+          title: "Google sign-in failed",
+          description: msg,
+          variant: "destructive",
+        });
+      } finally {
+        setPendingAction(null);
+        setIsLoading(false);
+      }
+    },
+    [navigate, toast],
+  );
 
   const onClickContinueWithGoogle = async () => {
     const isNative =
@@ -371,7 +369,6 @@ export default function Auth() {
         setErrorDialogOpen(true);
         return;
       }
-
 
       // On native, let the user pick the account first. Only show the
       // pending screen after we have an idToken to exchange.
@@ -415,7 +412,7 @@ export default function Auth() {
       }
 
       setIsGoogleSelecting(false);
-      
+
       setPendingAction({
         kind: "google",
         title: "Signing you in",
@@ -545,29 +542,31 @@ export default function Auth() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="font-heading text-2xl">
-              {showSignup ? "Create your account" : "Welcome back"}
+              {pendingAction
+                ? pendingAction.kind === "signup"
+                  ? "Creating your account"
+                  : "Signing you in"
+                : showSignup
+                  ? "Creating your account"
+                  : "Welcome back"}
             </CardTitle>
-            <CardDescription>
-              {showSignup
-                ? "Start tracking your workouts and PRs"
-                : "Log in to continue your fitness journey"}
-            </CardDescription>
+            {!pendingAction && (
+              <CardDescription>
+                {showSignup
+                  ? "Start tracking your workouts and PRs"
+                  : "Log in to continue your fitness journey"}
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent>
             {pendingAction ? (
               <div className="py-8 text-center space-y-3">
                 <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                <div className="space-y-1">
+                <div>
                   <p className="text-base font-semibold text-white">
                     {pendingAction.title}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {pendingAction.detail}
-                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground break-words">
-                  API: {API_BASE}
-                </p>
               </div>
             ) : (
               <>
