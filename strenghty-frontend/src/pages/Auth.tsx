@@ -358,17 +358,6 @@ export default function Auth() {
         return;
       }
 
-      // ✅ STEP 6 — Check Google Play Services FIRST
-      try {
-        await GoogleAuth.checkPlayServices();
-      } catch (e: any) {
-        console.warn("Play Services check failed:", e);
-        setDialogMessage(
-          "Google Play Services is missing or outdated. Please update it.",
-        );
-        setErrorDialogOpen(true);
-        return;
-      }
 
       // On native, let the user pick the account first. Only show the
       // pending screen after we have an idToken to exchange.
@@ -547,7 +536,7 @@ export default function Auth() {
                   ? "Just a moment"
                   : "Just a moment"
                 : showSignup
-                  ? "Creating your account"
+                  ? "Create your account"
                   : "Welcome back"}
             </CardTitle>
             {!pendingAction && (

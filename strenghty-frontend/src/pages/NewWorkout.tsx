@@ -95,6 +95,7 @@ export default function NewWorkout() {
           return {
             id: crypto.randomUUID(),
             reps: 0,
+            halfReps: 0,
             weight: 0,
             unit: getUnit(),
             isPR: false,
@@ -460,6 +461,7 @@ export default function NewWorkout() {
         {
           id: crypto.randomUUID(),
           reps: 0,
+          halfReps: 0,
           weight: 0,
           unit: getUnit(),
           isPR: false,
@@ -494,6 +496,7 @@ export default function NewWorkout() {
         const resetSets: WorkoutSet[] = we.sets.map(() => ({
           id: crypto.randomUUID(),
           reps: 0,
+          halfReps: 0,
           weight: 0,
           unit: getUnit(),
           isPR: false,
@@ -530,6 +533,7 @@ export default function NewWorkout() {
               {
                 id: crypto.randomUUID(),
                 reps: lastSet?.reps || 0,
+                halfReps: (lastSet as any)?.halfReps || 0,
                 weight: lastSet?.weight || 0,
                 unit: lastSet?.unit || getUnit(),
                 isPR: false,
@@ -680,6 +684,7 @@ export default function NewWorkout() {
       const isPersisted = /^\d+$/.test(String(set.id));
       const payload = {
         reps: set.reps,
+        halfReps: (set as any).halfReps || 0,
         weight: set.weight,
         unit: set.unit || getUnit(),
         type: set.type,
@@ -1505,6 +1510,7 @@ export default function NewWorkout() {
                 exerciseId: ex.exercise.id,
                 setNumber: i + 1,
                 reps: s.reps,
+                halfReps: (s as any).halfReps || 0,
                 weight: s.weight,
                 unit: s.unit || getUnit(),
                 type: s.type,

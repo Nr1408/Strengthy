@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.core.validators import MaxValueValidator
 
 User = get_user_model()
 
@@ -52,6 +53,8 @@ class WorkoutSet(models.Model):
     exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE,related_name="sets")
     set_number = models.PositiveIntegerField()
     reps = models.PositiveIntegerField()
+    # Number of half-reps (0..5) logged in addition to `reps`.
+    half_reps = models.PositiveSmallIntegerField(default=0, validators=[MaxValueValidator(5)])
     weight = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     UNIT_CHOICES = [
         ("lbs", "Pounds"),

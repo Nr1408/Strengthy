@@ -29,6 +29,9 @@ export interface Exercise {
 export interface WorkoutSet {
   id: string;
   reps: number;
+  // Number of half-reps (0..5) logged in addition to `reps`.
+  // Stored separately because the backend reps field is an integer.
+  halfReps?: number;
   weight: number;
   isPR: boolean;
   completed: boolean;

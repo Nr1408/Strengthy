@@ -43,6 +43,7 @@ class WorkoutSetSerializer(serializers.ModelSerializer):
             "exercise",
             "set_number",
             "reps",
+            "half_reps",
             "weight",
             "unit",
             "is_pr",

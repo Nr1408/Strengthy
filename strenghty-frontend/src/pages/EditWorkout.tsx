@@ -148,6 +148,7 @@ export default function EditWorkout() {
                 {
                   id: crypto.randomUUID(),
                   reps: 0,
+                  halfReps: 0,
                   weight: 0,
                   unit: getUnit(),
                   isPR: false,
@@ -243,6 +244,7 @@ export default function EditWorkout() {
                   return {
                     id: String(s.id),
                     reps: s.reps,
+                    halfReps: (s as any).halfReps || 0,
                     weight: s.weight || 0,
                     unit: s.unit || getUnit(),
                     isPR: s.isPR,
@@ -393,6 +395,7 @@ export default function EditWorkout() {
         {
           id: crypto.randomUUID(),
           reps: 0,
+          halfReps: 0,
           weight: 0,
           unit: getUnit(),
           isPR: false,
@@ -420,6 +423,7 @@ export default function EditWorkout() {
               {
                 id: crypto.randomUUID(),
                 reps: lastSet?.reps || 0,
+                halfReps: (lastSet as any)?.halfReps || 0,
                 weight: lastSet?.weight || 0,
                 unit: lastSet?.unit || getUnit(),
                 isPR: false,
@@ -506,6 +510,7 @@ export default function EditWorkout() {
 
       const payload: any = {
         reps: s.reps || 0,
+        halfReps: (s as any).halfReps || 0,
         weight: typeof s.weight === "undefined" ? null : s.weight,
         unit: s.unit || getUnit(),
         type: (s as any).type,
@@ -618,6 +623,7 @@ export default function EditWorkout() {
             exerciseId: exId,
             setNumber: s.setNumber || 1,
             reps: s.reps || 0,
+            halfReps: (s as any).halfReps || 0,
             weight: s.weight,
             unit: s.unit || getUnit(),
             type: s.type,
@@ -679,6 +685,7 @@ export default function EditWorkout() {
               exerciseId: exId,
               setNumber: s.setNumber || 1,
               reps: s.reps || 0,
+              halfReps: (s as any).halfReps || 0,
               weight: s.weight,
               unit: s.unit || getUnit(),
               type: s.type,
@@ -898,6 +905,7 @@ export default function EditWorkout() {
                 exerciseId: exId,
                 setNumber: i + 1,
                 reps: s.reps || 0,
+                halfReps: (s as any).halfReps || 0,
                 weight: s.weight,
                 unit: s.unit || getUnit(),
                 type: s.type,

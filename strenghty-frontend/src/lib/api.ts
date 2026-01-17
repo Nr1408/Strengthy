@@ -188,6 +188,8 @@ export interface UiWorkoutSet {
   exercise: string;
   setNumber: number;
   reps: number;
+  // Number of half-reps (0..5) in addition to `reps`
+  halfReps?: number;
   weight?: number;
   unit?: 'lbs' | 'kg';
   isPR: boolean;
@@ -207,6 +209,7 @@ interface ApiWorkoutSet {
   exercise: number;
   set_number: number;
   reps: number;
+  half_reps?: number | null;
   weight: string | null;
   unit?: string | null;
   is_pr: boolean;
@@ -587,6 +590,10 @@ function mapWorkoutSet(api: ApiWorkoutSet): UiWorkoutSet {
     exercise: String(api.exercise),
     setNumber: api.set_number,
     reps: api.reps,
+    halfReps:
+      typeof api.half_reps === "number" && Number.isFinite(api.half_reps)
+        ? Math.max(0, Math.min(5, Math.round(api.half_reps)))
+        : 0,
     weight: api.weight ? Number(api.weight) : undefined,
     unit: api.unit || undefined,
     isPR,
@@ -1068,11 +1075,17 @@ export async function getSetsForExercise(exerciseId: string): Promise<UiWorkoutS
   return data.map(mapWorkoutSet);
 }
 
-export async function createSet(params: { workoutId: string; exerciseId: string; setNumber?: number; reps: number; weight?: number; isPR?: boolean; unit?: 'lbs' | 'kg'; type?: 'W' | 'S' | 'F' | 'D'; rpe?: number }): Promise<UiWorkoutSet> {
-  const { workoutId, exerciseId, setNumber, reps, weight, isPR, unit, type, rpe } = params;
+export async function createSet(params: { workoutId: string; exerciseId: string; setNumber?: number; reps: number; halfReps?: number; weight?: number; isPR?: boolean; unit?: 'lbs' | 'kg'; type?: 'W' | 'S' | 'F' | 'D'; rpe?: number }): Promise<UiWorkoutSet> {
+  const { workoutId, exerciseId, setNumber, reps, halfReps, weight, isPR, unit, type, rpe } = params;
   // Validate reps is a positive integer
   if (typeof reps !== "number" || !Number.isFinite(reps) || !Number.isInteger(reps) || reps <= 0) {
     throw new Error(`createSet: invalid reps value: ${String(reps)}`);
+  }
+  if (typeof halfReps !== "undefined") {
+    const hr = Number(halfReps);
+    if (!Number.isFinite(hr) || !Number.isInteger(hr) || hr < 0 || hr > 5) {
+      throw new Error(`createSet: invalid halfReps value: ${String(halfReps)}`);
+    }
   }
   const workoutNum = Number(workoutId);
   const exerciseNum = Number(exerciseId);
@@ -1087,6 +1100,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     workout: workoutNum,
     exercise: exerciseNum,
     reps,
+    half_reps: typeof halfReps === "number" ? halfReps : 0,
     weight: typeof weight === "number" ? weight : null,
     // is_pr is computed on the server; client flag is ignored
   };
@@ -1130,10 +1144,11 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   return mapWorkoutSet(data);
 }
 
-export async function updateSet(id: string, data: Partial<{ setNumber: number; reps: number; weight?: number | null; isPR?: boolean; unit?: 'lbs' | 'kg'; type?: 'W' | 'S' | 'F' | 'D'; rpe?: number }>): Promise<UiWorkoutSet> {
+export async function updateSet(id: string, data: Partial<{ setNumber: number; reps: number; halfReps?: number; weight?: number | null; isPR?: boolean; unit?: 'lbs' | 'kg'; type?: 'W' | 'S' | 'F' | 'D'; rpe?: number }>): Promise<UiWorkoutSet> {
   const payload: any = {};
   if (typeof data.setNumber === 'number') payload.set_number = data.setNumber;
   if (typeof data.reps === 'number') payload.reps = data.reps;
+  if (typeof data.halfReps === 'number') payload.half_reps = data.halfReps;
   if (typeof data.weight !== 'undefined') payload.weight = data.weight === null ? null : String(data.weight);
   if (typeof data.unit !== 'undefined') payload.unit = data.unit;
   if (typeof data.type !== 'undefined') payload.set_type = data.type;

@@ -570,7 +570,7 @@ export function SetRow({
             />
           </div>
         ) : (
-          <>
+          <div className="relative w-full h-8">
             <label className="sr-only">Reps</label>
             <Input
               type="number"
@@ -580,9 +580,42 @@ export function SetRow({
                 !readOnly && onUpdate({ reps: Number(e.target.value) })
               }
               disabled={readOnly}
-              className="h-8 w-full px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
+              className="h-8 w-full px-1 pr-8 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
             />
-          </>
+            <button
+              type="button"
+              aria-label="Add half reps"
+              disabled={readOnly}
+              onClick={() => {
+                if (readOnly) return;
+                const cur =
+                  typeof set.halfReps === "number" &&
+                  Number.isFinite(set.halfReps)
+                    ? Number(set.halfReps)
+                    : 0;
+                const next = cur >= 5 ? 0 : cur + 1;
+                onUpdate({ halfReps: next });
+                try {
+                  triggerHaptic();
+                } catch (e) {}
+              }}
+              className={cn(
+                "absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md border text-[11px] font-semibold leading-none flex items-center justify-center select-none",
+                (set.halfReps || 0) > 0
+                  ? "bg-orange-500/15 text-orange-300 border-orange-500/40"
+                  : "bg-muted/10 text-muted-foreground/70 border-border"
+              )}
+            >
+              <span className="relative">
+                ½
+                {(set.halfReps || 0) > 0 && (
+                  <span className="absolute -right-2 -top-2 h-4 min-w-4 px-1 rounded-full bg-orange-500 text-[9px] font-bold text-black flex items-center justify-center">
+                    {Math.min(5, Number(set.halfReps) || 0)}
+                  </span>
+                )}
+              </span>
+            </button>
+          </div>
         )}
       </Cell>
 
