@@ -37,13 +37,17 @@ from rest_framework.decorators import api_view, permission_classes as drf_permis
 @api_view(["GET"])
 @drf_permission_classes([permissions.AllowAny])
 def public_config(request):
-    # Prefer the configured GOOGLE_CLIENT_ID; if it's empty or missing,
-    # fall back to the known web client ID used by the frontend.
-    configured = getattr(settings, "GOOGLE_CLIENT_ID", "") or ""
-    if not configured:
-        configured = "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com"
-    return Response({"google_client_id": configured})
+    web_id = getattr(settings, "GOOGLE_CLIENT_ID_WEB", "")
+    android_id = getattr(settings, "GOOGLE_CLIENT_ID_ANDROID", "")
 
+    # Fallback: if you only set one variable in settings
+    if not web_id and getattr(settings, "GOOGLE_CLIENT_ID", ""):
+        web_id = getattr(settings, "GOOGLE_CLIENT_ID")
+
+    return Response({
+        "google_client_id_web": web_id,
+        "google_client_id_android": android_id,
+    })
 
 
 def health_check(request):
@@ -270,20 +274,6 @@ class PasswordResetConfirmView(APIView):
         return Response({"detail": "Password has been reset. You can now log in."})
 
 
-class PublicConfigView(APIView):
-    """Return minimal public configuration values the frontend may need at runtime.
-
-    This keeps secrets (like other keys) out of the bundle while allowing the
-    frontend to obtain the Google OAuth client ID without rebuilding.
-    """
-
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request, *args, **kwargs):
-        # Return minimal public config. Expose Google client id (may be empty).
-        return Response({"google_client_id": getattr(settings, "GOOGLE_CLIENT_ID", "")})
-
-
 class ProfileView(generics.RetrieveUpdateAPIView):
     """Retrieve or update the authenticated user's profile/onboarding data.
 
@@ -331,7 +321,7 @@ class GoogleLoginView(APIView):
 
         # Optionally verify audience
         aud = info.get("aud")
-        configured_aud = getattr(settings, "GOOGLE_CLIENT_ID", "")
+        configured_aud = getattr(settings, "GOOGLE_CLIENT_ID_WEB", "")
         if configured_aud:
             if aud != configured_aud:
                 try:

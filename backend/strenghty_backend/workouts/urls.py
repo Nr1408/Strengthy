@@ -32,7 +32,6 @@ urlpatterns = [
     path("auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="auth_password_reset_confirm"),
     path("auth/google/", GoogleLoginView.as_view(), name="auth_google"),
     path("auth/google/redirect/", GoogleRedirectReceiver, name="auth_google_redirect"),
-    path("public-config/", PublicConfigView.as_view(), name="public_config"),
     path("profile/", ProfileView.as_view(), name="user_profile"),
 ]
 

@@ -221,6 +221,9 @@ CSRF_TRUSTED_ORIGINS = [
 # the frontend or native sign-in. Set this in your environment when enabling
 # Google sign-in, otherwise leave empty to skip AUD checks during development.
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_ID_WEB = os.environ.get("GOOGLE_CLIENT_ID_WEB", "")
+GOOGLE_CLIENT_ID_ANDROID = os.environ.get("GOOGLE_CLIENT_ID_ANDROID", "")
+
 
 # Allow cookies to be sent from the app during development (use token auth for
 # production/mobile use-cases where possible).

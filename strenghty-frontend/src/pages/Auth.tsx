@@ -12,8 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import {
-  getToken,
+import {  
   API_BASE,
   login,
   register,
@@ -57,7 +56,12 @@ export default function Auth() {
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
   const [showSignup, setShowSignup] = useState(false);
-  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [googleClientIdWeb, setGoogleClientIdWeb] = useState<string | null>(
+    null,
+  );
+  const [googleClientIdAndroid, setGoogleClientIdAndroid] = useState<
+    string | null
+  >(null);
   const [formData, setFormData] = useState<AuthFormData>({
     name: "",
     email: "",
@@ -131,17 +135,22 @@ export default function Auth() {
     return false;
   };
 
-  useEffect(() => {
-    try {
-    } catch (e) {}
+  useEffect(() => { 
     // fetch public config (google client id)
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/public-config/`);
         if (res.ok) {
           const data = await res.json();
-          if (data && data.google_client_id) {
-            setGoogleClientId(String(data.google_client_id));
+
+          // Web client
+          if (data?.google_client_id_web) {
+            setGoogleClientIdWeb(String(data.google_client_id_web));
+          }
+
+          // Android client
+          if (data?.google_client_id_android) {
+            setGoogleClientIdAndroid(String(data.google_client_id_android));
           }
         }
       } catch (e) {}
@@ -149,12 +158,12 @@ export default function Auth() {
   }, []);
 
   const openGoogleOAuthPopup = () => {
-    if (!googleClientId) return;
+    if (!googleClientIdWeb) return;
 
-    const nonce = crypto.randomUUID();
+    const nonce = Math.random().toString(36).slice(2);
 
     const params = new URLSearchParams({
-      client_id: googleClientId,
+      client_id: googleClientIdWeb,
       redirect_uri:
         "https://strengthy-backend.up.railway.app/api/auth/google/redirect/",
       response_type: "id_token",
@@ -194,13 +203,13 @@ export default function Auth() {
       if (isNative) return;
 
       // ✅ ADD THIS BLOCK HERE
-      if (!googleClientId) {
-        setDialogMessage("Google Client ID still loading. Please try again.");
-        setErrorDialogOpen(true);
-        return;
-      }
+        if (!googleClientIdWeb) {
+          setDialogMessage("Google Client ID still loading. Please try again.");
+          setErrorDialogOpen(true);
+          return;
+        }
 
-      const clientId = googleClientId.trim();
+      const clientId = googleClientIdWeb.trim();
 
       const loaded = await waitForGsi();
       if (!loaded) {
@@ -327,7 +336,7 @@ export default function Auth() {
       setPendingAction(null);
       setIsLoading(false);
     }
-  }, []);
+  }, [navigate, toast]);
 
   const onClickContinueWithGoogle = async () => {
     const isNative =
@@ -344,55 +353,86 @@ export default function Auth() {
 
     // --- NATIVE FLOW (Keep existing) ---
     try {
-      if (!googleClientId) {
-        const msg = `Google sign-in isn't ready (missing client id). This usually means the app can't reach the backend to load /public-config.\n\nAPI: ${API_BASE}`;
+      if (!googleClientIdAndroid) {
+        const msg = `Google sign-in isn't ready (missing Android client id).`;
         setDialogMessage(msg);
         setErrorDialogOpen(true);
-        toast({
-          title: "Google sign-in unavailable",
-          description: "Could not load Google config from server.",
-          variant: "destructive",
-        });
         return;
       }
+
+      // ✅ STEP 6 — Check Google Play Services FIRST
+      try {
+        await GoogleAuth.checkPlayServices();
+      } catch (e: any) {
+        console.warn("Play Services check failed:", e);
+        setDialogMessage(
+          "Google Play Services is missing or outdated. Please update it.",
+        );
+        setErrorDialogOpen(true);
+        return;
+      }
+
 
       // On native, let the user pick the account first. Only show the
       // pending screen after we have an idToken to exchange.
       setIsGoogleSelecting(true);
 
-      if (googleClientId) {
-        try {
-          await GoogleAuth.initialize({
-            clientId: googleClientId,
-            scopes: ["profile", "email"],
-          });
-        } catch (e) {}
+      let initialized = false;
+
+      try {
+        await GoogleAuth.initialize({
+          clientId: googleClientIdAndroid,
+          scopes: ["profile", "email"],
+        });
+        initialized = true;
+      } catch (e) {
+        console.warn("GoogleAuth initialize failed:", e);
       }
+
+      if (!initialized) {
+        setDialogMessage("Failed to initialize Google sign-in. Try again.");
+        setErrorDialogOpen(true);
+        setIsGoogleSelecting(false);
+        return;
+      }
+
       const res = await GoogleAuth.signIn();
       setIsGoogleSelecting(false);
-      const idToken = res?.authentication?.idToken || res?.idToken;
+      console.log("GoogleAuth.signIn response:", res);
 
-      if (idToken) {
-        setPendingAction({
-          kind: "google",
-          title: "Signing you in",
-          detail: "Syncing your account…",
-        });
-        setIsLoading(true);
-        try {
-          const data = await loginWithGoogle(idToken);
-          toast({ title: "Welcome!", description: "Signed in with Google" });
-          const target = data?.created ? "/onboarding" : "/dashboard";
-          navigate(target);
-          return;
-        } finally {
-          setPendingAction(null);
-          setIsLoading(false);
-        }
+      if (!res) {
+        setDialogMessage("Google sign-in was cancelled or failed to start.");
+        setErrorDialogOpen(true);
+        return;
       }
 
-      setDialogMessage("Google sign-in returned no token. Please try again.");
-      setErrorDialogOpen(true);
+      const idToken = res?.authentication?.idToken || res?.idToken;
+
+      if (!idToken) {
+        setDialogMessage("Google did not return an ID token.");
+        setErrorDialogOpen(true);
+        return;
+      }
+
+      setIsGoogleSelecting(false);
+      
+      setPendingAction({
+        kind: "google",
+        title: "Signing you in",
+        detail: "Syncing your account…",
+      });
+      setIsLoading(true);
+
+      try {
+        const data = await loginWithGoogle(idToken);
+        toast({ title: "Welcome!", description: "Signed in with Google" });
+        const target = data?.created ? "/onboarding" : "/dashboard";
+        navigate(target);
+        return;
+      } finally {
+        setPendingAction(null);
+        setIsLoading(false);
+      }
     } catch (e) {
       setIsGoogleSelecting(false);
       const msg = String(
@@ -536,7 +576,11 @@ export default function Auth() {
                   <button
                     type="button"
                     onClick={onClickContinueWithGoogle}
-                    disabled={!googleClientId || isLoading || isGoogleSelecting}
+                    disabled={
+                      (!googleClientIdWeb && !googleClientIdAndroid) ||
+                      isLoading ||
+                      isGoogleSelecting
+                    }
                     className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
                   >
                     <img
