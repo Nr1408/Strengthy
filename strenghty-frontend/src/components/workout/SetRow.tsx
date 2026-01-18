@@ -640,32 +640,39 @@ export function SetRow({
                   </button>
                 </DialogTrigger>
 
-                  {/* Dialog content: read-only shows a simple message; editable shows a slider (1-5) */}
-                  <DialogContent className="fixed left-1/2 top-1/3 z-50 max-w-xs -translate-x-1/2">
-                    {readOnly ? (
-                      <>
-                        <DialogHeader>
-                          <DialogTitle>Partial Reps</DialogTitle>
-                        </DialogHeader>
-                        <div className="mt-2 text-sm">
-                          This set contains <span className="font-medium">{Math.min(5, Number(set.halfReps) || 0)}</span> partial rep{(set.halfReps || 0) === 1 ? '' : 's'}.
-                        </div>
-                      </>
-                    ) : (
-                      <PartialRepsEditor
-                        initialValue={Math.max(1, Math.min(5, Number(set.halfReps) || 1))}
-                        onCancel={() => setHalfDialogOpen(false)}
-                        onClear={() => {
-                          onUpdate({ halfReps: 0 });
-                          setHalfDialogOpen(false);
-                        }}
-                        onSave={(val) => {
-                          onUpdate({ halfReps: val });
-                          setHalfDialogOpen(false);
-                        }}
-                      />
-                    )}
-                  </DialogContent>
+                {/* Dialog content: read-only shows a simple message; editable shows a slider (1-5) */}
+                <DialogContent className="fixed left-1/2 top-1/3 z-50 max-w-xs -translate-x-1/2">
+                  {readOnly ? (
+                    <>
+                      <DialogHeader>
+                        <DialogTitle>Partial Reps</DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-2 text-sm">
+                        This set contains{" "}
+                        <span className="font-medium">
+                          {Math.min(5, Number(set.halfReps) || 0)}
+                        </span>{" "}
+                        partial rep{(set.halfReps || 0) === 1 ? "" : "s"}.
+                      </div>
+                    </>
+                  ) : (
+                    <PartialRepsEditor
+                      initialValue={Math.max(
+                        1,
+                        Math.min(5, Number(set.halfReps) || 1),
+                      )}
+                      onCancel={() => setHalfDialogOpen(false)}
+                      onClear={() => {
+                        onUpdate({ halfReps: 0 });
+                        setHalfDialogOpen(false);
+                      }}
+                      onSave={(val) => {
+                        onUpdate({ halfReps: val });
+                        setHalfDialogOpen(false);
+                      }}
+                    />
+                  )}
+                </DialogContent>
               </Dialog>
             </div>
           </div>
@@ -941,7 +948,9 @@ function PartialRepsEditor({
 
       <div className="py-2">
         <div className="text-4xl font-bold text-center text-white">{value}</div>
-        <div className="text-sm text-center text-muted-foreground mb-3">Partial reps (1–5)</div>
+        <div className="text-sm text-center text-muted-foreground mb-3">
+          Partial reps (1–5)
+        </div>
         <div className="px-4">
           <Slider
             min={1}
@@ -960,7 +969,10 @@ function PartialRepsEditor({
         <Button variant="outline" className="text-xs" onClick={onClear}>
           Clear
         </Button>
-        <Button className="flex-1 text-xs font-semibold" onClick={() => onSave(value)}>
+        <Button
+          className="flex-1 text-xs font-semibold"
+          onClick={() => onSave(value)}
+        >
           Done
         </Button>
       </div>

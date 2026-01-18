@@ -1,5 +1,5 @@
 const GRID_TEMPLATE =
-  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
+  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
@@ -157,8 +157,8 @@ export default function ViewRoutine() {
                         {we.exercise.name.toLowerCase().includes("treadmill")
                           ? "INCLINE"
                           : we.exercise.name.toLowerCase().includes("row")
-                          ? "SPLIT"
-                          : "LEVEL"}
+                            ? "SPLIT"
+                            : "LEVEL"}
                       </span>
 
                       <span className="flex justify-center">
@@ -228,12 +228,12 @@ export default function ViewRoutine() {
                         const parsed = JSON.parse(raw) as any[];
                         const next = Array.isArray(parsed)
                           ? parsed.filter(
-                              (r) => String(r.id) !== String(routine.id)
+                              (r) => String(r.id) !== String(routine.id),
                             )
                           : [];
                         localStorage.setItem(
                           "user:routines",
-                          JSON.stringify(next)
+                          JSON.stringify(next),
                         );
                       }
                     }

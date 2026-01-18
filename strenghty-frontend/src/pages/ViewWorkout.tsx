@@ -1,5 +1,5 @@
 const GRID_TEMPLATE =
-  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
+  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
@@ -121,7 +121,7 @@ export default function ViewWorkout() {
       let bucket = m.get(exerciseId);
       if (!bucket) {
         const ex = exercises.find(
-          (e: any) => String(e.id) === String(exerciseId)
+          (e: any) => String(e.id) === String(exerciseId),
         ) || {
           id: exerciseId,
           name: `Exercise ${exerciseId}`,
@@ -238,8 +238,8 @@ export default function ViewWorkout() {
             typeof s.halfReps === "number"
               ? Math.max(0, Math.min(5, Math.round(s.halfReps)))
               : typeof s.half_reps === "number"
-              ? Math.max(0, Math.min(5, Math.round(s.half_reps)))
-              : 0,
+                ? Math.max(0, Math.min(5, Math.round(s.half_reps)))
+                : 0,
           reps: s.reps,
           weight: typeof s.weight === "number" ? s.weight : 0,
           unit: s.unit || getUnit(),
@@ -301,14 +301,14 @@ export default function ViewWorkout() {
   const headerExercisesCount = onlyStrength
     ? strengthExercisesCount
     : onlyCardio
-    ? cardioExercisesCount
-    : combinedExercisesCount;
+      ? cardioExercisesCount
+      : combinedExercisesCount;
 
   const headerSetsCount = onlyStrength
     ? strengthSetsCount
     : onlyCardio
-    ? cardioSetsCount
-    : strengthSetsCount + cardioSetsCount;
+      ? cardioSetsCount
+      : strengthSetsCount + cardioSetsCount;
 
   const totalVolume = sets.reduce((acc: number, s: any) => {
     const w = typeof s.weight === "number" ? s.weight : 0;
@@ -334,7 +334,7 @@ export default function ViewWorkout() {
   let cardioDistanceDisplay = "-";
   if (totalDistanceKm > 0 && totalFloors > 0) {
     cardioDistanceDisplay = `${totalDistanceKm.toFixed(
-      2
+      2,
     )} km + ${totalFloors} floors`;
   } else if (totalDistanceKm > 0) {
     cardioDistanceDisplay = `${totalDistanceKm.toFixed(2)} km`;
@@ -453,7 +453,7 @@ export default function ViewWorkout() {
                         ];
                         localStorage.setItem(
                           "user:routines",
-                          JSON.stringify(updated)
+                          JSON.stringify(updated),
                         );
                         queryClient.invalidateQueries({
                           queryKey: ["routines"],
@@ -561,72 +561,73 @@ export default function ViewWorkout() {
 
                 <div className="relative w-full overflow-hidden">
                   <div className="w-full">
-  <div
-    className="mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-    style={{
-      gridTemplateColumns:
-        we.exercise.muscleGroup === "cardio"
-          ? GRID_TEMPLATE_CARDIO
-          : GRID_TEMPLATE,
-    }}
-  >
-    {we.exercise.muscleGroup === "cardio" ? (
-      <>
-        <span className="flex justify-center">SET</span>
-        <span className="flex justify-center">DURATION</span>
+                    <div
+                      className="mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                      style={{
+                        gridTemplateColumns:
+                          we.exercise.muscleGroup === "cardio"
+                            ? GRID_TEMPLATE_CARDIO
+                            : GRID_TEMPLATE,
+                      }}
+                    >
+                      {we.exercise.muscleGroup === "cardio" ? (
+                        <>
+                          <span className="flex justify-center">SET</span>
+                          <span className="flex justify-center">DURATION</span>
 
-        <span className="flex justify-center">
-          {we.exercise.name.toLowerCase().includes("stair")
-            ? "FLOORS"
-            : "DISTANCE"}
-        </span>
+                          <span className="flex justify-center">
+                            {we.exercise.name.toLowerCase().includes("stair")
+                              ? "FLOORS"
+                              : "DISTANCE"}
+                          </span>
 
-        <span className="flex justify-center">
-          {we.exercise.name.toLowerCase().includes("treadmill")
-            ? "INCLINE"
-            : we.exercise.name.toLowerCase().includes("row")
-            ? "SPLIT"
-            : "LEVEL"}
-        </span>
+                          <span className="flex justify-center">
+                            {we.exercise.name
+                              .toLowerCase()
+                              .includes("treadmill")
+                              ? "INCLINE"
+                              : we.exercise.name.toLowerCase().includes("row")
+                                ? "SPLIT"
+                                : "LEVEL"}
+                          </span>
 
-        <span className="flex justify-center">
-          <Trophy className="h-3.5 w-3.5" />
-        </span>
+                          <span className="flex justify-center">
+                            <Trophy className="h-3.5 w-3.5" />
+                          </span>
 
-        <div />
-      </>
-    ) : (
-      <>
-        <span className="flex justify-center">SET</span>
-        <span className="flex justify-center">WEIGHT</span>
-        <span />
-        <span className="flex justify-center">REPS</span>
-        <span className="flex justify-center">RPE</span>
-        <span className="flex justify-center">
-          <Trophy className="h-3.5 w-3.5" />
-        </span>
-        <div />
-      </>
-    )}
-  </div>
+                          <div />
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex justify-center">SET</span>
+                          <span className="flex justify-center">WEIGHT</span>
+                          <span />
+                          <span className="flex justify-center">REPS</span>
+                          <span className="flex justify-center">RPE</span>
+                          <span className="flex justify-center">
+                            <Trophy className="h-3.5 w-3.5" />
+                          </span>
+                          <div />
+                        </>
+                      )}
+                    </div>
 
-  <div className="space-y-2">
-    {we.sets.map((s: any, idx: number) => (
-      <SetRow
-        key={s.id}
-        set={s}
-        exerciseName={we.exercise.name}
-        unit={s.unit}
-        setNumber={idx + 1}
-        onUpdate={() => {}}
-        onUnitChange={() => {}}
-        onComplete={() => {}}
-        readOnly
-      />
-    ))}
-  </div>
-</div>
-
+                    <div className="space-y-2">
+                      {we.sets.map((s: any, idx: number) => (
+                        <SetRow
+                          key={s.id}
+                          set={s}
+                          exerciseName={we.exercise.name}
+                          unit={s.unit}
+                          setNumber={idx + 1}
+                          onUpdate={() => {}}
+                          onUnitChange={() => {}}
+                          onComplete={() => {}}
+                          readOnly
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

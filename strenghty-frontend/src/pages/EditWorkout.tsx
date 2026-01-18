@@ -1,6 +1,6 @@
 // In EditWorkout.tsx (or ViewWorkout.tsx)
 const GRID_TEMPLATE =
-  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
+  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
 
 const GRID_TEMPLATE_CARDIO =
   "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
@@ -389,12 +389,31 @@ export default function EditWorkout() {
   };
 
   const addExercise = (exercise: Exercise) => {
-    const newExercise: WorkoutExercise = {
-      id: crypto.randomUUID(),
-      exercise,
-      notes: "",
-      sets: [
-        {
+    const isCardio = exercise.muscleGroup === "cardio";
+    const newSet = isCardio
+      ? {
+          id: crypto.randomUUID(),
+          // cardio-specific defaults
+          reps: 0,
+          halfReps: 0,
+          weight: 0,
+          unit: getUnit(),
+          isPR: false,
+          completed: false,
+          type: "S" as const,
+          // cardio fields
+          cardioMode: "treadmill",
+          cardioDurationSeconds: 0,
+          cardioDistanceUnit: "km",
+          cardioDistance: 0,
+          cardioStat: 0,
+          cardioDistancePR: false,
+          cardioPacePR: false,
+          cardioAscentPR: false,
+          cardioIntensityPR: false,
+          cardioSplitPR: false,
+        }
+      : {
           id: crypto.randomUUID(),
           reps: 0,
           halfReps: 0,
@@ -404,8 +423,13 @@ export default function EditWorkout() {
           completed: false,
           type: "S" as const,
           rpe: undefined,
-        },
-      ],
+        };
+
+    const newExercise: WorkoutExercise = {
+      id: crypto.randomUUID(),
+      exercise,
+      notes: "",
+      sets: [newSet as any],
     };
     setExercises((prev) => [...prev, newExercise]);
     setIsExerciseDialogOpen(false);
@@ -417,7 +441,34 @@ export default function EditWorkout() {
     setExercises(
       exercises.map((ex) => {
         if (ex.id === exerciseId) {
-          const lastSet = ex.sets[ex.sets.length - 1];
+          const lastSet = ex.sets[ex.sets.length - 1] as any;
+          const isCardio = ex.exercise.muscleGroup === "cardio";
+          if (isCardio) {
+            const newCardio = {
+              id: crypto.randomUUID(),
+              reps: 0,
+              halfReps: (lastSet && lastSet.halfReps) || 0,
+              weight: 0,
+              unit: (lastSet && lastSet.unit) || getUnit(),
+              isPR: false,
+              completed: false,
+              type: (lastSet && lastSet.type) || "S",
+              cardioMode: (lastSet && lastSet.cardioMode) || "treadmill",
+              cardioDurationSeconds:
+                (lastSet && lastSet.cardioDurationSeconds) || 0,
+              cardioDistanceUnit:
+                (lastSet && lastSet.cardioDistanceUnit) || "km",
+              cardioDistance: (lastSet && lastSet.cardioDistance) || 0,
+              cardioStat: (lastSet && lastSet.cardioStat) || 0,
+              cardioDistancePR: !!(lastSet && lastSet.cardioDistancePR),
+              cardioPacePR: !!(lastSet && lastSet.cardioPacePR),
+              cardioAscentPR: !!(lastSet && lastSet.cardioAscentPR),
+              cardioIntensityPR: !!(lastSet && lastSet.cardioIntensityPR),
+              cardioSplitPR: !!(lastSet && lastSet.cardioSplitPR),
+            };
+            return { ...ex, sets: [...ex.sets, newCardio] };
+          }
+
           return {
             ...ex,
             sets: [
