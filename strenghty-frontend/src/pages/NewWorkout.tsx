@@ -1502,6 +1502,7 @@ export default function NewWorkout() {
               const created = await createCardioSet({
                 workoutId: persistedWorkoutId,
                 exerciseId: ex.exercise.id,
+                setNumber: i + 1,
                 mode,
                 durationSeconds,
                 distance,
@@ -1598,6 +1599,7 @@ export default function NewWorkout() {
                 const createdRetry = await createCardioSet({
                   workoutId: persistedWorkoutId,
                   exerciseId: ex.exercise.id,
+                  setNumber: i + 1,
                   mode,
                   durationSeconds,
                   distance,

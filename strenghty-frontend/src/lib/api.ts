@@ -1188,6 +1188,7 @@ export async function getCardioSetsForWorkout(workoutId: string): Promise<UiCard
 export async function createCardioSet(params: {
   workoutId: string;
   exerciseId: string;
+  setNumber?: number;
   mode: CardioMode;
   durationSeconds?: number;
   distance?: number;
@@ -1196,7 +1197,7 @@ export async function createCardioSet(params: {
   splitSeconds?: number;
   spm?: number;
 }): Promise<UiCardioSet> {
-  const { workoutId, exerciseId, mode, durationSeconds, distance, floors, level, splitSeconds, spm } = params;
+  const { workoutId, exerciseId, setNumber, mode, durationSeconds, distance, floors, level, splitSeconds, spm } = params;
 
   const workoutNum = Number(workoutId);
   const exerciseNum = Number(exerciseId);
@@ -1212,6 +1213,7 @@ export async function createCardioSet(params: {
     exercise: exerciseNum,
     mode: mapUiCardioModeToApi(mode),
   };
+  if (typeof setNumber === 'number') payload.set_number = setNumber;
   if (typeof durationSeconds === "number") payload.duration_seconds = durationSeconds;
   if (typeof distance === "number") payload.distance_meters = distance;
   if (typeof floors === "number") payload.floors = floors;

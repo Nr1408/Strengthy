@@ -758,6 +758,7 @@ export default function EditWorkout() {
             created = await createCardioSet({
               workoutId: workoutId,
               exerciseId: exId,
+              setNumber: s.setNumber || 1,
               mode,
               durationSeconds,
               distance: distanceMeters,
@@ -866,6 +867,7 @@ export default function EditWorkout() {
               created = await createCardioSet({
                 workoutId: workoutId,
                 exerciseId: exId,
+                setNumber: s.setNumber || 1,
                 mode,
                 durationSeconds,
                 distance: distanceMeters,
