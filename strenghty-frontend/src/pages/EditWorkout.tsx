@@ -53,6 +53,7 @@ import {
   deleteSet,
   createWorkout,
 } from "@/lib/api";
+import { updateCardioSet } from "@/lib/api";
 import { getCardioSetsForWorkout } from "@/lib/api";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 
@@ -570,6 +571,13 @@ export default function EditWorkout() {
         rpe: typeof (s as any).rpe === "number" ? (s as any).rpe : undefined,
       };
 
+      const isCardioSet = !!(
+        (s as any).cardioMode ||
+        typeof (s as any).cardioDurationSeconds === "number" ||
+        typeof (s as any).cardioDistance === "number" ||
+        typeof (s as any).cardioStat === "number"
+      );
+
       // Determine whether this workout should be allowed to introduce new PRs.
       // For past-dated workouts we keep existing PR flags but do not create
       // new ones when editing, so retro changes don't show new trophies.
@@ -580,7 +588,54 @@ export default function EditWorkout() {
       const allowPrForWorkout = workoutDay.getTime() >= today.getTime();
 
       if (/^[0-9]+$/.test(String(s.id))) {
-        const saved = await updateSet(String(s.id), payload);
+        let saved: any;
+        if (isCardioSet) {
+          const mode = (s as any).cardioMode as any;
+          const rawDistance =
+            typeof (s as any).cardioDistance === "number"
+              ? (s as any).cardioDistance
+              : undefined;
+          const distanceMeters =
+            typeof rawDistance === "number"
+              ? (s as any).cardioDistanceUnit === "mile"
+                ? Math.round(rawDistance * 1609.34)
+                : Math.round(rawDistance * 1000)
+              : undefined;
+
+          const durationSeconds =
+            typeof (s as any).cardioDurationSeconds === "number"
+              ? (s as any).cardioDurationSeconds
+              : undefined;
+          let level: number | undefined = undefined;
+          let splitSeconds: number | undefined = undefined;
+          if (mode === "row")
+            splitSeconds =
+              typeof (s as any).cardioStat === "number"
+                ? (s as any).cardioStat
+                : undefined;
+          else
+            level =
+              typeof (s as any).cardioStat === "number"
+                ? (s as any).cardioStat
+                : undefined;
+
+          saved = await updateCardioSet(String(s.id), {
+            mode,
+            durationSeconds,
+            distance: distanceMeters,
+            floors:
+              mode === "stairs"
+                ? typeof (s as any).cardioDistance === "number"
+                  ? Math.round((s as any).cardioDistance)
+                  : undefined
+                : undefined,
+            level,
+            splitSeconds,
+          });
+        } else {
+          const savedLocal = await updateSet(String(s.id), payload);
+          saved = savedLocal;
+        }
         try {
           if (
             !allowPrForWorkout &&
@@ -671,18 +726,64 @@ export default function EditWorkout() {
       } else {
         let created: any;
         try {
-          created = await createSet({
-            workoutId: workoutId,
-            exerciseId: exId,
-            setNumber: s.setNumber || 1,
-            reps: s.reps || 0,
-            halfReps: (s as any).halfReps || 0,
-            weight: s.weight,
-            unit: s.unit || getUnit(),
-            type: s.type,
-            rpe:
-              typeof (s as any).rpe === "number" ? (s as any).rpe : undefined,
-          });
+          if (isCardioSet) {
+            const mode = (s as any).cardioMode as any;
+            const rawDistance =
+              typeof (s as any).cardioDistance === "number"
+                ? (s as any).cardioDistance
+                : undefined;
+            const distanceMeters =
+              typeof rawDistance === "number"
+                ? (s as any).cardioDistanceUnit === "mile"
+                  ? Math.round(rawDistance * 1609.34)
+                  : Math.round(rawDistance * 1000)
+                : undefined;
+            const durationSeconds =
+              typeof (s as any).cardioDurationSeconds === "number"
+                ? (s as any).cardioDurationSeconds
+                : undefined;
+            let level: number | undefined = undefined;
+            let splitSeconds: number | undefined = undefined;
+            if (mode === "row")
+              splitSeconds =
+                typeof (s as any).cardioStat === "number"
+                  ? (s as any).cardioStat
+                  : undefined;
+            else
+              level =
+                typeof (s as any).cardioStat === "number"
+                  ? (s as any).cardioStat
+                  : undefined;
+
+            created = await createCardioSet({
+              workoutId: workoutId,
+              exerciseId: exId,
+              mode,
+              durationSeconds,
+              distance: distanceMeters,
+              floors:
+                mode === "stairs"
+                  ? typeof (s as any).cardioDistance === "number"
+                    ? Math.round((s as any).cardioDistance)
+                    : undefined
+                  : undefined,
+              level,
+              splitSeconds,
+            });
+          } else {
+            created = await createSet({
+              workoutId: workoutId,
+              exerciseId: exId,
+              setNumber: s.setNumber || 1,
+              reps: s.reps || 0,
+              halfReps: (s as any).halfReps || 0,
+              weight: s.weight,
+              unit: s.unit || getUnit(),
+              type: s.type,
+              rpe:
+                typeof (s as any).rpe === "number" ? (s as any).rpe : undefined,
+            });
+          }
         } catch (err: any) {
           // Prefer structured error body if available (createSet now attaches parsed JSON to `err.body`).
           const body = err && (err as any).body ? (err as any).body : null;
@@ -733,18 +834,66 @@ export default function EditWorkout() {
             }
 
             // retry once
-            created = await createSet({
-              workoutId: workoutId,
-              exerciseId: exId,
-              setNumber: s.setNumber || 1,
-              reps: s.reps || 0,
-              halfReps: (s as any).halfReps || 0,
-              weight: s.weight,
-              unit: s.unit || getUnit(),
-              type: s.type,
-              rpe:
-                typeof (s as any).rpe === "number" ? (s as any).rpe : undefined,
-            });
+            if (isCardioSet) {
+              const mode = (s as any).cardioMode as any;
+              const rawDistance =
+                typeof (s as any).cardioDistance === "number"
+                  ? (s as any).cardioDistance
+                  : undefined;
+              const distanceMeters =
+                typeof rawDistance === "number"
+                  ? (s as any).cardioDistanceUnit === "mile"
+                    ? Math.round(rawDistance * 1609.34)
+                    : Math.round(rawDistance * 1000)
+                  : undefined;
+              const durationSeconds =
+                typeof (s as any).cardioDurationSeconds === "number"
+                  ? (s as any).cardioDurationSeconds
+                  : undefined;
+              let level: number | undefined = undefined;
+              let splitSeconds: number | undefined = undefined;
+              if (mode === "row")
+                splitSeconds =
+                  typeof (s as any).cardioStat === "number"
+                    ? (s as any).cardioStat
+                    : undefined;
+              else
+                level =
+                  typeof (s as any).cardioStat === "number"
+                    ? (s as any).cardioStat
+                    : undefined;
+
+              created = await createCardioSet({
+                workoutId: workoutId,
+                exerciseId: exId,
+                mode,
+                durationSeconds,
+                distance: distanceMeters,
+                floors:
+                  mode === "stairs"
+                    ? typeof (s as any).cardioDistance === "number"
+                      ? Math.round((s as any).cardioDistance)
+                      : undefined
+                    : undefined,
+                level,
+                splitSeconds,
+              });
+            } else {
+              created = await createSet({
+                workoutId: workoutId,
+                exerciseId: exId,
+                setNumber: s.setNumber || 1,
+                reps: s.reps || 0,
+                halfReps: (s as any).halfReps || 0,
+                weight: s.weight,
+                unit: s.unit || getUnit(),
+                type: s.type,
+                rpe:
+                  typeof (s as any).rpe === "number"
+                    ? (s as any).rpe
+                    : undefined,
+              });
+            }
           } else {
             throw err;
           }

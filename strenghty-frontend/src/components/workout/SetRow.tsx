@@ -636,7 +636,7 @@ export function SetRow({
                 </DialogTrigger>
 
                 {/* Dialog content: read-only shows a simple message; editable shows a slider (1-5) */}
-                <DialogContent className="fixed left-1/2 top-1/3 z-50 max-w-xs -translate-x-1/2">
+                <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-xs -translate-x-1/2 -translate-y-1/2">
                   {readOnly ? (
                     <>
                       <DialogHeader>
