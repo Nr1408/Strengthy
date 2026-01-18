@@ -290,6 +290,15 @@ export function SetRow({
 
   const [open, setOpen] = useState(false);
   const [halfDialogOpen, setHalfDialogOpen] = useState(false);
+  const [halfSliderValue, setHalfSliderValue] = useState<number>(
+    Math.max(1, Math.min(5, Number(set.halfReps) || 1)),
+  );
+
+  useEffect(() => {
+    if (halfDialogOpen) {
+      setHalfSliderValue(Math.max(1, Math.min(5, Number(set.halfReps) || 1)));
+    }
+  }, [halfDialogOpen, set.halfReps]);
   // Only show the trophy if the set is flagged as a PR and there are
   // actual PR lines to display. Prevents showing the trophy when
   // `isPR` is true but no PR details were detected.
@@ -631,14 +640,32 @@ export function SetRow({
                   </button>
                 </DialogTrigger>
 
-                <DialogContent className="fixed left-1/2 top-1/3 z-50 max-w-xs -translate-x-1/2">
-                  <DialogHeader>
-                    <DialogTitle>Partial Reps</DialogTitle>
-                  </DialogHeader>
-                  <div className="mt-2 text-sm">
-                    This set contains <span className="font-medium">{Math.min(5, Number(set.halfReps) || 0)}</span> partial rep{(set.halfReps || 0) === 1 ? '' : 's'}.
-                  </div>
-                </DialogContent>
+                  {/* Dialog content: read-only shows a simple message; editable shows a slider (1-5) */}
+                  <DialogContent className="fixed left-1/2 top-1/3 z-50 max-w-xs -translate-x-1/2">
+                    {readOnly ? (
+                      <>
+                        <DialogHeader>
+                          <DialogTitle>Partial Reps</DialogTitle>
+                        </DialogHeader>
+                        <div className="mt-2 text-sm">
+                          This set contains <span className="font-medium">{Math.min(5, Number(set.halfReps) || 0)}</span> partial rep{(set.halfReps || 0) === 1 ? '' : 's'}.
+                        </div>
+                      </>
+                    ) : (
+                      <PartialRepsEditor
+                        initialValue={Math.max(1, Math.min(5, Number(set.halfReps) || 1))}
+                        onCancel={() => setHalfDialogOpen(false)}
+                        onClear={() => {
+                          onUpdate({ halfReps: 0 });
+                          setHalfDialogOpen(false);
+                        }}
+                        onSave={(val) => {
+                          onUpdate({ halfReps: val });
+                          setHalfDialogOpen(false);
+                        }}
+                      />
+                    )}
+                  </DialogContent>
               </Dialog>
             </div>
           </div>
@@ -886,6 +913,57 @@ export function SetRow({
           </Button>
         )}
       </Cell>
+    </div>
+  );
+}
+
+// Small editor component for partial reps (slider 1..5)
+function PartialRepsEditor({
+  initialValue,
+  onSave,
+  onCancel,
+  onClear,
+}: {
+  initialValue: number;
+  onSave: (v: number) => void;
+  onCancel: () => void;
+  onClear: () => void;
+}) {
+  const [value, setValue] = useState<number>(initialValue || 1);
+
+  useEffect(() => setValue(initialValue || 1), [initialValue]);
+
+  return (
+    <div>
+      <DialogHeader>
+        <DialogTitle>Adjust Partial Reps</DialogTitle>
+      </DialogHeader>
+
+      <div className="py-2">
+        <div className="text-4xl font-bold text-center text-white">{value}</div>
+        <div className="text-sm text-center text-muted-foreground mb-3">Partial reps (1–5)</div>
+        <div className="px-4">
+          <Slider
+            min={1}
+            max={5}
+            step={1}
+            value={[value]}
+            onValueChange={(vals) => setValue(vals[0] ?? value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <Button variant="ghost" className="flex-1 text-xs" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button variant="outline" className="text-xs" onClick={onClear}>
+          Clear
+        </Button>
+        <Button className="flex-1 text-xs font-semibold" onClick={() => onSave(value)}>
+          Done
+        </Button>
+      </div>
     </div>
   );
 }
