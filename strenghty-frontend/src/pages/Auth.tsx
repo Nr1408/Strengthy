@@ -383,6 +383,8 @@ export default function Auth() {
         return;
       }
 
+      await GoogleAuth.signOut();
+      
       const res = await GoogleAuth.signIn();
       setIsGoogleSelecting(false);
       console.log("GoogleAuth.signIn response:", res);
