@@ -289,7 +289,12 @@ export function SetRow({
   }
 
   const [open, setOpen] = useState(false);
-  const showTrophy = set.isPR && (readOnly || set.completed);
+  const [halfDialogOpen, setHalfDialogOpen] = useState(false);
+  // Only show the trophy if the set is flagged as a PR and there are
+  // actual PR lines to display. Prevents showing the trophy when
+  // `isPR` is true but no PR details were detected.
+  const showTrophy =
+    set.isPR && (readOnly || set.completed) && prLines.length > 0;
 
   return (
     <div
@@ -582,40 +587,60 @@ export function SetRow({
               disabled={readOnly}
               className="h-8 w-full px-1 pr-8 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
             />
-            <button
-              type="button"
-              aria-label={
-                (set.halfReps || 0) > 0
-                  ? `Half reps: ${Math.min(5, Number(set.halfReps) || 0)}`
-                  : "Add half reps"
-              }
-              disabled={readOnly}
-              onClick={() => {
-                if (readOnly) return;
-                const cur =
-                  typeof set.halfReps === "number" &&
-                  Number.isFinite(set.halfReps)
-                    ? Number(set.halfReps)
-                    : 0;
-                const next = cur >= 5 ? 0 : cur + 1;
-                onUpdate({ halfReps: next });
-                try {
-                  triggerHaptic();
-                } catch (e) {}
-              }}
-              className={cn(
-                "absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-sm text-[11px] font-semibold leading-none flex items-center justify-center select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0",
-                (set.halfReps || 0) > 0
-                  ? "bg-orange-500 text-black border border-orange-500"
-                  : "bg-transparent text-muted-foreground/70 hover:text-muted-foreground border border-border",
-              )}
-            >
-              {(set.halfReps || 0) > 0 ? (
-                <span>{Math.min(5, Number(set.halfReps) || 0)}</span>
-              ) : (
-                <span>½</span>
-              )}
-            </button>
+            {/* Half-reps button: editable increments when not readOnly; when readOnly
+                and there are partials, open a dialog to show the count. */}
+            <div className="absolute right-1 top-1/2 -translate-y-1/2">
+              <Dialog open={halfDialogOpen} onOpenChange={setHalfDialogOpen}>
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={
+                      (set.halfReps || 0) > 0
+                        ? `Half reps: ${Math.min(5, Number(set.halfReps) || 0)}`
+                        : "Add half reps"
+                    }
+                    onClick={() => {
+                      if (readOnly) {
+                        // open the dialog to show partial reps when viewing
+                        if ((set.halfReps || 0) > 0) setHalfDialogOpen(true);
+                        return;
+                      }
+                      const cur =
+                        typeof set.halfReps === "number" &&
+                        Number.isFinite(set.halfReps)
+                          ? Number(set.halfReps)
+                          : 0;
+                      const next = cur >= 5 ? 0 : cur + 1;
+                      onUpdate({ halfReps: next });
+                      try {
+                        triggerHaptic();
+                      } catch (e) {}
+                    }}
+                    className={cn(
+                      "h-6 w-6 rounded-sm text-[11px] font-semibold leading-none flex items-center justify-center select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0",
+                      (set.halfReps || 0) > 0
+                        ? "bg-orange-500 text-black border border-orange-500"
+                        : "bg-transparent text-muted-foreground/70 hover:text-muted-foreground border border-border",
+                    )}
+                  >
+                    {(set.halfReps || 0) > 0 ? (
+                      <span>{Math.min(5, Number(set.halfReps) || 0)}</span>
+                    ) : (
+                      <span>½</span>
+                    )}
+                  </button>
+                </DialogTrigger>
+
+                <DialogContent className="fixed left-1/2 top-1/3 z-50 max-w-xs -translate-x-1/2">
+                  <DialogHeader>
+                    <DialogTitle>Partial Reps</DialogTitle>
+                  </DialogHeader>
+                  <div className="mt-2 text-sm">
+                    This set contains <span className="font-medium">{Math.min(5, Number(set.halfReps) || 0)}</span> partial rep{(set.halfReps || 0) === 1 ? '' : 's'}.
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         )}
       </Cell>
