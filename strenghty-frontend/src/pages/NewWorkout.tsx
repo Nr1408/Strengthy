@@ -1,5 +1,5 @@
 const GRID_TEMPLATE =
-  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
+  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
@@ -79,7 +79,7 @@ export default function NewWorkout() {
   const forceNew = !!location.state?.forceNew;
   const { toast } = useToast();
   const [workoutName, setWorkoutName] = useState(
-    fromRoutine?.name || "New Workout"
+    fromRoutine?.name || "New Workout",
   );
   const [notes, setNotes] = useState("");
   const [exercises, setExercises] = useState<WorkoutExercise[]>(() => {
@@ -130,7 +130,7 @@ export default function NewWorkout() {
   const [unusualSet, setUnusualSet] = useState<UnusualSetState | null>(null);
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
   const [exerciseToReplace, setExerciseToReplace] = useState<string | null>(
-    null
+    null,
   );
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [startTime, setStartTime] = useState<Date>(() => new Date());
@@ -201,7 +201,7 @@ export default function NewWorkout() {
       muscleGroup: e.muscleGroup === "other" ? "calves" : e.muscleGroup,
     });
     staticLibraryExercises.forEach((e) =>
-      map.set(e.name.toLowerCase(), normalize(e))
+      map.set(e.name.toLowerCase(), normalize(e)),
     );
     userExercises.forEach((e) => map.set(e.name.toLowerCase(), normalize(e)));
     return Array.from(map.values());
@@ -289,7 +289,13 @@ export default function NewWorkout() {
     try {
       localStorage.setItem(
         `workout:state:${workoutId}`,
-        JSON.stringify({ exercises, elapsedSec, workoutName, notes, startTime })
+        JSON.stringify({
+          exercises,
+          elapsedSec,
+          workoutName,
+          notes,
+          startTime,
+        }),
       );
     } catch (e) {}
   }, [exercises, elapsedSec, workoutId, workoutName, notes, isRoutineBuilder]);
@@ -340,7 +346,7 @@ export default function NewWorkout() {
     const dt = startTime;
     const pad = (n: number) => String(n).padStart(2, "0");
     const value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(
-      dt.getDate()
+      dt.getDate(),
     )}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
     setStartTimeInput(value);
     setShowDurationPicker(false);
@@ -356,7 +362,7 @@ export default function NewWorkout() {
             id: workoutId,
             startedAt: new Date().toISOString(),
             routineId: fromRoutine?.id ?? null,
-          })
+          }),
         );
         // If this session was started from a routine, keep it paused; otherwise clear paused flag
         if (!startedFromRoutine) {
@@ -419,7 +425,7 @@ export default function NewWorkout() {
     setStartTime(dt);
     const pad = (n: number) => String(n).padStart(2, "0");
     const value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(
-      dt.getDate()
+      dt.getDate(),
     )}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
     setStartTimeInput(value);
   };
@@ -482,7 +488,7 @@ export default function NewWorkout() {
 
   const replaceExerciseForCard = (
     workoutExerciseId: string,
-    newExercise: Exercise
+    newExercise: Exercise,
   ) => {
     const isCardio = newExercise.muscleGroup === "cardio";
     const cardioMode = isCardio
@@ -515,7 +521,7 @@ export default function NewWorkout() {
           exercise: newExercise,
           sets: resetSets,
         };
-      })
+      }),
     );
     setExerciseToReplace(null);
     setIsExerciseDialogOpen(false);
@@ -546,42 +552,42 @@ export default function NewWorkout() {
 
                 cardioMode:
                   ex.exercise.muscleGroup === "cardio"
-                    ? (lastSet as any)?.cardioMode ??
-                      getCardioModeForExercise(ex.exercise)
+                    ? ((lastSet as any)?.cardioMode ??
+                      getCardioModeForExercise(ex.exercise))
                     : undefined,
 
                 cardioDistanceUnit:
                   ex.exercise.muscleGroup === "cardio"
-                    ? (lastSet as any)?.cardioDistanceUnit ?? "km"
+                    ? ((lastSet as any)?.cardioDistanceUnit ?? "km")
                     : undefined,
 
                 cardioDurationSeconds:
                   ex.exercise.muscleGroup === "cardio"
-                    ? (lastSet as any)?.cardioDurationSeconds ?? 0
+                    ? ((lastSet as any)?.cardioDurationSeconds ?? 0)
                     : undefined,
 
                 cardioDistance:
                   ex.exercise.muscleGroup === "cardio"
-                    ? (lastSet as any)?.cardioDistance ?? 0
+                    ? ((lastSet as any)?.cardioDistance ?? 0)
                     : undefined,
 
                 cardioStat:
                   ex.exercise.muscleGroup === "cardio"
-                    ? (lastSet as any)?.cardioStat ?? 0
+                    ? ((lastSet as any)?.cardioStat ?? 0)
                     : undefined,
               },
             ],
           };
         }
         return ex;
-      })
+      }),
     );
   };
 
   const updateSetLocal = (
     exerciseId: string,
     setId: string,
-    updates: Partial<WorkoutSet>
+    updates: Partial<WorkoutSet>,
   ) => {
     setExercises((prev) =>
       prev.map((ex) => {
@@ -589,19 +595,19 @@ export default function NewWorkout() {
           return {
             ...ex,
             sets: ex.sets.map((set) =>
-              set.id === setId ? { ...set, ...updates } : set
+              set.id === setId ? { ...set, ...updates } : set,
             ),
           };
         }
         return ex;
-      })
+      }),
     );
   };
 
   const toggleSetComplete = async (
     exerciseId: string,
     setId: string,
-    force = false
+    force = false,
   ) => {
     setExercises((prev) =>
       prev.map((ex) => {
@@ -609,12 +615,12 @@ export default function NewWorkout() {
           return {
             ...ex,
             sets: ex.sets.map((set) =>
-              set.id === setId ? { ...set, completed: !set.completed } : set
+              set.id === setId ? { ...set, completed: !set.completed } : set,
             ),
           };
         }
         return ex;
-      })
+      }),
     );
 
     if (isRoutineBuilder) return;
@@ -646,7 +652,7 @@ export default function NewWorkout() {
 
         const targetNorm = normalize(ex.exercise.name);
         const match = userExercises.find(
-          (ue) => normalize(ue.name) === targetNorm
+          (ue) => normalize(ue.name) === targetNorm,
         );
 
         if (match) {
@@ -658,14 +664,14 @@ export default function NewWorkout() {
                     ...e,
                     exercise: { ...e.exercise, id: match.id as any },
                   }
-                : e
-            )
+                : e,
+            ),
           );
         } else {
           const created = await createExercise(
             ex.exercise.name,
             ex.exercise.muscleGroup as any,
-            (ex.exercise as any).description || ""
+            (ex.exercise as any).description || "",
           );
           backendExerciseId = String(created.id);
           setExercises((prev) =>
@@ -675,8 +681,8 @@ export default function NewWorkout() {
                     ...e,
                     exercise: { ...e.exercise, id: created.id },
                   }
-                : e
-            )
+                : e,
+            ),
           );
         }
       }
@@ -704,10 +710,10 @@ export default function NewWorkout() {
         try {
           const allWorkouts = await getWorkouts();
           const finished = new Set(
-            allWorkouts.filter((w) => !!w.endedAt).map((w) => String(w.id))
+            allWorkouts.filter((w) => !!w.endedAt).map((w) => String(w.id)),
           );
           completedSets = priorSets.filter((ps) =>
-            finished.has(String(ps.workout))
+            finished.has(String(ps.workout)),
           );
         } catch (e) {
           // If we can't fetch workouts, fall back to any prior set existing
@@ -773,19 +779,19 @@ export default function NewWorkout() {
                 ? {
                     ...e,
                     sets: e.sets.map((s) =>
-                      s.id === setId ? { ...s, completed: false } : s
+                      s.id === setId ? { ...s, completed: false } : s,
                     ),
                   }
-                : e
-            )
+                : e,
+            ),
           );
 
           const prevSummary =
             bestVolumeKg > 0
               ? `${bestVolumeKg.toFixed(1)} kg volume (approx.)`
               : best1rmKg > 0
-              ? `${best1rmKg.toFixed(1)} kg est. 1RM`
-              : "Previous best unknown";
+                ? `${best1rmKg.toFixed(1)} kg est. 1RM`
+                : "Previous best unknown";
 
           const newSummary =
             newKg > 0 && newReps > 0
@@ -826,15 +832,15 @@ export default function NewWorkout() {
               const createdEx = await createExercise(
                 ex.exercise.name,
                 ex.exercise.muscleGroup as any,
-                (ex.exercise as any).description || ""
+                (ex.exercise as any).description || "",
               );
               backendExerciseId = String(createdEx.id);
               setExercises((prev) =>
                 prev.map((e) =>
                   e.id === exerciseId
                     ? { ...e, exercise: { ...e.exercise, id: createdEx.id } }
-                    : e
-                )
+                    : e,
+                ),
               );
             } catch (createExErr) {
               throw err;
@@ -900,10 +906,10 @@ export default function NewWorkout() {
                           unit: saved.unit || s.unit,
                         };
                       })()
-                    : s
+                    : s,
                 ),
-              }
-        )
+              },
+        ),
       );
 
       // If server reported a PR, or our local detection found one, enqueue banners
@@ -976,12 +982,12 @@ export default function NewWorkout() {
           return {
             ...ex,
             sets: ex.sets.map((set) =>
-              set.id === setId ? { ...set, completed: !set.completed } : set
+              set.id === setId ? { ...set, completed: !set.completed } : set,
             ),
           };
         }
         return ex;
-      })
+      }),
     );
 
     if (isRoutineBuilder) return;
@@ -1018,7 +1024,7 @@ export default function NewWorkout() {
 
         const targetNorm = normalize(ex.exercise.name);
         const match = userExercises.find(
-          (ue) => normalize(ue.name) === targetNorm
+          (ue) => normalize(ue.name) === targetNorm,
         );
 
         if (match) {
@@ -1030,14 +1036,14 @@ export default function NewWorkout() {
                     ...e,
                     exercise: { ...e.exercise, id: match.id as any },
                   }
-                : e
-            )
+                : e,
+            ),
           );
         } else {
           const created = await createExercise(
             ex.exercise.name,
             ex.exercise.muscleGroup as any,
-            (ex.exercise as any).description || ""
+            (ex.exercise as any).description || "",
           );
           backendExerciseId = String(created.id);
           setExercises((prev) =>
@@ -1047,8 +1053,8 @@ export default function NewWorkout() {
                     ...e,
                     exercise: { ...e.exercise, id: created.id },
                   }
-                : e
-            )
+                : e,
+            ),
           );
         }
       }
@@ -1079,8 +1085,8 @@ export default function NewWorkout() {
           rawDistance && distanceUnit === "mile"
             ? Math.round(rawDistance * 1609.34)
             : rawDistance
-            ? Math.round(rawDistance * 1000)
-            : undefined;
+              ? Math.round(rawDistance * 1000)
+              : undefined;
         if (mode === "row") {
           distance = distanceMeters || undefined;
           splitSeconds = rawStat || undefined;
@@ -1126,7 +1132,7 @@ export default function NewWorkout() {
               const createdEx = await createExercise(
                 ex.exercise.name,
                 ex.exercise.muscleGroup as any,
-                (ex.exercise as any).description || ""
+                (ex.exercise as any).description || "",
               );
               backendExerciseId = String(createdEx.id);
               setExercises((prev) =>
@@ -1136,8 +1142,8 @@ export default function NewWorkout() {
                         ...e,
                         exercise: { ...e.exercise, id: createdEx.id },
                       }
-                    : e
-                )
+                    : e,
+                ),
               );
             } catch (createExErr) {
               throw err;
@@ -1189,8 +1195,8 @@ export default function NewWorkout() {
                           mode === "stairs"
                             ? saved.level
                             : mode === "row"
-                            ? saved.splitSeconds
-                            : saved.level,
+                              ? saved.splitSeconds
+                              : saved.level,
                         isPR: saved.isPR,
                         cardioDistancePR: saved.distancePR,
                         cardioPacePR: saved.pacePR,
@@ -1198,10 +1204,10 @@ export default function NewWorkout() {
                         cardioIntensityPR: saved.intensityPR,
                         cardioSplitPR: saved.splitPR,
                       }
-                    : s
+                    : s,
                 ),
-              }
-        )
+              },
+        ),
       );
 
       if (saved.isPR) {
@@ -1281,7 +1287,7 @@ export default function NewWorkout() {
           };
         }
         return ex;
-      })
+      }),
     );
   };
 
@@ -1382,7 +1388,7 @@ export default function NewWorkout() {
           return (
             (s.reps || 0) > 0 || (typeof s.weight === "number" && s.weight > 0)
           );
-        })
+        }),
       );
 
       const exercisesToPersist = await Promise.all(
@@ -1392,7 +1398,7 @@ export default function NewWorkout() {
 
           const targetNorm = normalize(ex.exercise.name);
           const match = userExercises.find(
-            (ue) => normalize(ue.name) === targetNorm
+            (ue) => normalize(ue.name) === targetNorm,
           );
           if (match) {
             return {
@@ -1404,13 +1410,13 @@ export default function NewWorkout() {
           const created = await createExercise(
             ex.exercise.name,
             ex.exercise.muscleGroup as any,
-            (ex.exercise as any).description || ""
+            (ex.exercise as any).description || "",
           );
           return {
             ...ex,
             exercise: { ...ex.exercise, id: created.id },
           } as WorkoutExercise;
-        })
+        }),
       );
 
       let createdPrCount = 0;
@@ -1421,7 +1427,7 @@ export default function NewWorkout() {
       try {
         const allWorkouts = await getWorkouts();
         finishedWorkoutIds = new Set(
-          allWorkouts.filter((w) => !!w.endedAt).map((w) => String(w.id))
+          allWorkouts.filter((w) => !!w.endedAt).map((w) => String(w.id)),
         );
       } catch (e) {
         // ignore, fallback per-exercise
@@ -1434,7 +1440,7 @@ export default function NewWorkout() {
           const priorSets = await getSetsForExercise(String(ex.exercise.id));
           if (finishedWorkoutIds.size > 0) {
             hadPriorForExercise = priorSets.some((ps) =>
-              finishedWorkoutIds.has(ps.workout)
+              finishedWorkoutIds.has(ps.workout),
             );
           } else {
             hadPriorForExercise = priorSets.length > 0;
@@ -1540,7 +1546,7 @@ export default function NewWorkout() {
                   const createdEx = await createExercise(
                     ex.exercise.name,
                     ex.exercise.muscleGroup as any,
-                    (ex.exercise as any).description || ""
+                    (ex.exercise as any).description || "",
                   );
                   ex.exercise = createdEx as any;
                 } catch (createExErr) {
@@ -1578,8 +1584,8 @@ export default function NewWorkout() {
                     rawDistance && distanceUnit === "mile"
                       ? Math.round(rawDistance * 1609.34)
                       : rawDistance
-                      ? Math.round(rawDistance * 1000)
-                      : undefined;
+                        ? Math.round(rawDistance * 1000)
+                        : undefined;
                   if (mode === "row") {
                     distance = distanceMeters || undefined;
                     splitSeconds = rawStat || undefined;
@@ -1678,7 +1684,7 @@ export default function NewWorkout() {
         const minutes = Math.max(1, Math.round(elapsedSec / 60));
         localStorage.setItem(
           `workout:durationOverride:${persistedWorkoutId}`,
-          String(minutes)
+          String(minutes),
         );
       } catch (e) {
         // non-fatal
@@ -2101,8 +2107,8 @@ export default function NewWorkout() {
                         prev.map((ex) =>
                           ex.id === workoutExercise.id
                             ? { ...ex, notes: value }
-                            : ex
-                        )
+                            : ex,
+                        ),
                       );
                     }}
                     className="w-full rounded-md border border-border bg-neutral-900/60 px-3 py-1 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
@@ -2138,7 +2144,7 @@ export default function NewWorkout() {
                     <span className="flex items-center justify-center text-center">
                       {(() => {
                         const mode = getCardioModeForExercise(
-                          workoutExercise.exercise
+                          workoutExercise.exercise,
                         );
                         if (mode === "treadmill") return "INCLINE";
                         if (mode === "row") return "SPLIT TIME";
@@ -2235,7 +2241,7 @@ export default function NewWorkout() {
                         removeSet(
                           workoutExercise.id,
                           workoutExercise.sets[workoutExercise.sets.length - 1]
-                            .id
+                            .id,
                         )
                       }
                       className="text-muted-foreground"

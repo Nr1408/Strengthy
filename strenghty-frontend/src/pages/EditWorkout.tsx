@@ -158,8 +158,8 @@ export default function EditWorkout() {
                 },
               ],
             }
-          : ex
-      )
+          : ex,
+      ),
     );
     setReplaceTarget(null);
     setReplaceFilter(null);
@@ -175,7 +175,7 @@ export default function EditWorkout() {
       try {
         const workouts = await getWorkouts();
         const workout = workouts.find(
-          (w) => String(w.id) === String(workoutId)
+          (w) => String(w.id) === String(workoutId),
         );
         if (workout) {
           setWorkoutName(workout.name || "Workout");
@@ -198,7 +198,7 @@ export default function EditWorkout() {
         let notesMap: Record<string, string> = {};
         try {
           const raw = localStorage.getItem(
-            `workout:exerciseNotes:${workoutId}`
+            `workout:exerciseNotes:${workoutId}`,
           );
           if (raw) {
             const parsed = JSON.parse(raw);
@@ -220,7 +220,7 @@ export default function EditWorkout() {
 
         const grouped = Array.from(m.entries()).map(([exerciseId, sets]) => {
           const exerciseRecord = userExercises.find(
-            (ue) => String(ue.id) === String(exerciseId)
+            (ue) => String(ue.id) === String(exerciseId),
           );
           const exerciseName = (exerciseRecord || { name: exerciseId }).name;
           const exerciseMuscle = (exerciseRecord || { muscleGroup: "calves" })
@@ -259,21 +259,23 @@ export default function EditWorkout() {
                 const durationSeconds =
                   typeof s.durationSeconds === "number"
                     ? s.durationSeconds
-                    : s.duration_seconds ?? 0;
+                    : (s.duration_seconds ?? 0);
                 const distanceMeters =
                   typeof s.distance === "number"
                     ? s.distance
-                    : s.distance_meters ?? undefined;
+                    : (s.distance_meters ?? undefined);
                 const floors =
                   typeof s.floors === "number"
                     ? s.floors
-                    : s.floors ?? undefined;
+                    : (s.floors ?? undefined);
                 const level =
-                  typeof s.level === "number" ? s.level : s.level ?? undefined;
+                  typeof s.level === "number"
+                    ? s.level
+                    : (s.level ?? undefined);
                 const splitSeconds =
                   typeof s.splitSeconds === "number"
                     ? s.splitSeconds
-                    : s.split_seconds ?? undefined;
+                    : (s.split_seconds ?? undefined);
 
                 let uiDistance: number | undefined = undefined;
                 if (mode === "stairs") {
@@ -291,7 +293,7 @@ export default function EditWorkout() {
                   uiStat =
                     typeof splitSeconds === "number"
                       ? splitSeconds
-                      : level ?? 0;
+                      : (level ?? 0);
                 else if (mode === "stairs")
                   uiStat = typeof level === "number" ? level : 0;
                 else uiStat = typeof level === "number" ? level : 0;
@@ -438,14 +440,14 @@ export default function EditWorkout() {
           };
         }
         return ex;
-      })
+      }),
     );
   };
 
   const updateSetLocal = (
     exerciseId: string,
     setId: string,
-    updates: Partial<WorkoutSet>
+    updates: Partial<WorkoutSet>,
   ) => {
     setExercises(
       exercises.map((ex) => {
@@ -453,12 +455,12 @@ export default function EditWorkout() {
           return {
             ...ex,
             sets: ex.sets.map((set) =>
-              set.id === setId ? { ...set, ...updates } : set
+              set.id === setId ? { ...set, ...updates } : set,
             ),
           };
         }
         return ex;
-      })
+      }),
     );
   };
 
@@ -488,22 +490,22 @@ export default function EditWorkout() {
             .replace(/[^a-z0-9]+/g, " ")
             .trim();
         const match = (userExercises as any[]).find(
-          (ue) => normalize(ue.name) === normalize((ex.exercise as any).name)
+          (ue) => normalize(ue.name) === normalize((ex.exercise as any).name),
         );
         if (match) exId = match.id;
         else {
           const createdEx = await createExercise(
             (ex.exercise as any).name,
             (ex.exercise as any).muscleGroup || "calves",
-            ""
+            "",
           );
           exId = createdEx.id;
           setExercises((prev) =>
             prev.map((ee) =>
               ee.id === exerciseLocalId
                 ? { ...ee, exercise: { ...(ee.exercise as any), id: exId } }
-                : ee
-            )
+                : ee,
+            ),
           );
         }
       }
@@ -554,29 +556,29 @@ export default function EditWorkout() {
                           isPR: allowPrForWorkout
                             ? saved.isPR
                             : saved.isPR
-                            ? ss.isPR
-                            : false,
+                              ? ss.isPR
+                              : false,
                           absWeightPR: allowPrForWorkout
                             ? saved.absWeightPR
                             : saved.absWeightPR
-                            ? ss.absWeightPR
-                            : false,
+                              ? ss.absWeightPR
+                              : false,
                           e1rmPR: allowPrForWorkout
                             ? saved.e1rmPR
                             : saved.e1rmPR
-                            ? ss.e1rmPR
-                            : false,
+                              ? ss.e1rmPR
+                              : false,
                           volumePR: allowPrForWorkout
                             ? saved.volumePR
                             : saved.volumePR
-                            ? ss.volumePR
-                            : false,
+                              ? ss.volumePR
+                              : false,
                           // repPR removed per UX request
                           unit: saved.unit || ss.unit,
-                        }
+                        },
                   ),
-                }
-          )
+                },
+          ),
         );
         // Show PR banners only for current-day workouts; historical
         // workouts skip celebrations to avoid noisy retro PRs.
@@ -653,7 +655,7 @@ export default function EditWorkout() {
                 const createdEx = await createExercise(
                   (ex.exercise as any).name,
                   (ex.exercise as any).muscleGroup || "calves",
-                  ""
+                  "",
                 );
                 exId = createdEx.id;
                 setExercises((prev) =>
@@ -663,8 +665,8 @@ export default function EditWorkout() {
                           ...ee,
                           exercise: { ...(ee.exercise as any), id: exId },
                         }
-                      : ee
-                  )
+                      : ee,
+                  ),
                 );
               } catch (createExErr) {
                 throw err;
@@ -735,10 +737,10 @@ export default function EditWorkout() {
                             : false,
                           // repPR removed per UX request
                           unit: created.unit || ss.unit,
-                        }
+                        },
                   ),
-                }
-          )
+                },
+          ),
         );
         // For newly created sets we follow the same rule: show
         // banners only for current-day workouts.
@@ -811,7 +813,7 @@ export default function EditWorkout() {
       // Persist name, notes, and (optionally) edited workout date
       const pad = (n: number) => String(n).padStart(2, "0");
       const workoutDate = `${startTime.getFullYear()}-${pad(
-        startTime.getMonth() + 1
+        startTime.getMonth() + 1,
       )}-${pad(startTime.getDate())}`;
 
       await updateWorkout(workoutId, {
@@ -838,7 +840,7 @@ export default function EditWorkout() {
               .replace(/[^a-z0-9]+/g, " ")
               .trim();
           const match = userExercises.find(
-            (ue) => normalize(ue.name) === normalize(ex.exercise.name)
+            (ue) => normalize(ue.name) === normalize(ex.exercise.name),
           );
           if (match) {
             exId = match.id;
@@ -846,7 +848,7 @@ export default function EditWorkout() {
             const created = await createExercise(
               ex.exercise.name,
               (ex.exercise as any).muscleGroup || "calves",
-              ""
+              "",
             );
             exId = created.id;
           }
@@ -878,8 +880,8 @@ export default function EditWorkout() {
                   rawDistance && distanceUnit === "mile"
                     ? Math.round(rawDistance * 1609.34)
                     : rawDistance
-                    ? Math.round(rawDistance * 1000)
-                    : undefined;
+                      ? Math.round(rawDistance * 1000)
+                      : undefined;
                 if (mode === "row") {
                   distance = distanceMeters || undefined;
                   splitSeconds = rawStat || undefined;
@@ -949,7 +951,7 @@ export default function EditWorkout() {
                 const created = await createExercise(
                   ex.exercise.name,
                   (ex.exercise as any).muscleGroup || "calves",
-                  ""
+                  "",
                 );
                 exId = created.id;
               }
@@ -983,8 +985,8 @@ export default function EditWorkout() {
                     rawDistance && distanceUnit === "mile"
                       ? Math.round(rawDistance * 1609.34)
                       : rawDistance
-                      ? Math.round(rawDistance * 1000)
-                      : undefined;
+                        ? Math.round(rawDistance * 1000)
+                        : undefined;
                   if (mode === "row") {
                     distance = distanceMeters || undefined;
                     splitSeconds = rawStat || undefined;
@@ -1026,7 +1028,7 @@ export default function EditWorkout() {
                 ) {
                   localStorage.setItem(
                     `set:prOverride:${createdRetry.id}`,
-                    "0"
+                    "0",
                   );
                 } else if (allowPrForWorkout) {
                   localStorage.removeItem(`set:prOverride:${createdRetry.id}`);
@@ -1080,8 +1082,8 @@ export default function EditWorkout() {
       exercises.map((ex) =>
         ex.id === exerciseId
           ? { ...ex, sets: ex.sets.filter((s) => s.id !== setId) }
-          : ex
-      )
+          : ex,
+      ),
     );
 
   return (
@@ -1126,7 +1128,7 @@ export default function EditWorkout() {
                   durationMinutes !== null &&
                     typeof durationMinutes === "number"
                     ? durationMinutes
-                    : getDuration()
+                    : getDuration(),
                 )}
               </button>
               <span>{exercises.length} exercises</span>
@@ -1207,8 +1209,8 @@ export default function EditWorkout() {
                         prev.map((ex) =>
                           ex.id === workoutExercise.id
                             ? { ...ex, notes: value }
-                            : ex
-                        )
+                            : ex,
+                        ),
                       );
                     }}
                     className="w-full rounded-md border border-border bg-neutral-900/60 px-3 py-1 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
@@ -1302,7 +1304,7 @@ export default function EditWorkout() {
                         removeSet(
                           workoutExercise.id,
                           workoutExercise.sets[workoutExercise.sets.length - 1]
-                            .id
+                            .id,
                         )
                       }
                       className="text-muted-foreground"
@@ -1463,7 +1465,7 @@ export default function EditWorkout() {
                     durationMinutes !== null &&
                       typeof durationMinutes === "number"
                       ? durationMinutes
-                      : getDuration()
+                      : getDuration(),
                   )}
                 </span>
               </button>
@@ -1593,7 +1595,7 @@ export default function EditWorkout() {
                       try {
                         localStorage.setItem(
                           `workout:durationOverride:${workoutId}`,
-                          String(clamped)
+                          String(clamped),
                         );
                       } catch (e) {}
                     }

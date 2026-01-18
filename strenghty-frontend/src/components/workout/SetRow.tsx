@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 // Grid templates for strength vs cardio rows
 const GRID_TEMPLATE_STRENGTH =
-  "minmax(20px, 0.4fr) minmax(65px, 0.8fr) 6px minmax(25px, 0.4fr) minmax(30px, 0.4fr) 32px 30px";
+  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
 
 // Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
@@ -312,17 +312,17 @@ export function SetRow({
                 type="button"
                 className={cn(
                   "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
-                  typeClasses[currentType]
+                  typeClasses[currentType],
                 )}
                 aria-label={`Set type ${currentType}`}
               >
                 {currentType === "W"
                   ? "W"
                   : currentType === "S"
-                  ? "1"
-                  : currentType === "F"
-                  ? "F"
-                  : "D"}
+                    ? "1"
+                    : currentType === "F"
+                      ? "F"
+                      : "D"}
               </button>
             </DropdownMenuTrigger>
 
@@ -373,16 +373,16 @@ export function SetRow({
           <div
             className={cn(
               "h-8 w-full rounded-md border px-1 text-[0.7rem] font-semibold flex items-center justify-center",
-              typeClasses[currentType]
+              typeClasses[currentType],
             )}
           >
             {currentType === "W"
               ? "W"
               : currentType === "S"
-              ? "1"
-              : currentType === "F"
-              ? "F"
-              : "D"}
+                ? "1"
+                : currentType === "F"
+                  ? "F"
+                  : "D"}
           </div>
         )}
       </Cell>
@@ -533,8 +533,8 @@ export function SetRow({
               {set.cardioMode === "row"
                 ? "Pace (per 500m)"
                 : set.cardioMode === "stairs"
-                ? "Level"
-                : "Level"}
+                  ? "Level"
+                  : "Level"}
             </label>
             <Input
               type={set.cardioMode === "row" ? "text" : "number"}
@@ -542,17 +542,17 @@ export function SetRow({
                 set.cardioMode === "row"
                   ? "mm:ss"
                   : set.cardioMode === "stairs"
-                  ? "lvl"
-                  : set.cardioMode === "treadmill"
-                  ? "%"
-                  : "lvl"
+                    ? "lvl"
+                    : set.cardioMode === "treadmill"
+                      ? "%"
+                      : "lvl"
               }
               value={
                 set.cardioMode === "row"
                   ? paceInput
                   : cardioStat && cardioStat !== 0
-                  ? String(cardioStat)
-                  : ""
+                    ? String(cardioStat)
+                    : ""
               }
               onChange={(e) => {
                 if (readOnly) return;
@@ -584,7 +584,11 @@ export function SetRow({
             />
             <button
               type="button"
-              aria-label="Add half reps"
+              aria-label={
+                (set.halfReps || 0) > 0
+                  ? `Half reps: ${Math.min(5, Number(set.halfReps) || 0)}`
+                  : "Add half reps"
+              }
               disabled={readOnly}
               onClick={() => {
                 if (readOnly) return;
@@ -600,20 +604,17 @@ export function SetRow({
                 } catch (e) {}
               }}
               className={cn(
-                "absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md border text-[11px] font-semibold leading-none flex items-center justify-center select-none",
+                "absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-sm text-[11px] font-semibold leading-none flex items-center justify-center select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0",
                 (set.halfReps || 0) > 0
-                  ? "bg-orange-500/15 text-orange-300 border-orange-500/40"
-                  : "bg-muted/10 text-muted-foreground/70 border-border"
+                  ? "bg-orange-500 text-black border border-orange-500"
+                  : "bg-transparent text-muted-foreground/70 hover:text-muted-foreground border border-border",
               )}
             >
-              <span className="relative">
-                ½
-                {(set.halfReps || 0) > 0 && (
-                  <span className="absolute -right-2 -top-2 h-4 min-w-4 px-1 rounded-full bg-orange-500 text-[9px] font-bold text-black flex items-center justify-center">
-                    {Math.min(5, Number(set.halfReps) || 0)}
-                  </span>
-                )}
-              </span>
+              {(set.halfReps || 0) > 0 ? (
+                <span>{Math.min(5, Number(set.halfReps) || 0)}</span>
+              ) : (
+                <span>½</span>
+              )}
             </button>
           </div>
         )}
