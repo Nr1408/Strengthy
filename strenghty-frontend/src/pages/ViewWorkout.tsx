@@ -233,6 +233,13 @@ export default function ViewWorkout() {
         // Strength mapping (existing behavior)
         return {
           id: String(s.id),
+          // number of partial reps (0..5)
+          halfReps:
+            typeof s.halfReps === "number"
+              ? Math.max(0, Math.min(5, Math.round(s.halfReps)))
+              : typeof s.half_reps === "number"
+              ? Math.max(0, Math.min(5, Math.round(s.half_reps)))
+              : 0,
           reps: s.reps,
           weight: typeof s.weight === "number" ? s.weight : 0,
           unit: s.unit || getUnit(),
