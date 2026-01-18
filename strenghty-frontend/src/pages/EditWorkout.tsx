@@ -3,7 +3,7 @@ const GRID_TEMPLATE =
   "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
 
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -92,6 +92,16 @@ export default function EditWorkout() {
     }[]
   >([]);
   const [prVisible, setPrVisible] = useState(false);
+
+  const getCardioModeForExercise = (exercise: Exercise): string => {
+    const name = (exercise?.name || "").toLowerCase();
+    if (name.includes("treadmill")) return "treadmill";
+    if (name.includes("bike") || name.includes("cycle")) return "bike";
+    if (name.includes("elliptical")) return "elliptical";
+    if (name.includes("stair") || name.includes("step")) return "stairs";
+    if (name.includes("row")) return "row";
+    return "treadmill";
+  };
 
   const allExercises = useMemo(() => {
     const map = new Map<string, Exercise>();
@@ -310,7 +320,14 @@ export default function EditWorkout() {
                   rpe: undefined,
                   cardioMode: mode,
                   cardioDurationSeconds: durationSeconds,
-                  cardioDistanceUnit: "km",
+                  cardioDistanceUnit:
+                    mode === "stairs"
+                      ? typeof floors === "number"
+                        ? "flr"
+                        : typeof distanceMeters === "number"
+                          ? "m"
+                          : "km"
+                      : "km",
                   cardioDistance:
                     typeof uiDistance === "number" ? uiDistance : 0,
                   cardioStat: uiStat,
@@ -595,12 +612,23 @@ export default function EditWorkout() {
             typeof (s as any).cardioDistance === "number"
               ? (s as any).cardioDistance
               : undefined;
-          const distanceMeters =
-            typeof rawDistance === "number"
-              ? (s as any).cardioDistanceUnit === "mile"
-                ? Math.round(rawDistance * 1609.34)
-                : Math.round(rawDistance * 1000)
-              : undefined;
+          let distanceMeters: number | undefined = undefined;
+          if (typeof rawDistance === "number") {
+            const unit =
+              (s as any).cardioDistanceUnit === "mile"
+                ? "mile"
+                : (s as any).cardioDistanceUnit === "m"
+                  ? "m"
+                  : (s as any).cardioDistanceUnit === "flr"
+                    ? "flr"
+                    : "km";
+            if (unit === "mile")
+              distanceMeters = Math.round(rawDistance * 1609.34);
+            else if (unit === "km")
+              distanceMeters = Math.round(rawDistance * 1000);
+            else if (unit === "m") distanceMeters = Math.round(rawDistance);
+            else distanceMeters = Math.round(rawDistance * 1000);
+          }
 
           const durationSeconds =
             typeof (s as any).cardioDurationSeconds === "number"
@@ -619,19 +647,32 @@ export default function EditWorkout() {
                 ? (s as any).cardioStat
                 : undefined;
 
-          saved = await updateCardioSet(String(s.id), {
-            mode,
-            durationSeconds,
-            distance: distanceMeters,
-            floors:
-              mode === "stairs"
-                ? typeof (s as any).cardioDistance === "number"
-                  ? Math.round((s as any).cardioDistance)
-                  : undefined
-                : undefined,
-            level,
-            splitSeconds,
-          });
+          {
+            let distanceParam = distanceMeters;
+            let floorsParam: number | undefined = undefined;
+            if (mode === "stairs") {
+              const distUnit =
+                (s as any).cardioDistanceUnit === "m" ? "m" : "flr";
+              if (distUnit === "m") {
+                distanceParam = rawDistance || undefined; // meters
+              } else {
+                distanceParam = undefined;
+                floorsParam =
+                  typeof rawDistance === "number"
+                    ? Math.round(rawDistance)
+                    : undefined;
+              }
+            }
+
+            saved = await updateCardioSet(String(s.id), {
+              mode,
+              durationSeconds,
+              distance: distanceParam,
+              floors: floorsParam,
+              level,
+              splitSeconds,
+            });
+          }
         } else {
           const savedLocal = await updateSet(String(s.id), payload);
           saved = savedLocal;
@@ -732,12 +773,23 @@ export default function EditWorkout() {
               typeof (s as any).cardioDistance === "number"
                 ? (s as any).cardioDistance
                 : undefined;
-            const distanceMeters =
-              typeof rawDistance === "number"
-                ? (s as any).cardioDistanceUnit === "mile"
-                  ? Math.round(rawDistance * 1609.34)
-                  : Math.round(rawDistance * 1000)
-                : undefined;
+            let distanceMeters: number | undefined = undefined;
+            if (typeof rawDistance === "number") {
+              const unit =
+                (s as any).cardioDistanceUnit === "mile"
+                  ? "mile"
+                  : (s as any).cardioDistanceUnit === "m"
+                    ? "m"
+                    : (s as any).cardioDistanceUnit === "flr"
+                      ? "flr"
+                      : "km";
+              if (unit === "mile")
+                distanceMeters = Math.round(rawDistance * 1609.34);
+              else if (unit === "km")
+                distanceMeters = Math.round(rawDistance * 1000);
+              else if (unit === "m") distanceMeters = Math.round(rawDistance);
+              else distanceMeters = Math.round(rawDistance * 1000);
+            }
             const durationSeconds =
               typeof (s as any).cardioDurationSeconds === "number"
                 ? (s as any).cardioDurationSeconds
@@ -755,22 +807,35 @@ export default function EditWorkout() {
                   ? (s as any).cardioStat
                   : undefined;
 
-            created = await createCardioSet({
-              workoutId: workoutId,
-              exerciseId: exId,
-              setNumber: s.setNumber || 1,
-              mode,
-              durationSeconds,
-              distance: distanceMeters,
-              floors:
-                mode === "stairs"
-                  ? typeof (s as any).cardioDistance === "number"
-                    ? Math.round((s as any).cardioDistance)
-                    : undefined
-                  : undefined,
-              level,
-              splitSeconds,
-            });
+            {
+              let distanceParam = distanceMeters;
+              let floorsParam: number | undefined = undefined;
+              if (mode === "stairs") {
+                const distUnit =
+                  (s as any).cardioDistanceUnit === "m" ? "m" : "flr";
+                if (distUnit === "m") {
+                  distanceParam = rawDistance || undefined; // meters
+                } else {
+                  distanceParam = undefined;
+                  floorsParam =
+                    typeof rawDistance === "number"
+                      ? Math.round(rawDistance)
+                      : undefined;
+                }
+              }
+
+              created = await createCardioSet({
+                workoutId: workoutId,
+                exerciseId: exId,
+                setNumber: s.setNumber || 1,
+                mode,
+                durationSeconds,
+                distance: distanceParam,
+                floors: floorsParam,
+                level,
+                splitSeconds,
+              });
+            }
           } else {
             created = await createSet({
               workoutId: workoutId,
@@ -1432,7 +1497,10 @@ export default function EditWorkout() {
                       DURATION
                     </span>
                     <span className="flex items-center justify-center">
-                      DISTANCE
+                      {getCardioModeForExercise(workoutExercise.exercise) ===
+                      "stairs"
+                        ? "CLIMB"
+                        : "DISTANCE"}
                     </span>
                     <span className="flex items-center justify-center">
                       LEVEL

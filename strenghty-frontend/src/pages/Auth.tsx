@@ -365,12 +365,14 @@ export default function Auth() {
 
       let initialized = false;
 
+// ✅ USE THIS NEW UPDATED BLOCK:
       try {
         await GoogleAuth.initialize({
           clientId: googleClientIdWeb, 
           scopes: ["profile", "email"],
           grantOfflineAccess: true,
-          // 👇 ADD THIS OBJECT HERE
+          // 🔥 NEW: These two settings break the auto-login cache
+          forceCodeForRefreshToken: true, 
           authentication: {
             enableAutoSignIn: false,
           },
@@ -387,7 +389,10 @@ export default function Auth() {
         return;
       }
 
+      // 🔥 Force clear the current session before showing the list
       await GoogleAuth.signOut();
+      // Tiny delay to ensure the OS processes the sign-out
+      await new Promise(r => setTimeout(r, 200));
       
       const res = await GoogleAuth.signIn();
       setIsGoogleSelecting(false);

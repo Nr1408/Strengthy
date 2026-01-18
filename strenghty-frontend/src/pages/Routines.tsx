@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Plus, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -192,52 +193,76 @@ export default function Routines() {
 
         {/* Create Routine Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Routine</DialogTitle>
-              <DialogDescription>
-                Create a reusable workout template.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Routine Name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Push Day, Upper Body"
-                  value={newRoutine.name}
-                  onChange={(e) =>
-                    setNewRoutine({ ...newRoutine, name: e.target.value })
-                  }
-                />
+          <DialogContent className="floating-card fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-[calc(100%-48px)] max-w-[420px] rounded-[32px] bg-zinc-900/80 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-8 pt-3 pb-10">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              {/* Grab handle */}
+              <div className="w-10 h-1 bg-zinc-800/50 rounded-full mx-auto mt-3 mb-6" />
+
+              <div className="text-center">
+                <DialogTitle className="text-xl font-bold">
+                  Create Routine
+                </DialogTitle>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Create a reusable sequence of exercises
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (optional)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="What does this routine focus on?"
-                  value={newRoutine.description}
-                  onChange={(e) =>
-                    setNewRoutine({
-                      ...newRoutine,
-                      description: e.target.value,
-                    })
-                  }
-                />
+
+              <div className="mt-4 max-h-[50vh] overflow-y-auto pr-2">
+                <div className="space-y-8">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Routine Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g., Push Day, Upper Body"
+                      value={newRoutine.name}
+                      onChange={(e) =>
+                        setNewRoutine({ ...newRoutine, name: e.target.value })
+                      }
+                      className="bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description (optional)</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="What does this routine focus on?"
+                      value={newRoutine.description}
+                      onChange={(e) =>
+                        setNewRoutine({
+                          ...newRoutine,
+                          description: e.target.value,
+                        })
+                      }
+                      className="p-4 text-sm bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40"
+                      rows={4}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-            <DialogFooter className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleCreateRoutine} className="flex-1">
-                Create Routine
-              </Button>
-            </DialogFooter>
+
+              <div className="mt-10">
+                <div className="flex flex-row gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsDialogOpen(false)}
+                    className="flex-1 text-sm text-zinc-500 font-medium rounded-xl bg-transparent px-3 py-2 hover:bg-white/5"
+                  >
+                    Cancel
+                  </button>
+                  <Button
+                    onClick={handleCreateRoutine}
+                    className="flex-1 bg-orange-500 text-white font-semibold rounded-xl shadow-[0_0_25px_rgba(249,115,22,0.25)]"
+                  >
+                    Create
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
           </DialogContent>
         </Dialog>
       </div>

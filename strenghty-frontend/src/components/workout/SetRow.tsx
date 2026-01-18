@@ -5,7 +5,7 @@ const GRID_TEMPLATE_STRENGTH =
 
 // Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
 
 import { Check, Trophy } from "lucide-react";
 import type { WorkoutSet } from "@/types/workout";
@@ -107,7 +107,13 @@ export function SetRow({
       ? set.cardioDistance
       : 0;
   const cardioDistanceUnit =
-    (set as any).cardioDistanceUnit === "mile" ? "mile" : "km";
+    (set as any).cardioDistanceUnit === "mile"
+      ? "mile"
+      : (set as any).cardioDistanceUnit === "m"
+        ? "m"
+        : (set as any).cardioDistanceUnit === "flr"
+          ? "flr"
+          : "km";
   const cardioStat =
     typeof set.cardioStat === "number" && !isNaN(set.cardioStat)
       ? set.cardioStat
@@ -340,7 +346,7 @@ export function SetRow({
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent className="w-56 p-0 border-border">
+            <DropdownMenuContent className="w-56 p-0">
               <div className="space-y-2 rounded-md bg-neutral-900 p-3">
                 <DropdownMenuLabel className="px-0 text-white">
                   Select Set Type
@@ -445,7 +451,7 @@ export function SetRow({
                     <span className="text-[8px] opacity-50">▼</span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-20 p-1 bg-neutral-900 border-border">
+                <DropdownMenuContent className="w-20 p-1">
                   <DropdownMenuItem
                     className="text-white text-xs justify-center"
                     onClick={() => onUnitChange?.("lbs")}
@@ -479,7 +485,13 @@ export function SetRow({
               </label>
               <Input
                 type="number"
-                placeholder={set.cardioMode === "stairs" ? "floors" : "dist"}
+                placeholder={
+                  set.cardioMode === "stairs"
+                    ? cardioDistanceUnit === "flr"
+                      ? "floors"
+                      : "meters"
+                    : "dist"
+                }
                 value={
                   cardioDistance && cardioDistance > 0
                     ? String(cardioDistance)
@@ -494,10 +506,61 @@ export function SetRow({
               />
             </div>
             {set.cardioMode === "stairs" ? (
-              // Floors are unitless; show a static badge for clarity
-              <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[10px] font-bold text-muted-foreground/60">
-                flr
-              </div>
+              // For stairs allow choosing between floors and meters
+              !readOnly ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors"
+                    >
+                      {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                      <span className="text-[8px] opacity-50">▼</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
+                    style={{ transformOrigin: "top right" }}
+                  >
+                    <DropdownMenuItem
+                      className={cn(
+                        "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                        cardioDistanceUnit === "flr"
+                          ? "text-orange-500"
+                          : "text-muted-foreground",
+                      )}
+                      onClick={() =>
+                        onUpdate({ cardioDistanceUnit: "flr" as any })
+                      }
+                    >
+                      {cardioDistanceUnit === "flr" && (
+                        <Check className="h-4 w-4 text-orange-500" />
+                      )}
+                      <span>floors</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className={cn(
+                        "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                        cardioDistanceUnit === "m"
+                          ? "text-orange-500"
+                          : "text-muted-foreground",
+                      )}
+                      onClick={() =>
+                        onUpdate({ cardioDistanceUnit: "m" as any })
+                      }
+                    >
+                      {cardioDistanceUnit === "m" && (
+                        <Check className="h-4 w-4 text-orange-500" />
+                      )}
+                      <span>meters</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[10px] font-bold text-muted-foreground/60">
+                  {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                </div>
+              )
             ) : !readOnly ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -509,22 +572,41 @@ export function SetRow({
                     <span className="text-[8px] opacity-50">▼</span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-24 p-1 bg-neutral-900 border-border">
+                <DropdownMenuContent
+                  className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
+                  style={{ transformOrigin: "top right" }}
+                >
                   <DropdownMenuItem
-                    className="text-white text-xs justify-center"
+                    className={cn(
+                      "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                      cardioDistanceUnit === "km"
+                        ? "text-orange-500"
+                        : "text-muted-foreground",
+                    )}
                     onClick={() =>
                       onUpdate({ cardioDistanceUnit: "km" as any })
                     }
                   >
-                    km
+                    {cardioDistanceUnit === "km" && (
+                      <Check className="h-4 w-4 text-orange-500" />
+                    )}
+                    <span>km</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="text-white text-xs justify-center"
+                    className={cn(
+                      "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                      cardioDistanceUnit === "mile"
+                        ? "text-orange-500"
+                        : "text-muted-foreground",
+                    )}
                     onClick={() =>
                       onUpdate({ cardioDistanceUnit: "mile" as any })
                     }
                   >
-                    mile
+                    {cardioDistanceUnit === "mile" && (
+                      <Check className="h-4 w-4 text-orange-500" />
+                    )}
+                    <span>mile</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -936,36 +1018,52 @@ function PartialRepsEditor({
   useEffect(() => setValue(initialValue || 1), [initialValue]);
 
   return (
-    <div>
-      <DialogHeader>
-        <DialogTitle>Adjust Partial Reps</DialogTitle>
+    <div className="rounded-2xl border border-border/50 bg-neutral-900/80 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.6)]">
+      <DialogHeader className="text-center">
+        <DialogTitle className="mx-auto">Adjust Partial Reps</DialogTitle>
       </DialogHeader>
 
       <div className="py-2">
-        <div className="text-4xl font-bold text-center text-white">{value}</div>
-        <div className="text-sm text-center text-muted-foreground mb-3">
+        <div className="text-5xl sm:text-6xl font-heading font-extrabold text-white text-center">
+          {value}
+        </div>
+        <div className="text-sm text-center text-muted-foreground mb-3 font-medium">
           Partial reps (1–5)
         </div>
-        <div className="px-4">
-          <Slider
-            min={1}
-            max={5}
-            step={1}
-            value={[value]}
-            onValueChange={(vals) => setValue(vals[0] ?? value)}
-          />
+
+        <div className="px-2">
+          <div className="mx-auto max-w-[220px]">
+            <Slider
+              min={1}
+              max={5}
+              step={1}
+              value={[value]}
+              onValueChange={(vals) => setValue(vals[0] ?? value)}
+              className="h-1.5"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-2 pt-2">
-        <Button variant="ghost" className="flex-1 text-xs" onClick={onCancel}>
+      <div className="flex gap-3 pt-4">
+        <Button
+          variant="ghost"
+          className="flex-1 px-4 py-2 text-xs"
+          onClick={onCancel}
+        >
           Cancel
         </Button>
-        <Button variant="outline" className="text-xs" onClick={onClear}>
+
+        <Button
+          variant="ghost"
+          className="flex-1 px-4 py-2 text-xs"
+          onClick={onClear}
+        >
           Clear
         </Button>
+
         <Button
-          className="flex-1 text-xs font-semibold"
+          className="flex-1 px-4 py-2 text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white"
           onClick={() => onSave(value)}
         >
           Done

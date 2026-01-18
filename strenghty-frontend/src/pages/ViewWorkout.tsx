@@ -3,7 +3,7 @@ const GRID_TEMPLATE =
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
 
 import { useMemo, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -397,7 +397,7 @@ export default function ViewWorkout() {
             </button>
           </div>
 
-          <div className="pr-0">
+          <div className="pr-0 relative">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -408,22 +408,22 @@ export default function ViewWorkout() {
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 p-1 border border-border bg-neutral-900 text-white rounded-lg shadow-xl -translate-x-2">
-                <div className="px-2 py-1">
+              <DropdownMenuContent className="absolute right-0 top-full0 z-[110] min-w-[160px] rounded-2xl bg-zinc-900/98 backdrop-blur-md border border-white/5 p-0 text-left font-sans text-sm">
+                <div>
                   <DropdownMenuItem
-                    className="px-3 py-2 text-sm hover:bg-neutral-700/40 rounded cursor-pointer"
+                    className="px-8 py-2 text-sm text-zinc-400 hover:bg-white/5 rounded cursor-pointer leading-tight text-left font-medium"
                     onClick={() => navigate(`/workouts/${id}/edit`)}
                   >
                     Edit workout
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="px-3 py-2 text-sm hover:bg-neutral-700/40 rounded cursor-pointer text-red-400"
+                    className="px-6 py-2 text-sm text-red-500 hover:bg-white/5 rounded cursor-pointer border-t border-white/5 leading-tight text-left font-semibold"
                     onClick={() => setShowDiscardConfirm(true)}
                   >
                     Delete workout
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="px-3 py-2 text-sm hover:bg-neutral-700/40 rounded cursor-pointer"
+                    className="px-6 py-2 text-sm text-zinc-400 hover:bg-white/5 rounded cursor-pointer leading-tight text-left font-medium"
                     onClick={async () => {
                       try {
                         if (!workout) return;
@@ -483,59 +483,50 @@ export default function ViewWorkout() {
           </p>
         </div>
 
-        {/* Unified Stats and Buttons Row */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap gap-1 items-center">
-            <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[64px] sm:min-w-[84px]">
-              <div className="text-lg sm:text-xl font-semibold">
+        {/* Summary Bar - Exercises / Sets / Volume / PRs */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl">
+            <div className="flex-1 text-center">
+              <div className="text-lg font-semibold text-white">
                 {headerExercisesCount}
               </div>
-              <div className="text-[9px] sm:text-[10px] opacity-90">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1">
                 Exercises
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[64px] sm:min-w-[84px]">
-              <div className="text-lg sm:text-xl font-semibold">
+            <div className="flex-1 text-center">
+              <div className="text-lg font-semibold text-white">
                 {headerSetsCount}
               </div>
-              <div className="text-[9px] sm:text-[10px] opacity-90">Sets</div>
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1">
+                Sets
+              </div>
             </div>
 
-            {(onlyStrength || mixedTypes) && (
-              <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[80px] sm:min-w-[100px]">
-                <div className="text-lg sm:text-xl font-semibold">
-                  {totalVolume > 0 ? totalVolume.toLocaleString() : "0"}
-                </div>
-                <div className="text-[9px] sm:text-[10px] opacity-90">
-                  Volume ({getUnit()})
-                </div>
+            <div className="flex-1 text-center">
+              <div className="text-lg font-semibold text-white">
+                {totalVolume > 0 ? totalVolume.toLocaleString() : "0"}
               </div>
-            )}
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1">
+                Volume ({getUnit()})
+              </div>
+            </div>
 
-            {(onlyCardio || mixedTypes) && (
-              <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[80px] sm:min-w-[120px]">
-                <div className="text-lg sm:text-xl font-semibold">
-                  {cardioDistanceDisplay}
-                </div>
-                <div className="text-[9px] sm:text-[10px] opacity-90">
-                  Distance
-                </div>
+            <div className="flex-1 text-center">
+              <div
+                className={`text-lg font-semibold ${prCount > 0 ? "text-orange-500" : "text-white"}`}
+              >
+                {prCount}
+                {prCount > 0 && (
+                  <Trophy className="inline-block ml-2 h-4 w-4 text-orange-500 align-middle" />
+                )}
               </div>
-            )}
-
-            {(onlyStrength || mixedTypes) && (
-              <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[64px] sm:min-w-[84px]">
-                <div className="text-lg sm:text-xl font-semibold">
-                  {prCount}
-                </div>
-                <div className="text-[9px] sm:text-[10px] opacity-90">PRs</div>
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1">
+                PRs
               </div>
-            )}
+            </div>
           </div>
-
-          {/* Action Buttons placeholder (moved to header) */}
-          <div className="ml-auto flex gap-2 items-center" />
         </div>
 
         {/* Exercise Cards List */}

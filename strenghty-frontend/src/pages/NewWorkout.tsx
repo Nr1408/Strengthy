@@ -3,7 +3,7 @@ const GRID_TEMPLATE =
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
 
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -1068,7 +1068,13 @@ export default function NewWorkout() {
       const rawDistance = set.cardioDistance ?? 0;
       const rawStat = set.cardioStat ?? 0;
       const distanceUnit =
-        (set as any).cardioDistanceUnit === "mile" ? "mile" : "km";
+        (set as any).cardioDistanceUnit === "mile"
+          ? "mile"
+          : (set as any).cardioDistanceUnit === "m"
+            ? "m"
+            : (set as any).cardioDistanceUnit === "flr"
+              ? "flr"
+              : "km";
 
       // Map generic UI stats to backend metrics per mode
       let distance: number | undefined;
@@ -1077,7 +1083,12 @@ export default function NewWorkout() {
       let splitSeconds: number | undefined;
 
       if (mode === "stairs") {
-        floors = rawDistance || undefined;
+        const distUnit = (set as any).cardioDistanceUnit === "m" ? "m" : "flr";
+        if (distUnit === "m") {
+          distance = rawDistance || undefined;
+        } else {
+          floors = rawDistance || undefined;
+        }
         level = rawStat || undefined;
       } else {
         // Convert user-entered distance (km or miles) into meters for the API.
@@ -1489,7 +1500,14 @@ export default function NewWorkout() {
               let splitSeconds: number | undefined;
 
               if (mode === "stairs") {
-                floors = rawDistance || undefined;
+                // For stairs, allow floors (count) or meters (vertical meters)
+                const distUnit =
+                  (s as any).cardioDistanceUnit === "m" ? "m" : "flr";
+                if (distUnit === "m") {
+                  distance = rawDistance || undefined; // meters
+                } else {
+                  floors = rawDistance || undefined; // floor count
+                }
                 level = rawStat || undefined;
               } else if (mode === "row") {
                 distance = rawDistance || undefined;
@@ -1570,7 +1588,13 @@ export default function NewWorkout() {
                 const rawDistance = s.cardioDistance ?? 0;
                 const rawStat = s.cardioStat ?? 0;
                 const distanceUnit =
-                  (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
+                  (s as any).cardioDistanceUnit === "mile"
+                    ? "mile"
+                    : (s as any).cardioDistanceUnit === "m"
+                      ? "m"
+                      : (s as any).cardioDistanceUnit === "flr"
+                        ? "flr"
+                        : "km";
 
                 let distance: number | undefined;
                 let floors: number | undefined;
@@ -1578,7 +1602,14 @@ export default function NewWorkout() {
                 let splitSeconds: number | undefined;
 
                 if (mode === "stairs") {
-                  floors = rawDistance || undefined;
+                  const distUnit =
+                    (s as any).cardioDistanceUnit === "m" ? "m" : "flr";
+                  if (distUnit === "m") {
+                    // rawDistance is already meters
+                    distance = rawDistance || undefined;
+                  } else {
+                    floors = rawDistance || undefined;
+                  }
                   level = rawStat || undefined;
                 } else {
                   const distanceMeters =
@@ -2134,11 +2165,11 @@ export default function NewWorkout() {
                       DURATION
                     </span>
 
-                    {/* Column 3: DISTANCE or FLOORS */}
+                    {/* Column 3: DISTANCE or CLIMB (stairs) */}
                     <span className="flex items-center justify-center text-center">
                       {getCardioModeForExercise(workoutExercise.exercise) ===
                       "stairs"
-                        ? "FLOORS"
+                        ? "CLIMB"
                         : "DISTANCE"}
                     </span>
 
@@ -2279,102 +2310,113 @@ export default function NewWorkout() {
             }
           }}
         >
-          <DialogContent className="max-h-[85vh] flex flex-col bg-[#0f0f0f] border border-neutral-800/40 text-white">
-            <DialogHeader>
-              <DialogTitle>
-                {exerciseToReplace ? "Replace Exercise" : "Add Exercise"}
-              </DialogTitle>
-              <DialogDescription className="text-zinc-400">
-                {exerciseToReplace
-                  ? "Choose a new exercise to replace the current one."
-                  : "Select an exercise from your library."}
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent className="fixed inset-x-0 bottom-4 left-1/2 z-[100] -translate-x-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6">
+            {/* Grab handle */}
+            <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mt-3 mb-2" />
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search exercises..."
-                value={exerciseSearch}
-                onChange={(e) => setExerciseSearch(e.target.value)}
-                className="pl-10 bg-muted/20 border border-neutral-800/30 focus:ring-primary"
-              />
-            </div>
+            <div className="sticky top-0 z-10 bg-transparent pt-1">
+              <div className="text-center">
+                <DialogTitle className="font-heading text-base font-semibold">
+                  {exerciseToReplace ? "Replace Exercise" : "Add Exercise"}
+                </DialogTitle>
+              </div>
 
-            <div className="pt-3">
-              <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
-                <button
-                  onClick={() => setFilterMuscle("all")}
-                  className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                    filterMuscle === "all"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted/20 text-muted-foreground hover:bg-muted/30"
-                  }`}
-                >
-                  All Muscles
-                </button>
-                {availableMuscles.map((m) => {
-                  const colorClass =
-                    muscleGroupColors[m as keyof typeof muscleGroupColors] ||
-                    "bg-muted/20 text-muted-foreground";
-                  const active = filterMuscle === m;
-                  return (
-                    <button
-                      key={m}
-                      onClick={() => setFilterMuscle(m)}
-                      className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-all ${colorClass} ${
-                        active
-                          ? "ring-2 ring-offset-2 ring-[#0f0f0f] font-bold"
-                          : "opacity-80 hover:opacity-100"
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  );
-                })}
+              <div className="relative mt-3">
+                <Search className="absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search exercises..."
+                  value={exerciseSearch}
+                  onChange={(e) => setExerciseSearch(e.target.value)}
+                  className="pl-10 bg-zinc-950 text-sm focus:ring-1 focus:ring-orange-500 rounded-full"
+                />
+              </div>
+
+              <div className="pt-3">
+                <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
+                  <button
+                    onClick={() => setFilterMuscle("all")}
+                    className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                      filterMuscle === "all"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/20 text-muted-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    All Muscles
+                  </button>
+                  {availableMuscles.map((m) => {
+                    const colorClass =
+                      muscleGroupColors[m as keyof typeof muscleGroupColors] ||
+                      "bg-muted/20 text-muted-foreground";
+                    const active = filterMuscle === m;
+                    return (
+                      <button
+                        key={m}
+                        onClick={() => setFilterMuscle(m)}
+                        className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-all ${colorClass} ${
+                          active
+                            ? "ring-2 ring-offset-2 ring-[#0f0f0f] font-bold"
+                            : "opacity-80 hover:opacity-100"
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1">
+            <div className="mt-3 flex-1 overflow-y-auto">
               {filteredExercises.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No exercises found matching "{exerciseSearch}"
                 </p>
               ) : (
-                filteredExercises.map((exercise) => (
-                  <button
-                    key={exercise.id}
-                    onClick={() =>
-                      exerciseToReplace
-                        ? replaceExerciseForCard(exerciseToReplace, exercise)
-                        : addExercise(exercise)
-                    }
-                    className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-all hover:border-primary/50 hover:bg-secondary/50 group"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium group-hover:text-primary transition-colors">
-                        {exercise.name}
-                      </p>
-                      {(() => {
-                        const normalizedGroup =
-                          exercise.muscleGroup === "other" &&
-                          exercise.name.toLowerCase().includes("calf")
-                            ? "calves"
-                            : exercise.muscleGroup;
-                        return (
-                          <Badge
-                            variant="secondary"
-                            className={muscleGroupColors[normalizedGroup]}
-                          >
-                            {normalizedGroup}
-                          </Badge>
-                        );
-                      })()}
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                  </button>
-                ))
+                <div className="flex flex-col">
+                  {filteredExercises.map((exercise) => (
+                    <button
+                      key={exercise.id}
+                      onClick={() =>
+                        exerciseToReplace
+                          ? replaceExerciseForCard(exerciseToReplace, exercise)
+                          : addExercise(exercise)
+                      }
+                      className="flex w-full items-center gap-4 py-4 text-left transition-colors border-b border-white/5 hover:bg-white/2"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium text-white">
+                          {exercise.name}
+                        </p>
+                        {(() => {
+                          const normalizedGroup =
+                            exercise.muscleGroup === "other" &&
+                            exercise.name.toLowerCase().includes("calf")
+                              ? "calves"
+                              : exercise.muscleGroup;
+                          if (normalizedGroup === "quads") {
+                            return (
+                              <span className="inline-block mt-1 rounded px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500">
+                                quads
+                              </span>
+                            );
+                          }
+                          return (
+                            <Badge
+                              variant="secondary"
+                              className={muscleGroupColors[normalizedGroup]}
+                            >
+                              {normalizedGroup}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  ))}
+                </div>
               )}
+              <div className="h-6" />
             </div>
           </DialogContent>
         </Dialog>

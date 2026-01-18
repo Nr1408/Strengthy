@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,7 @@ import { libraryExercises } from "@/data/libraryExercises";
 export default function Exercises() {
   const [search, setSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | "all">(
-    "all"
+    "all",
   );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   // default to user's exercises view when opening the page
@@ -60,7 +61,7 @@ export default function Exercises() {
         newExercise.name,
         newExercise.muscleGroup as MuscleGroup,
         newExercise.description,
-        { custom: true }
+        { custom: true },
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exercises"] });
@@ -137,12 +138,12 @@ export default function Exercises() {
     exercises
       .filter((e) => e.custom)
       .forEach((e) =>
-        present.add(e.muscleGroup === "other" ? "calves" : e.muscleGroup)
+        present.add(e.muscleGroup === "other" ? "calves" : e.muscleGroup),
       );
     // only include public library groups when in library view
     if (showLibrary) {
       libraryExercises.forEach((e) =>
-        present.add(e.muscleGroup === "other" ? "calves" : e.muscleGroup)
+        present.add(e.muscleGroup === "other" ? "calves" : e.muscleGroup),
       );
     }
     const filtered = allMusclesOrder.filter((m) => present.has(m));
@@ -229,10 +230,10 @@ export default function Exercises() {
               {isLoading
                 ? "Loading..."
                 : showLibrary
-                ? `${libraryExercises.length} exercises in the public library`
-                : `${
-                    exercises.filter((e) => e.custom).length
-                  } exercises in your library`}
+                  ? `${libraryExercises.length} exercises in the public library`
+                  : `${
+                      exercises.filter((e) => e.custom).length
+                    } exercises in your library`}
             </p>
           </div>
 
@@ -251,84 +252,106 @@ export default function Exercises() {
                   New Exercise
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Exercise</DialogTitle>
-                  <DialogDescription>
-                    Add a new exercise to your personal library.
-                  </DialogDescription>
-                </DialogHeader>
+              <DialogContent className="floating-card fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-[calc(100%-48px)] max-w-[420px] rounded-[32px] bg-zinc-900/80 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-8 pt-3 pb-10">
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                >
+                  <div className="w-10 h-1 bg-zinc-800/50 rounded-full mx-auto mt-3 mb-6" />
 
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Exercise Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="e.g., Incline Dumbbell Press"
-                      value={newExercise.name}
-                      onChange={(e) =>
-                        setNewExercise({ ...newExercise, name: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="muscle">Muscle Group</Label>
-                    <Select
-                      value={newExercise.muscleGroup}
-                      onValueChange={(value) =>
-                        setNewExercise({
-                          ...newExercise,
-                          muscleGroup: value as MuscleGroup,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select muscle group" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableMuscles.map((muscle) => (
-                          <SelectItem key={muscle} value={muscle}>
-                            {muscle.charAt(0).toUpperCase() + muscle.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description (optional)</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Add notes about form, cues, or variations..."
-                      value={newExercise.description}
-                      onChange={(e) =>
-                        setNewExercise({
-                          ...newExercise,
-                          description: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <div className="flex w-full justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                      className="min-w-[6rem]"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleCreateExercise}
-                      className="min-w-[6rem]"
-                    >
+                  <div className="text-center">
+                    <DialogTitle className="text-xl font-bold">
                       Create Exercise
-                    </Button>
+                    </DialogTitle>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Add a new exercise to your personal library.
+                    </p>
                   </div>
-                </DialogFooter>
+
+                  <div className="mt-4 max-h-[50vh] overflow-y-auto pr-2 space-y-8">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Exercise Name</Label>
+                      <Input
+                        id="name"
+                        placeholder="e.g., Incline Dumbbell Press"
+                        value={newExercise.name}
+                        onChange={(e) =>
+                          setNewExercise({
+                            ...newExercise,
+                            name: e.target.value,
+                          })
+                        }
+                        className="bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="muscle">Muscle Group</Label>
+                      <Select
+                        value={newExercise.muscleGroup}
+                        onValueChange={(value) =>
+                          setNewExercise({
+                            ...newExercise,
+                            muscleGroup: value as MuscleGroup,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40">
+                          <SelectValue placeholder="Select muscle group" />
+                        </SelectTrigger>
+                        <SelectContent className="p-0">
+                          {allMusclesOrder.map((muscle) => (
+                            <SelectItem
+                              key={muscle}
+                              value={muscle}
+                              className="px-6 py-4"
+                            >
+                              {muscle.charAt(0).toUpperCase() + muscle.slice(1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description">
+                        Description (optional)
+                      </Label>
+                      <Textarea
+                        id="description"
+                        placeholder="Add notes about form, cues, or variations..."
+                        value={newExercise.description}
+                        onChange={(e) =>
+                          setNewExercise({
+                            ...newExercise,
+                            description: e.target.value,
+                          })
+                        }
+                        className="bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-10">
+                    <div className="flex flex-row gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setIsDialogOpen(false)}
+                        className="flex-1 text-sm text-zinc-500 font-medium rounded-xl bg-transparent px-3 py-2 hover:bg-white/5"
+                      >
+                        Cancel
+                      </button>
+                      <Button
+                        onClick={handleCreateExercise}
+                        className="flex-1 bg-orange-500 text-white font-semibold rounded-xl shadow-[0_0_25px_rgba(249,115,22,0.25)]"
+                      >
+                        Create
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
               </DialogContent>
             </Dialog>
           </div>
