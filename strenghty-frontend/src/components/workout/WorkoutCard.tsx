@@ -49,7 +49,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
     totalSets = workout.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
     totalPRs = workout.exercises.reduce(
       (acc, ex) => acc + ex.sets.filter((s) => s.isPR).length,
-      0
+      0,
     );
     exerciseBadges = workout.exercises
       .slice(0, 3)
@@ -60,8 +60,8 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
         (s: any) =>
           (s.weight !== undefined && Number(s.weight) > 0) ||
           (s.reps !== undefined && Number(s.reps) > 0) ||
-          s.set_type === "S"
-      )
+          s.set_type === "S",
+      ),
     );
     hasCardio = workout.exercises.some((ex) =>
       (ex.sets || []).some(
@@ -69,8 +69,8 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
           s.cardioMode ||
           s.cardioDistance !== undefined ||
           s.distance_meters !== undefined ||
-          s.split_seconds !== undefined
-      )
+          s.split_seconds !== undefined,
+      ),
     );
   } else {
     // If workout.exercises is empty, combine strength + cardio sets fetched from server
@@ -103,11 +103,11 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
       new Set([
         ...strengthSets.map((s) => s.exercise),
         ...cardioSets.map((c) => c.exercise),
-      ])
+      ]),
     ).slice(0, 3);
     exerciseBadges = uniqueIds.map((id) => {
       const found = (exercisesList as UiExercise[]).find(
-        (e) => e.id === id || String(e.id) === String(id)
+        (e) => e.id === id || String(e.id) === String(id),
       );
       return found ? found.name : `Exercise ${id}`;
     });
@@ -155,7 +155,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
       new Set([
         ...strengthSets.map((s) => s.exercise),
         ...cardioSets.map((c) => c.exercise),
-      ])
+      ]),
     );
     displayedExercisesCount = uniqueIds.length;
   }
@@ -218,15 +218,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
             </span>
           )}
         </div>
-        {/* On small screens show PRs on their own line so layout doesn't break */}
-        {totalPRs > 0 && (
-          <div className="flex sm:hidden mt-2 text-xs text-yellow-500 items-center gap-2">
-            <Trophy className="h-3.5 w-3.5" />
-            <span>
-              {totalPRs} PR{totalPRs > 1 ? "s" : ""}
-            </span>
-          </div>
-        )}
+        {/* PRs already shown inline above; no duplicate needed for small screens */}
       </CardContent>
     </Card>
   );

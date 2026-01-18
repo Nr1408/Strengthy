@@ -614,16 +614,11 @@ export function SetRow({
                         if ((set.halfReps || 0) > 0) setHalfDialogOpen(true);
                         return;
                       }
-                      const cur =
-                        typeof set.halfReps === "number" &&
-                        Number.isFinite(set.halfReps)
-                          ? Number(set.halfReps)
-                          : 0;
-                      const next = cur >= 5 ? 0 : cur + 1;
-                      onUpdate({ halfReps: next });
-                      try {
-                        triggerHaptic();
-                      } catch (e) {}
+                      // When editing, open the partial-reps editor without
+                      // automatically incrementing the value. This prevents
+                      // accidental increments when the user intends to adjust
+                      // via the slider.
+                      setHalfDialogOpen(true);
                     }}
                     className={cn(
                       "h-6 w-6 rounded-sm text-[11px] font-semibold leading-none flex items-center justify-center select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0",
