@@ -7,7 +7,19 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}/strenghty_backend"
 
 echo "[entrypoint] Running database migrations..."
-python manage.py migrate --noinput || echo "[entrypoint] migrate failed or no DB access yet"
+echo "[entrypoint] Waiting for DB and running migrations..."
+MAX_TRIES=10
+SLEEP_SECONDS=5
+i=1
+until python manage.py migrate --noinput; do
+	if [ $i -ge $MAX_TRIES ]; then
+		echo "[entrypoint] migrations failed after $i attempts, exiting"
+		exit 1
+	fi
+	echo "[entrypoint] migrate failed, retrying in ${SLEEP_SECONDS}s ($i/${MAX_TRIES})"
+	i=$((i+1))
+	sleep $SLEEP_SECONDS
+done
 
 echo "[entrypoint] Collecting static files..."
 python manage.py collectstatic --noinput || echo "[entrypoint] collectstatic failed or no storage configured"
