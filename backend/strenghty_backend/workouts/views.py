@@ -130,6 +130,7 @@ class WorkoutSetViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Server error while creating set."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
 class CardioSetViewSet(viewsets.ModelViewSet):
     serializer_class = CardioSetSerializer
     permission_classes = [permissions.IsAuthenticated]
