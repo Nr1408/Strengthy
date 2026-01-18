@@ -623,7 +623,7 @@ export function SetRow({
                     className={cn(
                       "h-6 w-6 rounded-sm text-[11px] font-semibold leading-none flex items-center justify-center select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0",
                       (set.halfReps || 0) > 0
-                        ? "bg-orange-500 text-black border border-orange-500"
+                        ? "bg-neutral-900/70 text-orange-500 border border-orange-500"
                         : "bg-transparent text-muted-foreground/70 hover:text-muted-foreground border border-border",
                     )}
                   >
