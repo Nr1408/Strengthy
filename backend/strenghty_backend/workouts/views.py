@@ -32,6 +32,7 @@ from .serializers import (
 # Simple function-based view alias for public config, if needed by older
 # URL patterns. It returns the same payload as PublicConfigView.
 from rest_framework.decorators import api_view, permission_classes as drf_permission_classes
+import logging
 
 @api_view(["GET"])
 @drf_permission_classes([permissions.AllowAny])
@@ -112,6 +113,21 @@ class WorkoutSetViewSet(viewsets.ModelViewSet):
             except ValueError:
                 pass
         return qs
+
+    def create(self, request, *args, **kwargs):
+        """Wrap creation to convert DB integrity errors into 400s and
+        log unexpected exceptions so the API returns JSON instead of HTML 500 pages.
+        """
+        logger = logging.getLogger(__name__)
+        try:
+            return super().create(request, *args, **kwargs)
+        except IntegrityError as e:
+            logger.warning("WorkoutSet create IntegrityError: %s", e)
+            return Response({"detail": "Invalid data or duplicate set number."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Log full exception for debugging; return a JSON 500 response
+            logger.exception("Unhandled error creating WorkoutSet")
+            return Response({"detail": "Server error while creating set."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CardioSetViewSet(viewsets.ModelViewSet):
