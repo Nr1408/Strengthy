@@ -40,6 +40,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { muscleGroupColors } from "@/data/mockData";
+import { getExerciseIconFile } from "@/lib/exerciseIcons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getExercises,
@@ -1686,6 +1687,13 @@ export default function EditWorkout() {
                     }
                     className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-all hover:border-primary/50 hover:bg-secondary/50 group"
                   >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
+                      <img
+                        src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+                        alt={exercise.name}
+                        className="h-9 w-9 object-contain"
+                      />
+                    </div>
                     <div className="flex-1">
                       <p className="font-medium group-hover:text-primary transition-colors">
                         {exercise.name}

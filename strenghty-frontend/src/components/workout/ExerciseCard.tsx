@@ -1,8 +1,9 @@
-import { Dumbbell, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { Exercise } from "@/types/workout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { muscleGroupColors } from "@/data/mockData";
+import { getExerciseIconFile } from "@/lib/exerciseIcons";
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -22,8 +23,12 @@ export function ExerciseCard({
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
-            <Dumbbell className="h-5 w-5 text-muted-foreground" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
+            <img
+              src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+              alt={exercise.muscleGroup || exercise.name}
+              className="h-9 w-9 object-contain"
+            />
           </div>
           <div className="space-y-1">
             <h3 className="font-heading font-semibold">{exercise.name}</h3>

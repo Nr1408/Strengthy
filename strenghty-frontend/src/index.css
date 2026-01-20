@@ -152,6 +152,27 @@
   }
 }
 
+/* Utility to hide scrollbars across browsers (used by JS/markup classes like .scrollbar-hide) */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+/* Ensure the square, larger placeholder centers icons */
+.icon-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  width: 48px;
+  border-radius: 6px;
+  background-color: #121212;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
 /* Hide Google Identity Services broken overlay while using popup fallback */
 #credential_picker_container,
 iframe[id^="gsi_"] {

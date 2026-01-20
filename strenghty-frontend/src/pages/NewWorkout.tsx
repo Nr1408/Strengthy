@@ -38,6 +38,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
+import { getExerciseIconFile } from "@/lib/exerciseIcons";
 import { Badge } from "@/components/ui/badge";
 import { muscleGroupColors } from "@/data/mockData";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -2383,7 +2384,13 @@ export default function NewWorkout() {
                       }
                       className="flex w-full items-center gap-4 py-4 text-left transition-colors border-b border-white/5 hover:bg-white/2"
                     >
-                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex-shrink-0" />
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
+                        <img
+                          src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+                          alt={exercise.name}
+                          className="h-9 w-9 object-contain"
+                        />
+                      </div>
                       <div className="flex-1">
                         <p className="font-medium text-white">
                           {exercise.name}

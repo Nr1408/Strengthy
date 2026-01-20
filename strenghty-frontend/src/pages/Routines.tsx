@@ -193,7 +193,7 @@ export default function Routines() {
 
         {/* Create Routine Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="floating-card fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-[calc(100%-48px)] max-w-[420px] rounded-[32px] bg-zinc-900/80 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-8 pt-3 pb-10">
+          <DialogContent className="floating-card fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-[calc(100%-48px)] max-w-[420px] rounded-[20px] bg-[#121212] backdrop-blur-0 border border-[#262626] px-8 pt-3 pb-10 font-sans">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -215,7 +215,12 @@ export default function Routines() {
               <div className="mt-4 max-h-[50vh] overflow-y-auto pr-2">
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Routine Name</Label>
+                    <Label
+                      htmlFor="name"
+                      className="text-[#A0A0A0] text-sm font-medium"
+                    >
+                      Routine Name
+                    </Label>
                     <Input
                       id="name"
                       placeholder="e.g., Push Day, Upper Body"
@@ -223,11 +228,16 @@ export default function Routines() {
                       onChange={(e) =>
                         setNewRoutine({ ...newRoutine, name: e.target.value })
                       }
-                      className="bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40"
+                      className="bg-[#1E1E1E] border border-[#2A2A2A] placeholder:text-[#555555] focus-visible:border-[#FF7000] focus-visible:ring-0 px-4"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description (optional)</Label>
+                    <Label
+                      htmlFor="description"
+                      className="text-[#A0A0A0] text-sm font-medium"
+                    >
+                      Description (optional)
+                    </Label>
                     <Textarea
                       id="description"
                       placeholder="What does this routine focus on?"
@@ -238,7 +248,7 @@ export default function Routines() {
                           description: e.target.value,
                         })
                       }
-                      className="p-4 text-sm bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40"
+                      className="p-4 text-sm bg-[#1E1E1E] border border-[#2A2A2A] placeholder:text-[#555555] focus-visible:border-[#FF7000] focus-visible:ring-0"
                       rows={4}
                     />
                   </div>
@@ -250,13 +260,13 @@ export default function Routines() {
                   <button
                     type="button"
                     onClick={() => setIsDialogOpen(false)}
-                    className="flex-1 text-sm text-zinc-500 font-medium rounded-xl bg-transparent px-3 py-2 hover:bg-white/5"
+                    className="flex-1 text-sm text-[#A0A0A0] font-medium rounded-xl bg-transparent px-3 py-2 hover:bg-white/5"
                   >
                     Cancel
                   </button>
                   <Button
                     onClick={handleCreateRoutine}
-                    className="flex-1 bg-orange-500 text-white font-semibold rounded-xl shadow-[0_0_25px_rgba(249,115,22,0.25)]"
+                    className="flex-1 bg-[#FF7000] text-white font-bold rounded-xl"
                   >
                     Create
                   </Button>

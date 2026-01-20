@@ -283,7 +283,7 @@ export default function Exercises() {
                             name: e.target.value,
                           })
                         }
-                        className="bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40"
+                        className="bg-[#1E1E1E] border border-[#2A2A2A] placeholder:text-[#555555] focus-visible:border-[#FF7000] focus-visible:ring-0 px-4"
                       />
                     </div>
 
@@ -329,7 +329,7 @@ export default function Exercises() {
                             description: e.target.value,
                           })
                         }
-                        className="bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40"
+                        className="bg-[#1E1E1E] border border-[#2A2A2A] placeholder:text-[#555555] focus-visible:border-[#FF7000] focus-visible:ring-0 px-4"
                       />
                     </div>
                   </div>
@@ -339,13 +339,13 @@ export default function Exercises() {
                       <button
                         type="button"
                         onClick={() => setIsDialogOpen(false)}
-                        className="flex-1 text-sm text-zinc-500 font-medium rounded-xl bg-transparent px-3 py-2 hover:bg-white/5"
+                        className="flex-1 text-sm text-[#A0A0A0] font-medium rounded-xl bg-transparent px-3 py-2 hover:bg-white/5"
                       >
                         Cancel
                       </button>
                       <Button
                         onClick={handleCreateExercise}
-                        className="flex-1 bg-orange-500 text-white font-semibold rounded-xl shadow-[0_0_25px_rgba(249,115,22,0.25)]"
+                        className="flex-1 bg-[#FF7000] text-white font-bold rounded-xl"
                       >
                         Create
                       </Button>
