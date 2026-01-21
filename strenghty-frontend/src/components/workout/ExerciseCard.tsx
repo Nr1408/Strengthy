@@ -27,7 +27,7 @@ export function ExerciseCard({
             <img
               src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
               alt={exercise.muscleGroup || exercise.name}
-              className="h-9 w-9 object-contain"
+              className="h-10 w-10 object-contain"
             />
           </div>
           <div className="space-y-1">

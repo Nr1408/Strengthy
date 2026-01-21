@@ -19,6 +19,9 @@ import type { Routine } from "@/types/workout";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SetRow } from "@/components/workout/SetRow";
 import { Card, CardContent } from "@/components/ui/card";
+import { getExerciseIconFile } from "@/lib/exerciseIcons";
+import MuscleTag from "@/components/workout/MuscleTag";
+import ExerciseHeader from "@/components/workout/ExerciseHeader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getWorkouts,
@@ -544,14 +547,21 @@ export default function ViewWorkout() {
             <Card key={we.id} className="w-full">
               <CardContent className="px-1 py-3 sm:p-4 overflow-hidden">
                 <div className="mb-3">
-                  <h3 className="font-heading text-lg font-semibold text-white">
-                    {we.exercise.name}
-                  </h3>
-                  <div className="text-sm text-muted-foreground">
-                    {we.exercise.muscleGroup === "other"
-                      ? "calves"
-                      : we.exercise.muscleGroup}
-                  </div>
+                  <ExerciseHeader
+                    exerciseName={we.exercise.name}
+                    muscleGroup={we.exercise.muscleGroup}
+                    onClick={() => {
+                      try {
+                        const exId = String(we.exercise.id);
+                        navigate(`/exercises/${exId}/history`, {
+                          state: {
+                            exerciseName: we.exercise.name,
+                            muscleGroup: we.exercise.muscleGroup,
+                          },
+                        });
+                      } catch (e) {}
+                    }}
+                  />
                   {we.notes && (
                     <p className="mt-2 text-sm text-muted-foreground">
                       {we.notes}
@@ -634,6 +644,8 @@ export default function ViewWorkout() {
           ))}
         </div>
       </div>
+
+      {/* ExerciseInfo modal removed; navigation now goes to ExerciseHistory page */}
 
       {showDiscardConfirm && (
         <div className="fixed left-1/2 top-1/3 z-[9999] -translate-x-1/2 w-[min(520px,90%)]">

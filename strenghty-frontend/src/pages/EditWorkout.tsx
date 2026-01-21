@@ -39,8 +39,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import MuscleTag from "@/components/workout/MuscleTag";
+import ExerciseHeader from "@/components/workout/ExerciseHeader";
 import { muscleGroupColors } from "@/data/mockData";
 import { getExerciseIconFile } from "@/lib/exerciseIcons";
+import ExerciseInfo from "@/components/workout/ExerciseInfo";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getExercises,
@@ -134,6 +137,12 @@ export default function EditWorkout() {
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [filterMuscle, setFilterMuscle] = useState<"all" | string>("all");
+  const [exerciseInfoOpen, setExerciseInfoOpen] = useState(false);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
+    null,
+  );
+  const [selectedExerciseName, setSelectedExerciseName] = useState<string>();
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>();
 
   const filteredExercises = useMemo(() => {
     const q = exerciseSearch.trim().toLowerCase();
@@ -1421,38 +1430,68 @@ export default function EditWorkout() {
             <Card key={workoutExercise.id}>
               <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
                 <div className="mb-4 flex items-start justify-between">
-                  <div>
+                  <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-heading text-lg font-semibold">
-                          {workoutExercise.exercise.name}
-                        </h3>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setReplaceTarget(workoutExercise.id);
-                            setReplaceFilter(null);
-                            setExerciseSearch("");
-                            setFilterMuscle("all");
-                            setIsExerciseDialogOpen(true);
-                          }}
-                          className="text-muted-foreground"
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const exId = String(
+                                  workoutExercise.exercise.id,
+                                );
+                                navigate(`/exercises/${exId}/history`, {
+                                  state: {
+                                    exerciseName: workoutExercise.exercise.name,
+                                    muscleGroup:
+                                      workoutExercise.exercise.muscleGroup,
+                                  },
+                                });
+                              } catch (e) {}
+                            }}
+                            className="flex items-start gap-3 p-0 bg-transparent border-0"
+                          >
+                            <ExerciseHeader
+                              exerciseName={workoutExercise.exercise.name}
+                              muscleGroup={workoutExercise.exercise.muscleGroup}
+                              onClick={() => {
+                                try {
+                                  const exId = String(
+                                    workoutExercise.exercise.id,
+                                  );
+                                  navigate(`/exercises/${exId}/history`, {
+                                    state: {
+                                      exerciseName:
+                                        workoutExercise.exercise.name,
+                                      muscleGroup:
+                                        workoutExercise.exercise.muscleGroup,
+                                    },
+                                  });
+                                } catch (e) {}
+                              }}
+                              trailing={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setReplaceTarget(workoutExercise.id);
+                                    setReplaceFilter(null);
+                                    setExerciseSearch("");
+                                    setFilterMuscle("all");
+                                    setIsExerciseDialogOpen(true);
+                                  }}
+                                  className="text-muted-foreground"
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        muscleGroupColors[workoutExercise.exercise.muscleGroup]
-                      }
-                    >
-                      {workoutExercise.exercise.muscleGroup === "other"
-                        ? "calves"
-                        : workoutExercise.exercise.muscleGroup}
-                    </Badge>
+                    <MuscleTag muscle={workoutExercise.exercise.muscleGroup} />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1603,6 +1642,14 @@ export default function EditWorkout() {
           <Plus className="h-4 w-4" /> Add Exercise
         </Button>
 
+        <ExerciseInfo
+          exerciseId={selectedExerciseId}
+          exerciseName={selectedExerciseName}
+          muscleGroup={selectedMuscleGroup}
+          open={exerciseInfoOpen}
+          onOpenChange={(o: boolean) => setExerciseInfoOpen(o)}
+        />
+
         <Dialog
           open={isExerciseDialogOpen}
           onOpenChange={(open) => {
@@ -1637,80 +1684,49 @@ export default function EditWorkout() {
               />
             </div>
 
-            <div className="pt-3">
-              <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
-                <button
-                  onClick={() => setFilterMuscle("all")}
-                  className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                    filterMuscle === "all"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted/20 text-muted-foreground hover:bg-muted/30"
-                  }`}
-                >
-                  All Muscles
-                </button>
-                {availableMuscleGroups.map((m) => {
-                  const colorClass =
-                    muscleGroupColors[m as keyof typeof muscleGroupColors] ||
-                    "bg-muted/20 text-muted-foreground";
-                  const active = filterMuscle === m;
-                  return (
-                    <button
-                      key={m}
-                      onClick={() => setFilterMuscle(m)}
-                      className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-all ${colorClass} ${
-                        active
-                          ? "ring-2 ring-offset-2 ring-[#0f0f0f] font-bold"
-                          : "opacity-80 hover:opacity-100"
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1">
+            <div className="mt-3 flex-1 overflow-y-auto">
               {filteredExercises.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No exercises found matching "{exerciseSearch}"
                 </p>
               ) : (
-                filteredExercises.map((exercise) => (
-                  <button
-                    key={exercise.id}
-                    onClick={() =>
-                      replaceTarget
-                        ? replaceExercise(replaceTarget, exercise)
-                        : addExercise(exercise)
-                    }
-                    className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-all hover:border-primary/50 hover:bg-secondary/50 group"
-                  >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
-                      <img
-                        src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
-                        alt={exercise.name}
-                        className="h-9 w-9 object-contain"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium group-hover:text-primary transition-colors">
-                        {exercise.name}
-                      </p>
-                      <Badge
-                        variant="secondary"
-                        className={muscleGroupColors[exercise.muscleGroup]}
-                      >
-                        {exercise.muscleGroup === "other"
-                          ? "calves"
-                          : exercise.muscleGroup}
-                      </Badge>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                  </button>
-                ))
+                <div className="flex flex-col">
+                  {filteredExercises.map((exercise) => (
+                    <button
+                      key={exercise.id}
+                      onClick={() =>
+                        replaceTarget
+                          ? replaceExercise(replaceTarget, exercise)
+                          : addExercise(exercise)
+                      }
+                      className="flex w-full items-center gap-4 py-4 text-left transition-colors border-b border-white/5 hover:bg-white/2"
+                    >
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
+                        <img
+                          src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+                          alt={exercise.name}
+                          className="h-10 w-10 object-contain"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-white">
+                          {exercise.name}
+                        </p>
+                        {(() => {
+                          const normalizedGroup =
+                            exercise.muscleGroup === "other" &&
+                            exercise.name.toLowerCase().includes("calf")
+                              ? "calves"
+                              : exercise.muscleGroup;
+                          return <MuscleTag muscle={normalizedGroup} />;
+                        })()}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  ))}
+                </div>
               )}
+              <div className="h-6" />
             </div>
           </DialogContent>
         </Dialog>

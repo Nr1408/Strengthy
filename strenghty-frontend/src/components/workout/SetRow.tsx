@@ -38,6 +38,7 @@ interface SetRowProps {
   exerciseName?: string;
   readOnly?: boolean;
   unitInteractiveWhenReadOnly?: boolean;
+  showComplete?: boolean;
   onUpdate: (updates: Partial<WorkoutSet>) => void;
   onUnitChange?: (unit: "lbs" | "kg") => void;
   onComplete: () => void;
@@ -66,6 +67,7 @@ export function SetRow({
   exerciseName,
   readOnly = false,
   unitInteractiveWhenReadOnly = false,
+  showComplete = true,
   onUpdate,
   onUnitChange,
   onComplete,
@@ -977,24 +979,28 @@ export function SetRow({
         )}
       </Cell>
 
-      {/* Column 8: Complete / check button */}
+      {/* Column 8: Complete / check button (optional) */}
       <Cell className="flex items-center justify-center">
-        {readOnly ? (
-          <div className="h-8 w-full max-w-[2rem] flex items-center justify-center rounded-md border border-border bg-neutral-900/60 text-xs text-muted-foreground">
-            <Check className="h-4 w-4" />
-          </div>
+        {showComplete ? (
+          readOnly ? (
+            <div className="h-8 w-full max-w-[2rem] flex items-center justify-center rounded-md border border-border bg-neutral-900/60 text-xs text-muted-foreground">
+              <Check className="h-4 w-4" />
+            </div>
+          ) : (
+            <Button
+              variant={set.completed ? "success" : "outline"}
+              size="icon"
+              className="h-8 w-full max-w-[2rem] p-0"
+              onClick={() => {
+                triggerHaptic();
+                onComplete();
+              }}
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+          )
         ) : (
-          <Button
-            variant={set.completed ? "success" : "outline"}
-            size="icon"
-            className="h-8 w-full max-w-[2rem] p-0"
-            onClick={() => {
-              triggerHaptic();
-              onComplete();
-            }}
-          >
-            <Check className="h-4 w-4" />
-          </Button>
+          <div className="h-8 w-full max-w-[2rem]" />
         )}
       </Cell>
     </div>

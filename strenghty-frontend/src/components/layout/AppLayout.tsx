@@ -92,7 +92,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -137,7 +137,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 to={item.href}
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-xs font-medium transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 <Icon className="h-5 w-5" />
@@ -154,7 +154,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       </main>
       {/* Paused workout small dialog (top) */}
       {showPausedDialog && (
-        <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 w-[min(720px,90%)]">
+        <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 w-[min(640px,75%)]">
           <div className="rounded-lg border border-border bg-neutral-900/95 p-4 shadow-lg">
             <div className="mb-1 text-center text-lg font-semibold text-muted-foreground">
               Workout in Progress

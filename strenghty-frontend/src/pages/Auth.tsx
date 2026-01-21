@@ -358,21 +358,20 @@ export default function Auth() {
         return;
       }
 
-
       // On native, let the user pick the account first. Only show the
       // pending screen after we have an idToken to exchange.
       setIsGoogleSelecting(true);
 
       let initialized = false;
 
-// ✅ USE THIS NEW UPDATED BLOCK:
+      // ✅ USE THIS NEW UPDATED BLOCK:
       try {
         await GoogleAuth.initialize({
-          clientId: googleClientIdWeb, 
+          clientId: googleClientIdWeb,
           scopes: ["profile", "email"],
           grantOfflineAccess: true,
           // 🔥 NEW: These two settings break the auto-login cache
-          forceCodeForRefreshToken: true, 
+          forceCodeForRefreshToken: true,
           authentication: {
             enableAutoSignIn: false,
           },
@@ -392,8 +391,8 @@ export default function Auth() {
       // 🔥 Force clear the current session before showing the list
       await GoogleAuth.signOut();
       // Tiny delay to ensure the OS processes the sign-out
-      await new Promise(r => setTimeout(r, 200));
-      
+      await new Promise((r) => setTimeout(r, 200));
+
       const res = await GoogleAuth.signIn();
       setIsGoogleSelecting(false);
       console.log("GoogleAuth.signIn response:", res);
@@ -540,81 +539,104 @@ export default function Auth() {
       </header>
 
       <main className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="font-heading text-2xl">
-              {pendingAction
-                ? pendingAction.kind === "signup"
-                  ? "Just a moment"
-                  : "Just a moment"
-                : showSignup
-                  ? "Create your account"
-                  : "Welcome back"}
-            </CardTitle>
-            {!pendingAction && (
-              <CardDescription>
-                {showSignup
-                  ? "Start tracking your workouts and PRs"
-                  : "Log in to continue your fitness journey"}
-              </CardDescription>
-            )}
-          </CardHeader>
-          <CardContent>
-            {pendingAction ? (
-              <div className="py-8 text-center space-y-3">
-                <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                <div>
-                  <p className="text-base font-semibold text-white">
-                    {pendingAction.title}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Google sign-in button */}
-                <div className="mb-4 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={onClickContinueWithGoogle}
-                    disabled={
-                      (!googleClientIdWeb && !googleClientIdAndroid) ||
-                      isLoading ||
-                      isGoogleSelecting
-                    }
-                    className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
-                  >
-                    <img
-                      src="/google-logo.svg"
-                      alt="Google"
-                      className="mr-2 h-4 w-4"
-                    />
-                    {isGoogleSelecting
-                      ? "Choose an account…"
-                      : "Continue with Google"}
-                  </button>
-                </div>
-                <div className="relative mb-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      or continue with email
-                    </span>
+        <div
+          className="w-full max-w-md transition-transform"
+          style={pendingAction ? { transform: "translateY(-6vh)" } : undefined}
+        >
+          <Card className="w-full">
+            <CardHeader className="text-center">
+              <CardTitle className="font-heading text-2xl">
+                {pendingAction
+                  ? pendingAction.kind === "signup"
+                    ? "Just a moment"
+                    : "Just a moment"
+                  : showSignup
+                    ? "Create your account"
+                    : "Welcome back"}
+              </CardTitle>
+              {!pendingAction && (
+                <CardDescription>
+                  {showSignup
+                    ? "Start tracking your workouts and PRs"
+                    : "Log in to continue your fitness journey"}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              {pendingAction ? (
+                <div className="py-8 text-center space-y-3">
+                  <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  <div>
+                    <p className="text-base font-semibold text-white">
+                      {pendingAction.title}
+                    </p>
                   </div>
                 </div>
+              ) : (
+                <>
+                  {/* Google sign-in button */}
+                  <div className="mb-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={onClickContinueWithGoogle}
+                      disabled={
+                        (!googleClientIdWeb && !googleClientIdAndroid) ||
+                        isLoading ||
+                        isGoogleSelecting
+                      }
+                      className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
+                    >
+                      <img
+                        src="/google-logo.svg"
+                        alt="Google"
+                        className="mr-2 h-4 w-4"
+                      />
+                      {isGoogleSelecting
+                        ? "Choose an account…"
+                        : "Continue with Google"}
+                    </button>
+                  </div>
+                  <div className="relative mb-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        or continue with email
+                      </span>
+                    </div>
+                  </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {showSignup && (
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    {showSignup && (
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <div className="relative">
+                          <User className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                          <Input
+                            id="name"
+                            name="name"
+                            placeholder="John Doe"
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
+                      <Label htmlFor="email">Email</Label>
                       <div className="relative">
-                        <User className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                        <Mail className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
                         <Input
-                          id="name"
-                          name="name"
-                          placeholder="John Doe"
-                          value={formData.name}
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={formData.email}
                           onChange={handleInputChange}
                           className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                           required
@@ -622,109 +644,95 @@ export default function Auth() {
                         />
                       </div>
                     </div>
-                  )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <div className="relative">
-                      <Mail className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                        required
-                        disabled={isLoading}
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <div className="relative">
+                        <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          required
+                          minLength={6}
+                          disabled={isLoading}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                        required
-                        minLength={6}
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      "Loading..."
-                    ) : (
-                      <>
-                        <>{showSignup ? "Create Account" : "Log In"}</>
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </form>
-
-                <div
-                  className={
-                    showSignup
-                      ? "mt-4 text-center text-sm"
-                      : "mt-4 space-y-2 text-center text-sm sm:flex sm:items-center sm:justify-between sm:space-y-0"
-                  }
-                >
-                  {!showSignup && (
-                    <Link
-                      to="/auth/forgot-password"
-                      className="text-muted-foreground hover:text-primary hover:underline sm:text-left"
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
                     >
-                      Forgot password?
-                    </Link>
-                  )}
+                      {isLoading ? (
+                        "Loading..."
+                      ) : (
+                        <>
+                          <>{showSignup ? "Create Account" : "Log In"}</>
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  </form>
 
                   <div
                     className={
                       showSignup
-                        ? "text-muted-foreground"
-                        : "text-muted-foreground sm:text-right sm:flex-1"
+                        ? "mt-4 text-center text-sm"
+                        : "mt-4 space-y-2 text-center text-sm sm:flex sm:items-center sm:justify-between sm:space-y-0"
                     }
                   >
-                    {showSignup ? (
-                      <>
-                        Already have an account?{" "}
-                        <button
-                          type="button"
-                          onClick={() => setShowSignup(false)}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          Log in
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        Don't have an account?{" "}
-                        <button
-                          type="button"
-                          onClick={() => setShowSignup(true)}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          Sign up
-                        </button>
-                      </>
+                    {!showSignup && (
+                      <Link
+                        to="/auth/forgot-password"
+                        className="text-muted-foreground hover:text-primary hover:underline sm:text-left"
+                      >
+                        Forgot password?
+                      </Link>
                     )}
+
+                    <div
+                      className={
+                        showSignup
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground sm:text-right sm:flex-1"
+                      }
+                    >
+                      {showSignup ? (
+                        <>
+                          Already have an account?{" "}
+                          <button
+                            type="button"
+                            onClick={() => setShowSignup(false)}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            Log in
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          Don't have an account?{" "}
+                          <button
+                            type="button"
+                            onClick={() => setShowSignup(true)}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            Sign up
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
         <Dialog
           open={errorDialogOpen}
           onOpenChange={(o) => setErrorDialogOpen(o)}

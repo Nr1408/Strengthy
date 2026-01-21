@@ -39,7 +39,9 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { getExerciseIconFile } from "@/lib/exerciseIcons";
-import { Badge } from "@/components/ui/badge";
+import ExerciseInfo from "@/components/workout/ExerciseInfo";
+import MuscleTag from "@/components/workout/MuscleTag";
+import ExerciseHeader from "@/components/workout/ExerciseHeader";
 import { muscleGroupColors } from "@/data/mockData";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -55,6 +57,7 @@ import {
   createExercise,
   getToken,
 } from "@/lib/api";
+import { recommendNextRoutine } from "@/lib/onboarding";
 import { triggerHaptic } from "@/lib/haptics";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 
@@ -133,6 +136,12 @@ export default function NewWorkout() {
   const [exerciseToReplace, setExerciseToReplace] = useState<string | null>(
     null,
   );
+  const [exerciseInfoOpen, setExerciseInfoOpen] = useState(false);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
+    null,
+  );
+  const [selectedExerciseName, setSelectedExerciseName] = useState<string>();
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>();
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [startTime, setStartTime] = useState<Date>(() => new Date());
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -215,6 +224,14 @@ export default function NewWorkout() {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
       try {
         triggerHaptic();
+      } catch (e) {}
+
+      // If the opener requested an immediate start+view (onboarding recommended flow)
+      try {
+        const auto = (location.state as any)?.autostartAndView;
+        if (auto) {
+          navigate(`/workouts/${w.id}/view`);
+        }
       } catch (e) {}
     },
     onError: (err: any) => {
@@ -1760,6 +1777,52 @@ export default function NewWorkout() {
             : "Great session!"
         }`,
       });
+
+      // Post-workout first-time completion flow
+      try {
+        const firstDone = localStorage.getItem("user:firstWorkoutCompleted");
+        if (!firstDone) {
+          try {
+            localStorage.setItem("user:firstWorkoutCompleted", "1");
+          } catch (e) {}
+
+          let suggested = null as any;
+          try {
+            if (fromRoutine && fromRoutine.id) {
+              suggested = recommendNextRoutine(fromRoutine.id);
+            }
+          } catch (e) {
+            suggested = null;
+          }
+
+          try {
+            if (suggested && suggested.routine) {
+              localStorage.setItem(
+                "user:nextSuggestedRoutine",
+                JSON.stringify({
+                  id: suggested.routine.id,
+                  label: suggested.label,
+                }),
+              );
+            }
+          } catch (e) {}
+
+          try {
+            navigate("/workouts/complete", {
+              state: {
+                suggestedRoutine: suggested?.routine,
+                label: suggested?.label,
+              },
+            });
+            try {
+              localStorage.removeItem("workout:inProgress");
+              localStorage.removeItem("workout:paused");
+            } catch (e) {}
+            return;
+          } catch (e) {}
+        }
+      } catch (e) {}
+
       navigate("/workouts");
       try {
         localStorage.removeItem("workout:inProgress");
@@ -1798,6 +1861,14 @@ export default function NewWorkout() {
             </span>
           </div>
         </div>
+
+        <ExerciseInfo
+          exerciseId={selectedExerciseId}
+          exerciseName={selectedExerciseName}
+          muscleGroup={selectedMuscleGroup}
+          open={exerciseInfoOpen}
+          onOpenChange={(o: boolean) => setExerciseInfoOpen(o)}
+        />
       </div>
 
       {/* PR banner (mirrors EditWorkout) */}
@@ -2092,33 +2163,48 @@ export default function NewWorkout() {
             <Card key={workoutExercise.id} className="sm:mx-0 w-full">
               <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
                 <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-1">
-                      <h3 className="font-heading text-lg font-semibold text-white">
-                        {workoutExercise.exercise.name}
-                      </h3>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-white"
-                        onClick={() => {
-                          setExerciseToReplace(workoutExercise.id);
-                          setIsExerciseDialogOpen(true);
-                        }}
-                      >
-                        <ChevronDown className="h-3 w-3" />
-                      </Button>
+                  <div className="flex flex-col">
+                    <div className="flex items-start gap-1">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1">
+                            <ExerciseHeader
+                              exerciseName={workoutExercise.exercise.name}
+                              muscleGroup={workoutExercise.exercise.muscleGroup}
+                              onClick={() => {
+                                try {
+                                  const exId = String(
+                                    workoutExercise.exercise.id,
+                                  );
+                                  navigate(`/exercises/${exId}/history`, {
+                                    state: {
+                                      exerciseName:
+                                        workoutExercise.exercise.name,
+                                      muscleGroup:
+                                        workoutExercise.exercise.muscleGroup,
+                                    },
+                                  });
+                                } catch (e) {}
+                              }}
+                              trailing={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-white"
+                                  onClick={() => {
+                                    setExerciseToReplace(workoutExercise.id);
+                                    setIsExerciseDialogOpen(true);
+                                  }}
+                                >
+                                  <ChevronDown className="h-3 w-3" />
+                                </Button>
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {/** moved chevron into ExerciseHeader trailing prop */}
                     </div>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        muscleGroupColors[workoutExercise.exercise.muscleGroup]
-                      }
-                    >
-                      {workoutExercise.exercise.muscleGroup === "other"
-                        ? "calves"
-                        : workoutExercise.exercise.muscleGroup}
-                    </Badge>
                   </div>
                   <Button
                     variant="ghost"
@@ -2388,7 +2474,7 @@ export default function NewWorkout() {
                         <img
                           src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
                           alt={exercise.name}
-                          className="h-9 w-9 object-contain"
+                          className="h-10 w-10 object-contain"
                         />
                       </div>
                       <div className="flex-1">
@@ -2401,21 +2487,7 @@ export default function NewWorkout() {
                             exercise.name.toLowerCase().includes("calf")
                               ? "calves"
                               : exercise.muscleGroup;
-                          if (normalizedGroup === "quads") {
-                            return (
-                              <span className="inline-block mt-1 rounded px-2 py-0.5 text-xs bg-orange-500/10 text-orange-500">
-                                quads
-                              </span>
-                            );
-                          }
-                          return (
-                            <Badge
-                              variant="secondary"
-                              className={muscleGroupColors[normalizedGroup]}
-                            >
-                              {normalizedGroup}
-                            </Badge>
-                          );
+                          return <MuscleTag muscle={normalizedGroup} />;
                         })()}
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />

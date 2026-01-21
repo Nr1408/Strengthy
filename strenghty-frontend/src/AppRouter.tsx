@@ -20,8 +20,11 @@ import Profile from "./pages/ProfilePage";
 import AccountSettings from "./pages/AccountSettings";
 import ExploreRoutines from "./pages/ExploreRoutines";
 import NewWorkout from "./pages/NewWorkout";
+import WorkoutPreview from "./pages/WorkoutPreview";
+import WorkoutComplete from "./pages/WorkoutComplete";
 import EditWorkout from "./pages/EditWorkout";
 import ViewWorkout from "./pages/ViewWorkout";
+import ExerciseHistory from "./pages/ExerciseHistory";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import GoogleRedirect from "./pages/GoogleRedirect";
@@ -49,8 +52,14 @@ const App = () => (
             <Route path="/exercises" element={<Exercises />} />
             <Route path="/workouts" element={<Workouts />} />
             <Route path="/workouts/new" element={<NewWorkout />} />
+            <Route path="/workouts/preview" element={<WorkoutPreview />} />
+            <Route path="/workouts/complete" element={<WorkoutComplete />} />
             <Route path="/workouts/:id/view" element={<ViewWorkout />} />
             <Route path="/workouts/:id/edit" element={<EditWorkout />} />
+            <Route
+              path="/exercises/:id/history"
+              element={<ExerciseHistory />}
+            />
             <Route path="/routines" element={<Routines />} />
             <Route path="/routines/explore" element={<ExploreRoutines />} />
             <Route path="/routines/:id/view" element={<ViewRoutine />} />

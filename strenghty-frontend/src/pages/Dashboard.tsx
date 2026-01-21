@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Calendar, Trophy, Dumbbell, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { mockRoutines } from "@/data/mockData";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
 import { StatsCard } from "@/components/workout/StatsCard";
@@ -19,7 +20,7 @@ export default function Dashboard() {
   // Only consider workouts with an end time as completed/logged
   const completedWorkouts = useMemo(
     () => workouts.filter((w) => w.endedAt),
-    [workouts]
+    [workouts],
   );
 
   // Recent workouts (latest 3 by createdAt desc)
@@ -30,6 +31,23 @@ export default function Dashboard() {
   }, [completedWorkouts]);
 
   const navigate = useNavigate();
+
+  const [nextSuggested, setNextSuggested] = useState<null | {
+    id: string;
+    label: string;
+  }>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("user:nextSuggestedRoutine");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.id) setNextSuggested(parsed);
+      }
+    } catch (e) {
+      setNextSuggested(null);
+    }
+  }, []);
 
   // Date ranges
   const thisWeekRange = useMemo(() => {
@@ -60,9 +78,9 @@ export default function Dashboard() {
         isWithinInterval(w.date, {
           start: thisWeekRange.start,
           end: thisWeekRange.end,
-        })
+        }),
       ),
-    [completedWorkouts, thisWeekRange]
+    [completedWorkouts, thisWeekRange],
   );
   const workoutsLastWeek = useMemo(
     () =>
@@ -70,9 +88,9 @@ export default function Dashboard() {
         isWithinInterval(w.date, {
           start: lastWeekRange.start,
           end: lastWeekRange.end,
-        })
+        }),
       ),
-    [completedWorkouts, lastWeekRange]
+    [completedWorkouts, lastWeekRange],
   );
   const workoutsPrevWeek = useMemo(
     () =>
@@ -80,9 +98,9 @@ export default function Dashboard() {
         isWithinInterval(w.date, {
           start: prevWeekRange.start,
           end: prevWeekRange.end,
-        })
+        }),
       ),
-    [completedWorkouts, prevWeekRange]
+    [completedWorkouts, prevWeekRange],
   );
 
   // Fetch sets for last week and previous week to compute PRs and total sets
@@ -90,7 +108,7 @@ export default function Dashboard() {
     queryKey: ["setsByWorkout", workoutsLastWeek.map((w) => w.id)],
     queryFn: async () => {
       const entries = await Promise.all(
-        workoutsLastWeek.map(async (w) => [w.id, await getSets(w.id)] as const)
+        workoutsLastWeek.map(async (w) => [w.id, await getSets(w.id)] as const),
       );
       return Object.fromEntries(entries) as Record<string, UiWorkoutSet[]>;
     },
@@ -101,7 +119,7 @@ export default function Dashboard() {
     queryKey: ["setsByWorkoutThis", workoutsThisWeek.map((w) => w.id)],
     queryFn: async () => {
       const entries = await Promise.all(
-        workoutsThisWeek.map(async (w) => [w.id, await getSets(w.id)] as const)
+        workoutsThisWeek.map(async (w) => [w.id, await getSets(w.id)] as const),
       );
       return Object.fromEntries(entries) as Record<string, UiWorkoutSet[]>;
     },
@@ -113,8 +131,8 @@ export default function Dashboard() {
     queryFn: async () => {
       const entries = await Promise.all(
         workoutsThisWeek.map(
-          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const
-        )
+          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const,
+        ),
       );
       return Object.fromEntries(entries) as Record<string, any[]>;
     },
@@ -125,7 +143,7 @@ export default function Dashboard() {
     queryKey: ["setsByWorkoutPrev", workoutsPrevWeek.map((w) => w.id)],
     queryFn: async () => {
       const entries = await Promise.all(
-        workoutsPrevWeek.map(async (w) => [w.id, await getSets(w.id)] as const)
+        workoutsPrevWeek.map(async (w) => [w.id, await getSets(w.id)] as const),
       );
       return Object.fromEntries(entries) as Record<string, UiWorkoutSet[]>;
     },
@@ -137,8 +155,8 @@ export default function Dashboard() {
     queryFn: async () => {
       const entries = await Promise.all(
         workoutsPrevWeek.map(
-          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const
-        )
+          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const,
+        ),
       );
       return Object.fromEntries(entries) as Record<string, any[]>;
     },
@@ -150,8 +168,8 @@ export default function Dashboard() {
     queryFn: async () => {
       const entries = await Promise.all(
         workoutsLastWeek.map(
-          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const
-        )
+          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const,
+        ),
       );
       return Object.fromEntries(entries) as Record<string, any[]>;
     },
@@ -183,11 +201,11 @@ export default function Dashboard() {
     if (workoutsThisWeek.length === 0) return 0;
     const strengthCount = Object.values(setsByWorkoutThisWeek).reduce(
       (acc, sets) => acc + sets.length,
-      0
+      0,
     );
     const cardioCount = Object.values(cardioSetsByWorkoutThisWeek).reduce(
       (acc, sets) => acc + sets.length,
-      0
+      0,
     );
     return strengthCount + cardioCount;
   })();
@@ -196,11 +214,11 @@ export default function Dashboard() {
     if (workoutsLastWeek.length === 0) return 0;
     const strengthCount = Object.values(setsByWorkoutLastWeek).reduce(
       (acc, sets) => acc + sets.length,
-      0
+      0,
     );
     const cardioCount = Object.values(cardioSetsByWorkoutLastWeek).reduce(
       (acc, sets) => acc + sets.length,
-      0
+      0,
     );
     return strengthCount + cardioCount;
   })();
@@ -238,7 +256,7 @@ export default function Dashboard() {
                 if (inProg) {
                   // show toast via browser alert if toast hook not available
                   alert(
-                    "You already have a workout in progress. Resume or discard it before starting another."
+                    "You already have a workout in progress. Resume or discard it before starting another.",
                   );
                   navigate("/workouts/new");
                   return;
@@ -253,6 +271,60 @@ export default function Dashboard() {
         </div>
 
         {/* Stats */}
+        {/* Next Up (post-first-workout) */}
+        {nextSuggested && (
+          <div className="rounded-xl border border-border bg-card p-6 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-muted-foreground">Next Up</div>
+                <div className="font-medium text-white">
+                  {nextSuggested.label}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Recommended after your first workout
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => {
+                    // Start the suggested routine without autostart (user must start explicitly)
+                    try {
+                      const rt = mockRoutines.find(
+                        (r) => r.id === nextSuggested.id,
+                      );
+                      if (rt) {
+                        // Clear the suggested item so it doesn't persist
+                        localStorage.removeItem("user:nextSuggestedRoutine");
+                        setNextSuggested(null);
+                        navigate("/workouts/new", {
+                          state: { routine: rt, forceNew: true },
+                        });
+                      }
+                    } catch (e) {}
+                  }}
+                >
+                  Start Workout
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    try {
+                      const rt = mockRoutines.find(
+                        (r) => r.id === nextSuggested.id,
+                      );
+                      if (rt)
+                        navigate(`/routines/${rt.id}/view`, {
+                          state: { routine: rt },
+                        });
+                    } catch (e) {}
+                  }}
+                >
+                  View Routine
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             label="This Week"
@@ -319,7 +391,7 @@ export default function Dashboard() {
                   const inProg = localStorage.getItem("workout:inProgress");
                   if (inProg) {
                     alert(
-                      "You already have a workout in progress. Resume or discard it before starting another."
+                      "You already have a workout in progress. Resume or discard it before starting another.",
                     );
                     navigate("/workouts/new");
                     return;
