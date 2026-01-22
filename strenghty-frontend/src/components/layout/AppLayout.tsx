@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import { loadSettings } from "@/lib/settings";
 import { Capacitor } from "@capacitor/core";
 
@@ -220,13 +221,32 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Notification enable prompt (non-blocking) */}
         {showNotifPrompt && (
           <div className="mb-4 rounded-md border border-border bg-neutral-900/90 p-3 shadow-md">
-            <div className="flex items-center justify-between gap-4">
-              <div className="text-sm text-white">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="text-sm text-white break-words min-w-0">
                 Enable notifications to receive workout alerts and reminders.
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className="h-9 px-3 rounded-lg bg-amber-500 text-white font-semibold"
+
+              <div className="flex gap-2 w-full md:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 md:flex-none"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem(
+                        "notifications:promptDismissed",
+                        "1",
+                      );
+                    } catch {}
+                    setShowNotifPrompt(false);
+                  }}
+                >
+                  Not now
+                </Button>
+
+                <Button
+                  size="sm"
+                  className="flex-1 md:flex-none"
                   onClick={async () => {
                     try {
                       // Native flow
@@ -263,21 +283,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   }}
                 >
                   Enable
-                </button>
-                <button
-                  className="h-9 px-3 rounded-lg border border-border text-muted-foreground bg-transparent"
-                  onClick={() => {
-                    try {
-                      localStorage.setItem(
-                        "notifications:promptDismissed",
-                        "1",
-                      );
-                    } catch {}
-                    setShowNotifPrompt(false);
-                  }}
-                >
-                  Not now
-                </button>
+                </Button>
               </div>
             </div>
           </div>
