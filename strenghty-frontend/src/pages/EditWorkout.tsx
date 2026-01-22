@@ -1,9 +1,9 @@
 // In EditWorkout.tsx (or ViewWorkout.tsx)
 const GRID_TEMPLATE =
-  "minmax(25px, 0.3fr) minmax(65px, 0.75fr) 6px minmax(25px, 0.6fr) minmax(30px, 0.35fr) 28px 30px";
+  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
+  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -834,17 +834,41 @@ export default function EditWorkout() {
                 }
               }
 
-              created = await createCardioSet({
+              // compute next set number for this workout+exercise to avoid duplicates
+              let setNumberToUse: number | undefined = undefined;
+              try {
+                const existing = await getCardioSetsForWorkout(
+                  String(workoutId),
+                );
+                const sameEx = (existing || []).filter(
+                  (c: any) => String(c.exercise) === String(exId),
+                );
+                const max = sameEx.reduce(
+                  (m: number, it: any) =>
+                    Math.max(
+                      m,
+                      typeof it.setNumber === "number" ? it.setNumber : 0,
+                    ),
+                  0,
+                );
+                setNumberToUse = max + 1;
+              } catch (e) {
+                setNumberToUse = undefined;
+              }
+
+              const payload: any = {
                 workoutId: workoutId,
                 exerciseId: exId,
-                setNumber: s.setNumber || 1,
                 mode,
                 durationSeconds,
                 distance: distanceParam,
                 floors: floorsParam,
                 level,
                 splitSeconds,
-              });
+              };
+              if (typeof setNumberToUse === "number")
+                payload.setNumber = setNumberToUse;
+              created = await createCardioSet(payload);
             }
           } else {
             created = await createSet({
@@ -939,10 +963,31 @@ export default function EditWorkout() {
                     ? (s as any).cardioStat
                     : undefined;
 
-              created = await createCardioSet({
+              // compute a safe set number for retry
+              let setNumberToUseRetry2: number | undefined = undefined;
+              try {
+                const existing = await getCardioSetsForWorkout(
+                  String(workoutId),
+                );
+                const sameEx = (existing || []).filter(
+                  (c: any) => String(c.exercise) === String(exId),
+                );
+                const max = sameEx.reduce(
+                  (m: number, it: any) =>
+                    Math.max(
+                      m,
+                      typeof it.setNumber === "number" ? it.setNumber : 0,
+                    ),
+                  0,
+                );
+                setNumberToUseRetry2 = max + 1;
+              } catch (e) {
+                setNumberToUseRetry2 = undefined;
+              }
+
+              const payloadRetry2: any = {
                 workoutId: workoutId,
                 exerciseId: exId,
-                setNumber: s.setNumber || 1,
                 mode,
                 durationSeconds,
                 distance: distanceMeters,
@@ -954,7 +999,10 @@ export default function EditWorkout() {
                     : undefined,
                 level,
                 splitSeconds,
-              });
+              };
+              if (typeof setNumberToUseRetry2 === "number")
+                payloadRetry2.setNumber = setNumberToUseRetry2;
+              created = await createCardioSet(payloadRetry2);
             } else {
               created = await createSet({
                 workoutId: workoutId,
@@ -1168,7 +1216,29 @@ export default function EditWorkout() {
                 }
               }
 
-              created = await createCardioSet({
+              // compute next set number to avoid uniqueness errors
+              let setNumberToUseMain: number | undefined = undefined;
+              try {
+                const existing = await getCardioSetsForWorkout(
+                  String(curWorkoutId),
+                );
+                const sameEx = (existing || []).filter(
+                  (c: any) => String(c.exercise) === String(exId),
+                );
+                const max = sameEx.reduce(
+                  (m: number, it: any) =>
+                    Math.max(
+                      m,
+                      typeof it.setNumber === "number" ? it.setNumber : 0,
+                    ),
+                  0,
+                );
+                setNumberToUseMain = max + 1;
+              } catch (e) {
+                setNumberToUseMain = undefined;
+              }
+
+              const payloadMain: any = {
                 workoutId: curWorkoutId as string,
                 exerciseId: exId,
                 mode: mode as any,
@@ -1177,7 +1247,10 @@ export default function EditWorkout() {
                 floors,
                 level,
                 splitSeconds,
-              });
+              };
+              if (typeof setNumberToUseMain === "number")
+                payloadMain.setNumber = setNumberToUseMain;
+              created = await createCardioSet(payloadMain);
             } else {
               created = await createSet({
                 workoutId: curWorkoutId as string,
@@ -1273,27 +1346,46 @@ export default function EditWorkout() {
                   }
                 }
 
-                createdRetry = await createCardioSet({
+                // compute next set number for retry
+                let setNumberToUseRetry: number | undefined = undefined;
+                try {
+                  const existing = await getCardioSetsForWorkout(
+                    String(curWorkoutId),
+                  );
+                  const sameEx = (existing || []).filter(
+                    (c: any) => String(c.exercise) === String(exId),
+                  );
+                  const max = sameEx.reduce(
+                    (m: number, it: any) =>
+                      Math.max(
+                        m,
+                        typeof it.setNumber === "number" ? it.setNumber : 0,
+                      ),
+                    0,
+                  );
+                  setNumberToUseRetry = max + 1;
+                } catch (e) {
+                  setNumberToUseRetry = undefined;
+                }
+
+                const payloadRetry: any = {
                   workoutId: curWorkoutId as string,
                   exerciseId: exId,
-                  mode: mode as any,
+                  mode,
                   durationSeconds,
-                  distance,
-                  floors,
+                  distance: distanceMeters,
+                  floors:
+                    mode === "stairs"
+                      ? typeof (s as any).cardioDistance === "number"
+                        ? Math.round((s as any).cardioDistance)
+                        : undefined
+                      : undefined,
                   level,
                   splitSeconds,
-                });
-              } else {
-                createdRetry = await createSet({
-                  workoutId: curWorkoutId as string,
-                  exerciseId: exId,
-                  setNumber: i + 1,
-                  reps: s.reps || 0,
-                  weight: s.weight,
-                  unit: s.unit || getUnit(),
-                  type: s.type,
-                  rpe: s.rpe,
-                });
+                };
+                if (typeof setNumberToUseRetry === "number")
+                  payloadRetry.setNumber = setNumberToUseRetry;
+                createdRetry = await createCardioSet(payloadRetry);
               }
               try {
                 if (
@@ -1431,27 +1523,10 @@ export default function EditWorkout() {
               <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
                 <div className="mb-4 flex items-start justify-between">
                   <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              try {
-                                const exId = String(
-                                  workoutExercise.exercise.id,
-                                );
-                                navigate(`/exercises/${exId}/history`, {
-                                  state: {
-                                    exerciseName: workoutExercise.exercise.name,
-                                    muscleGroup:
-                                      workoutExercise.exercise.muscleGroup,
-                                  },
-                                });
-                              } catch (e) {}
-                            }}
-                            className="flex items-start gap-3 p-0 bg-transparent border-0"
-                          >
+                    <div className="flex items-start gap-1">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1">
                             <ExerciseHeader
                               exerciseName={workoutExercise.exercise.name}
                               muscleGroup={workoutExercise.exercise.muscleGroup}
@@ -1474,6 +1549,7 @@ export default function EditWorkout() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-white"
                                   onClick={() => {
                                     setReplaceTarget(workoutExercise.id);
                                     setReplaceFilter(null);
@@ -1481,28 +1557,25 @@ export default function EditWorkout() {
                                     setFilterMuscle("all");
                                     setIsExerciseDialogOpen(true);
                                   }}
-                                  className="text-muted-foreground"
                                 >
-                                  <ChevronDown className="h-4 w-4" />
+                                  <ChevronDown className="h-3 w-3" />
                                 </Button>
                               }
                             />
-                          </button>
+                          </div>
                         </div>
                       </div>
+                      {/** moved chevron into ExerciseHeader trailing prop */}
                     </div>
-                    <MuscleTag muscle={workoutExercise.exercise.muscleGroup} />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeExercise(workoutExercise.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeExercise(workoutExercise.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
 
                 {/* Exercise notes (moved just under exercise header) */}
@@ -1527,7 +1600,7 @@ export default function EditWorkout() {
 
                 {workoutExercise.exercise.muscleGroup === "cardio" ? (
                   <div
-                    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                     style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
                   >
                     <span className="flex items-center justify-center">
@@ -1552,7 +1625,7 @@ export default function EditWorkout() {
                   </div>
                 ) : (
                   <div
-                    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                     style={{ gridTemplateColumns: GRID_TEMPLATE }}
                   >
                     <span className="flex items-center justify-center">
@@ -1682,6 +1755,40 @@ export default function EditWorkout() {
                 onChange={(e) => setExerciseSearch(e.target.value)}
                 className="pl-10 bg-muted/20 border border-neutral-800/30 focus:ring-primary"
               />
+            </div>
+
+            <div className="pt-3">
+              <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
+                <button
+                  onClick={() => setFilterMuscle("all")}
+                  className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                    filterMuscle === "all"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/20 text-muted-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  All Muscles
+                </button>
+                {availableMuscleGroups.map((m) => {
+                  const active = filterMuscle === m;
+                  const colorClass =
+                    (muscleGroupColors as any)[m] ||
+                    "bg-muted/20 text-muted-foreground";
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => setFilterMuscle(m)}
+                      className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-all ${colorClass} ${
+                        active
+                          ? "ring-2 ring-offset-2 ring-[#0f0f0f] font-bold"
+                          : "opacity-80 hover:opacity-100"
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="mt-3 flex-1 overflow-y-auto min-h-[200px]">

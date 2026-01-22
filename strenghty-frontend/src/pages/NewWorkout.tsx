@@ -1,9 +1,9 @@
 const GRID_TEMPLATE =
-  "minmax(25px, 0.3fr) minmax(65px, 0.75fr) 6px minmax(25px, 0.6fr) minmax(30px, 0.35fr) 28px 30px";
+  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.75fr) minmax(28px, 0.3fr) 32px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
+  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -51,6 +51,7 @@ import {
   createCardioSet,
   updateCardioSet,
   finishWorkout,
+  getCardioSetsForWorkout,
   getExercises,
   getSetsForExercise,
   getWorkouts,
@@ -1127,25 +1128,50 @@ export default function NewWorkout() {
 
       let saved;
       try {
-        saved = isPersisted
-          ? await updateCardioSet(String(set.id), {
-              mode,
-              durationSeconds,
-              distance,
-              floors,
-              level,
-              splitSeconds,
-            })
-          : await createCardioSet({
-              workoutId: String(wId),
-              exerciseId: backendExerciseId,
-              mode,
-              durationSeconds,
-              distance,
-              floors,
-              level,
-              splitSeconds,
-            });
+        if (isPersisted) {
+          saved = await updateCardioSet(String(set.id), {
+            mode,
+            durationSeconds,
+            distance,
+            floors,
+            level,
+            splitSeconds,
+          });
+        } else {
+          // compute next set number for this workout+exercise to avoid uniqueness errors
+          let setNumberToUse: number | undefined = undefined;
+          try {
+            const existing = await getCardioSetsForWorkout(String(wId));
+            const sameEx = (existing || []).filter(
+              (c: any) => String(c.exercise) === String(backendExerciseId),
+            );
+            const max = sameEx.reduce(
+              (m: number, it: any) =>
+                Math.max(
+                  m,
+                  typeof it.setNumber === "number" ? it.setNumber : 0,
+                ),
+              0,
+            );
+            setNumberToUse = max + 1;
+          } catch (e) {
+            setNumberToUse = undefined;
+          }
+
+          const payload: any = {
+            workoutId: String(wId),
+            exerciseId: backendExerciseId,
+            mode,
+            durationSeconds,
+            distance,
+            floors,
+            level,
+            splitSeconds,
+          };
+          if (typeof setNumberToUse === "number")
+            payload.setNumber = setNumberToUse;
+          saved = await createCardioSet(payload);
+        }
       } catch (err: any) {
         const text = String(err || "").toLowerCase();
         const mentionsInvalidPk =
@@ -1185,7 +1211,27 @@ export default function NewWorkout() {
             wId = w.id;
           }
 
-          saved = await createCardioSet({
+          // compute next set number for this workout+exercise to avoid duplicates
+          let setNumberToUseFallback: number | undefined = undefined;
+          try {
+            const existing = await getCardioSetsForWorkout(String(wId));
+            const sameEx = (existing || []).filter(
+              (c: any) => String(c.exercise) === String(backendExerciseId),
+            );
+            const max = sameEx.reduce(
+              (m: number, it: any) =>
+                Math.max(
+                  m,
+                  typeof it.setNumber === "number" ? it.setNumber : 0,
+                ),
+              0,
+            );
+            setNumberToUseFallback = max + 1;
+          } catch (e) {
+            setNumberToUseFallback = undefined;
+          }
+
+          const payloadFallback: any = {
             workoutId: String(wId),
             exerciseId: backendExerciseId,
             mode,
@@ -1194,7 +1240,10 @@ export default function NewWorkout() {
             floors,
             level,
             splitSeconds,
-          });
+          };
+          if (typeof setNumberToUseFallback === "number")
+            payloadFallback.setNumber = setNumberToUseFallback;
+          saved = await createCardioSet(payloadFallback);
         } else {
           throw err;
         }
@@ -1535,17 +1584,42 @@ export default function NewWorkout() {
                 level = rawStat || undefined;
               }
 
-              const created = await createCardioSet({
+              // compute next set number for this workout+exercise to avoid duplicates
+              let setNumberToUse: number | undefined = undefined;
+              try {
+                const existing = await getCardioSetsForWorkout(
+                  String(persistedWorkoutId),
+                );
+                const sameEx = (existing || []).filter(
+                  (c: any) => String(c.exercise) === String(ex.exercise.id),
+                );
+                const max = sameEx.reduce(
+                  (m: number, it: any) =>
+                    Math.max(
+                      m,
+                      typeof it.setNumber === "number" ? it.setNumber : 0,
+                    ),
+                  0,
+                );
+                setNumberToUse = max + 1;
+              } catch (e) {
+                setNumberToUse = undefined;
+              }
+
+              const payload: any = {
                 workoutId: persistedWorkoutId,
                 exerciseId: ex.exercise.id,
-                setNumber: i + 1,
                 mode,
                 durationSeconds,
                 distance,
                 floors,
                 level,
                 splitSeconds,
-              });
+              };
+              if (typeof setNumberToUse === "number")
+                payload.setNumber = setNumberToUse;
+
+              const created = await createCardioSet(payload);
               if (created.isPR && hadPriorForExercise) createdPrCount += 1;
             } else {
               const created = await createSet({
@@ -1645,17 +1719,42 @@ export default function NewWorkout() {
                   }
                 }
 
-                const createdRetry = await createCardioSet({
+                // compute next set number for retry as well
+                let setNumberToUseRetry: number | undefined = undefined;
+                try {
+                  const existing = await getCardioSetsForWorkout(
+                    String(persistedWorkoutId),
+                  );
+                  const sameEx = (existing || []).filter(
+                    (c: any) => String(c.exercise) === String(ex.exercise.id),
+                  );
+                  const max = sameEx.reduce(
+                    (m: number, it: any) =>
+                      Math.max(
+                        m,
+                        typeof it.setNumber === "number" ? it.setNumber : 0,
+                      ),
+                    0,
+                  );
+                  setNumberToUseRetry = max + 1;
+                } catch (e) {
+                  setNumberToUseRetry = undefined;
+                }
+
+                const payloadRetry: any = {
                   workoutId: persistedWorkoutId,
                   exerciseId: ex.exercise.id,
-                  setNumber: i + 1,
                   mode,
                   durationSeconds,
                   distance,
                   floors,
                   level,
                   splitSeconds,
-                });
+                };
+                if (typeof setNumberToUseRetry === "number")
+                  payloadRetry.setNumber = setNumberToUseRetry;
+
+                const createdRetry = await createCardioSet(payloadRetry);
                 if (createdRetry.isPR && hadPriorForExercise)
                   createdPrCount += 1;
               } else {
@@ -2239,7 +2338,7 @@ export default function NewWorkout() {
                 {/* Sets Header */}
                 {workoutExercise.exercise.muscleGroup === "cardio" ? (
                   <div
-                    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                     style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
                   >
                     {/* Column 1: SET */}
@@ -2282,7 +2381,7 @@ export default function NewWorkout() {
                   </div>
                 ) : (
                   <div
-                    className="mt-3 mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                     style={{ gridTemplateColumns: GRID_TEMPLATE }}
                   >
                     {/* Column 1: SET */}

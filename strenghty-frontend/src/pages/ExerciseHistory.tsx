@@ -10,11 +10,15 @@ import { format } from "date-fns";
 import { SetRow } from "@/components/workout/SetRow";
 import { Trophy } from "lucide-react";
 
+// Exercise history uses a slightly tighter grid so entries align closer
+// to the card edges without affecting other pages.
+// Use the same tightened "no-check" templates from SetRow so the
+// header labels line up exactly with the read-only set boxes below.
 const GRID_TEMPLATE =
-  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px";
+  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
 
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px";
+  "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(56px, 0.8fr) minmax(28px, 0.25fr) 32px";
 
 export default function ExerciseHistory() {
   const { id } = useParams();
@@ -27,7 +31,85 @@ export default function ExerciseHistory() {
 
   const { data: serverSets = [], isLoading } = useQuery({
     queryKey: ["exerciseSets", id],
-    queryFn: () => (id ? getSetsForExercise(String(id)) : Promise.resolve([])),
+    queryFn: async () => {
+      if (!id) return [] as any[];
+      try {
+        // Fetch both strength sets and cardio sets for this exercise and merge them
+        const [strength, cardio] = await Promise.all([
+          getSetsForExercise(String(id)),
+          // cardio API may return an empty array if none
+          // getCardioSetsForExercise was added to the API helpers
+          (async () => {
+            try {
+              const cs = await (
+                await import("@/lib/api")
+              ).getCardioSetsForExercise(String(id));
+              return cs;
+            } catch (e) {
+              return [] as any[];
+            }
+          })(),
+        ] as any);
+
+        // Map cardio sets into the same WorkoutSet shape expected by SetRow
+        const cardioMapped = (cardio || []).map((s: any) => {
+          const mode = s.mode as any;
+          const durationSeconds =
+            typeof s.durationSeconds === "number" ? s.durationSeconds : 0;
+          const rawDistance =
+            typeof s.distance === "number" && !isNaN(s.distance)
+              ? s.distance
+              : 0;
+          const distance = mode === "stairs" ? rawDistance : rawDistance / 1000;
+          let cardioStat: number | undefined;
+          if (mode === "stairs") {
+            cardioStat =
+              typeof s.floors === "number" && !isNaN(s.floors)
+                ? s.floors
+                : typeof s.level === "number" && !isNaN(s.level)
+                  ? s.level
+                  : undefined;
+          } else if (mode === "row") {
+            cardioStat =
+              typeof s.splitSeconds === "number" && !isNaN(s.splitSeconds)
+                ? s.splitSeconds
+                : undefined;
+          } else {
+            cardioStat =
+              typeof s.level === "number" && !isNaN(s.level)
+                ? s.level
+                : undefined;
+          }
+
+          return {
+            id: String(s.id),
+            workout: String(s.workout),
+            exercise: String(s.exercise),
+            setNumber: s.setNumber,
+            reps: 0,
+            weight: 0,
+            unit: s.unit || "kg",
+            isPR: !!s.isPR,
+            completed: true,
+            type: "S",
+            cardioMode: mode,
+            cardioDurationSeconds: durationSeconds,
+            cardioDistance: distance,
+            cardioStat,
+            cardioDistancePR: !!s.distancePR,
+            cardioPacePR: !!s.pacePR,
+            cardioAscentPR: !!s.ascentPR,
+            cardioIntensityPR: !!s.intensityPR,
+            cardioSplitPR: !!s.splitPR,
+            createdAt: s.createdAt ? new Date(s.createdAt) : undefined,
+          } as any;
+        });
+
+        return [...(strength || []), ...cardioMapped];
+      } catch (e) {
+        return [] as any[];
+      }
+    },
     enabled: isNumericId,
   });
 
@@ -188,7 +270,7 @@ export default function ExerciseHistory() {
 
                   <div className="mt-4">
                     <div
-                      className="mb-1.5 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                      className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                       style={{
                         gridTemplateColumns:
                           g.sets && g.sets.length > 0 && g.sets[0].cardioMode

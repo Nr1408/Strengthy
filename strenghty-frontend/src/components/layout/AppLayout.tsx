@@ -81,13 +81,15 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
   }, [location.pathname]);
 
-  // On initial app load, if user wants notifications but permission not granted,
-  // show a small prompt asking them to enable notifications. Respect a
-  // dismiss flag so we don't repeatedly nag the user.
+  // When on the Dashboard route, if user wants notifications but permission
+  // not granted, show a small prompt asking them to enable notifications.
+  // Respect a dismiss flag so we don't repeatedly nag the user.
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
+        // only show this prompt when on the main dashboard
+        if (location.pathname !== "/dashboard") return;
         const settings = loadSettings();
         if (!settings.notifications) return;
 
@@ -120,7 +122,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">

@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-// Grid templates for strength vs cardio rows
+// Grid templates for strength vs cardio rows (tightened to reduce left/right gaps)
 const GRID_TEMPLATE_STRENGTH =
-  "minmax(25px, 0.3fr) minmax(65px, 0.75fr) 6px minmax(25px, 0.6fr) minmax(30px, 0.35fr) 28px 30px";
-// same as above but without the final check column (30px)
+  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+// same as above but without the final check column
 const GRID_TEMPLATE_STRENGTH_NO_CHECK =
-  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px";
+  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
 
-// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check
+// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
+  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 const GRID_TEMPLATE_CARDIO_NO_CHECK =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px";
+  "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(56px, 0.8fr) minmax(28px, 0.25fr) 32px";
 
 import { Check, Trophy } from "lucide-react";
 import type { WorkoutSet } from "@/types/workout";
@@ -329,7 +329,7 @@ export function SetRow({
 
   return (
     <div
-      className="grid gap-2 rounded-lg border border-border px-2 py-1 items-center mx-auto"
+      className="grid gap-1 rounded-lg border border-border px-1 py-1 items-center mx-auto"
       style={{
         gridTemplateColumns: isCardio
           ? showComplete
@@ -779,7 +779,7 @@ export function SetRow({
       {/* Column 5: RPE control (centered dialog on click) - strength only */}
       {!isCardio && (
         <Cell>
-              {!readOnly ? (
+          {!readOnly ? (
             <Dialog open={rpeDialogOpen} onOpenChange={setRpeDialogOpen}>
               <DialogTrigger asChild>
                 <button
@@ -821,7 +821,9 @@ export function SetRow({
                           max={10}
                           step={0.5}
                           value={[rpeDialogOpen ? localRpe : sliderValue]}
-                          onValueChange={(vals) => setLocalRpe(vals[0] ?? localRpe)}
+                          onValueChange={(vals) =>
+                            setLocalRpe(vals[0] ?? localRpe)
+                          }
                         />
                       </div>
 
@@ -926,7 +928,7 @@ export function SetRow({
                             setRpeDialogOpen(false);
                           }}
                         >
-                          Done 
+                          Done
                         </Button>
                       </div>
                     </div>
@@ -1067,30 +1069,39 @@ export function SetRow({
                 <Trophy className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="fixed left-1/2 top-1/3 z-50 max-w-sm -translate-x-1/2">
-              <DialogHeader>
-                <DialogTitle>Personal Record</DialogTitle>
+            <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-neutral-900 p-5 shadow-lg">
+              <DialogHeader className="px-0 pt-0">
+                <DialogTitle className="font-heading text-xl font-semibold text-white">
+                  Personal Record
+                </DialogTitle>
                 {exerciseName && (
-                  <DialogDescription className="mt-1 font-semibold text-white">
+                  <DialogDescription className="mt-1 text-sm text-muted-foreground">
                     {exerciseName}
                   </DialogDescription>
                 )}
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-3 text-sm text-muted-foreground">
                   This set hit the following PR type(s):
                 </p>
               </DialogHeader>
+
               {prLines.length > 0 ? (
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                <div className="mt-4 space-y-3">
                   {prLines.map((line) => (
-                    <li key={line.label}>
-                      <span className="font-medium">{line.label}</span>
-                      {" - "}
-                      <span>{line.value}</span>
-                    </li>
+                    <div
+                      key={line.label}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="text-sm text-muted-foreground">
+                        {line.label}
+                      </div>
+                      <div className="ml-4 text-base font-semibold text-white">
+                        {line.value}
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               ) : (
-                <div className="mt-2 text-sm text-muted-foreground">
+                <div className="mt-4 text-sm text-muted-foreground">
                   No personal records for this set.
                 </div>
               )}

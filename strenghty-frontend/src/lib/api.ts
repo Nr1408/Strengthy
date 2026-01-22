@@ -1185,6 +1185,19 @@ export async function getCardioSetsForWorkout(workoutId: string): Promise<UiCard
   return data.map(mapCardioSet);
 }
 
+export async function getCardioSetsForExercise(exerciseId: string): Promise<UiCardioSet[]> {
+  const exerciseNum = Number(exerciseId);
+  if (!Number.isFinite(exerciseNum) || exerciseNum <= 0) {
+    throw new Error(`getCardioSetsForExercise: invalid exerciseId: ${String(exerciseId)}`);
+  }
+  const res = await fetch(`${API_BASE}/cardio-sets/?exercise=${exerciseNum}`, {
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(`Load cardio sets for exercise failed: ${res.status}`);
+  const data = (await res.json()) as ApiCardioSet[];
+  return data.map(mapCardioSet);
+}
+
 export async function createCardioSet(params: {
   workoutId: string;
   exerciseId: string;
