@@ -1,6 +1,6 @@
 // In EditWorkout.tsx (or ViewWorkout.tsx)
 const GRID_TEMPLATE =
-  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
+  "minmax(25px, 0.3fr) minmax(65px, 0.75fr) 6px minmax(25px, 0.6fr) minmax(30px, 0.35fr) 28px 30px";
 
 const GRID_TEMPLATE_CARDIO =
   "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
@@ -1684,7 +1684,7 @@ export default function EditWorkout() {
               />
             </div>
 
-            <div className="mt-3 flex-1 overflow-y-auto">
+            <div className="mt-3 flex-1 overflow-y-auto min-h-[200px]">
               {filteredExercises.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No exercises found matching "{exerciseSearch}"

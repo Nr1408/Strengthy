@@ -91,9 +91,9 @@ function computeStreak(dates: Date[]): number {
   const uniqueDays = Array.from(
     new Set(
       dates.map((d) =>
-        new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-      )
-    )
+        new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(),
+      ),
+    ),
   ).sort((a, b) => b - a); // newest first
 
   let streak = 0;
@@ -129,7 +129,7 @@ export default function Profile() {
 
   const completedWorkouts = useMemo(
     () => workouts.filter((w) => w.endedAt),
-    [workouts]
+    [workouts],
   );
 
   const { data: setsByWorkout = {} } = useQuery<Record<string, UiWorkoutSet[]>>(
@@ -138,13 +138,13 @@ export default function Profile() {
       queryFn: async () => {
         const entries = await Promise.all(
           completedWorkouts.map(
-            async (w) => [w.id, await getSets(w.id)] as const
-          )
+            async (w) => [w.id, await getSets(w.id)] as const,
+          ),
         );
         return Object.fromEntries(entries) as Record<string, UiWorkoutSet[]>;
       },
       enabled: completedWorkouts.length > 0,
-    }
+    },
   );
 
   const totalWorkouts = completedWorkouts.length;
@@ -166,14 +166,14 @@ export default function Profile() {
 
   const streak = useMemo(
     () => computeStreak(completedWorkouts.map((w) => w.date)),
-    [completedWorkouts]
+    [completedWorkouts],
   );
 
   const memberSinceLabel = useMemo(() => {
     if (!completedWorkouts.length) return "Just getting started";
     const earliest = completedWorkouts.reduce(
       (min, w) => (w.date < min ? w.date : min),
-      completedWorkouts[0].date
+      completedWorkouts[0].date,
     );
     try {
       return format(earliest, "MMM yyyy");
@@ -187,7 +187,7 @@ export default function Profile() {
     email?: string | null;
   }>(() => ({ name: "Strenghty User", email: "" }));
   const [onboardingInfo, setOnboardingInfo] = useState<OnboardingInfo | null>(
-    null
+    null,
   );
   const [monthlyGoal, setMonthlyGoal] = useState<number>(getInitialMonthlyGoal);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -235,7 +235,7 @@ export default function Profile() {
         JSON.stringify({
           name: profileInfo.name,
           email: profileInfo.email || "",
-        })
+        }),
       );
       toast({
         title: "Profile saved",
@@ -315,154 +315,75 @@ export default function Profile() {
           </p>
         </div>
 
+        {/* Reworked Profile layout: identity, fitness identity, progress, controls */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Profile Card */}
+          {/* Profile Header (identity) */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Personal Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-                  <User className="h-10 w-10 text-primary" />
+            <CardContent className="p-6">
+              {/* Identity row: avatar + text stack (primary anchor) */}
+              <div className="flex items-center gap-6">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
+                  <User className="h-12 w-12 text-primary" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold">{profileInfo.name}</h2>
-                  <p className="text-muted-foreground">
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-white">
+                    {profileInfo.name}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {onboardingInfo?.experience
-                      ? EXPERIENCE_LABELS[onboardingInfo.experience] ||
-                        "Fitness Enthusiast"
+                      ? `${EXPERIENCE_LABELS[onboardingInfo.experience] || "Intermediate"} • ${onboardingInfo.goals && onboardingInfo.goals.length ? onboardingInfo.goals.map((g) => g.replace(/-/g, " ")).join(", ") : "Fitness Enthusiast"}`
                       : "Fitness Enthusiast"}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Member since {memberSinceLabel}
                   </p>
                 </div>
               </div>
 
-              <Separator />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={profileInfo.name}
-                    onChange={(e) =>
-                      setProfileInfo((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profileInfo.email || ""}
-                    onChange={(e) =>
-                      setProfileInfo((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Current Weight (kg)</Label>
-                  <Input
-                    id="weight"
-                    type="number"
-                    defaultValue={onboardingInfo?.currentWeight || ""}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="goal">Goal Weight (kg)</Label>
-                  <Input
-                    id="goal"
-                    type="number"
-                    defaultValue={onboardingInfo?.goalWeight || ""}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              {/* Actions row: secondary, centered below identity */}
+              <div className="mt-4 flex justify-center gap-3">
                 <Button
+                  size="sm"
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  onClick={() => setDialogOpen(true)}
+                >
+                  Edit Profile
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => navigate("/profile/account")}
                 >
                   Account Settings
                 </Button>
-                <div className="w-full sm:w-auto grid grid-cols-2 gap-2">
-                  <Button
-                    className="w-full px-4 sm:px-6"
-                    onClick={handleSaveProfile}
-                  >
-                    Save Changes
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="w-full px-4 sm:px-6"
-                    onClick={handleSignOut}
-                  >
-                    Sign Out
-                  </Button>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Stats Summary */}
-          <div className="space-y-4">
-            <Card className="border border-border">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Calendar className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      Member Since
-                    </p>
-                    <p className="text-lg font-semibold">{memberSinceLabel}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10">
-                    <TrendingUp className="h-6 w-6 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground truncate">
+          {/* Progress Snapshot */}
+          <div className="space-y-4 flex flex-col justify-center h-full">
+            <Card>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg border border-border bg-secondary/50 p-6 flex flex-col items-center justify-center">
+                    <p className="text-sm text-muted-foreground">
                       Total Workouts
                     </p>
-                    <p className="text-lg font-semibold">{totalWorkouts}</p>
+                    <p className="text-2xl font-bold">{totalWorkouts}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-secondary/50 p-6 flex flex-col items-center justify-center">
                     <p className="text-sm text-muted-foreground">
-                      {workoutsThisMonth} this month
+                      Current Streak
                     </p>
+                    <p className="text-2xl font-bold">{streak} days</p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                    <Award className="h-6 w-6 text-accent" />
+                  <div className="rounded-lg border border-border bg-secondary/50 p-6 flex flex-col items-center justify-center">
+                    <p className="text-sm text-muted-foreground">This Month</p>
+                    <p className="text-2xl font-bold">{workoutsThisMonth}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      Personal Records
-                    </p>
-                    <p className="text-lg font-semibold">{totalPRs}</p>
+                  <div className="rounded-lg border border-border bg-secondary/50 p-6 flex flex-col items-center justify-center">
+                    <p className="text-sm text-muted-foreground">PRs</p>
+                    <p className="text-2xl font-bold">{totalPRs}</p>
                   </div>
                 </div>
               </CardContent>
@@ -470,188 +391,133 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Goals Section */}
+        {/* Fitness Identity Card (read-only) */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5 text-primary" />
-              Fitness Goals
+              Fitness Identity
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-lg border border-border bg-secondary/50 p-4">
-                <p className="text-sm text-muted-foreground">Weekly Goal</p>
-                <p className="text-2xl font-bold">4 workouts</p>
-                <p className="text-sm text-success">2/4 completed this week</p>
+            <div className="grid gap-3">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Goal</span>
+                <span className="font-medium text-white">
+                  {onboardingInfo?.goals && onboardingInfo.goals.length
+                    ? onboardingInfo.goals
+                        .map((g) => g.replace(/-/g, " "))
+                        .join(", ")
+                    : "—"}
+                </span>
               </div>
-              <div className="rounded-lg border border-border bg-secondary/50 p-4">
-                <p className="text-sm text-muted-foreground">Monthly Goal</p>
-                <p className="text-2xl font-bold">{monthlyGoal} workouts</p>
-                <p className="text-sm text-muted-foreground">
-                  {workoutsThisMonth}/{monthlyGoal} completed
-                </p>
-                <div className="mt-3 flex justify-end">
-                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">Edit</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Monthly Goal</DialogTitle>
-                        <DialogDescription>
-                          Set how many workouts you want to complete each month.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="py-4">
-                        <div className="text-center mb-4 text-lg font-semibold">
-                          {monthlyGoal} workouts
-                        </div>
-                        <input
-                          aria-label="Monthly goal"
-                          type="range"
-                          min={0}
-                          max={MAX_MONTHLY_GOAL}
-                          value={monthlyGoal}
-                          onChange={(e) =>
-                            setMonthlyGoal(
-                              Math.min(
-                                Number((e.target as HTMLInputElement).value),
-                                MAX_MONTHLY_GOAL
-                              )
-                            )
-                          }
-                          className="w-full"
-                        />
-                        <div className="flex justify-between text-sm mt-2">
-                          <span>0</span>
-                          <span>{MAX_MONTHLY_GOAL}</span>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={() => setDialogOpen(false)}>
-                          Done
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Experience</span>
+                <span className="font-medium text-white">
+                  {onboardingInfo?.experience
+                    ? EXPERIENCE_LABELS[onboardingInfo.experience]
+                    : "—"}
+                </span>
               </div>
-              <div className="rounded-lg border border-border bg-secondary/50 p-4">
-                <p className="text-sm text-muted-foreground">Current Streak</p>
-                <p className="text-2xl font-bold">{streak} days</p>
-                <p className="text-sm text-primary">Keep it up! 🔥</p>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Equipment</span>
+                <span className="font-medium text-white">
+                  {onboardingInfo?.heightUnit
+                    ? onboardingInfo.heightUnit === "cm"
+                      ? "Full Gym"
+                      : "Bodyweight"
+                    : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Monthly Goal</span>
+                <span className="font-medium text-white">
+                  {monthlyGoal} workouts
+                </span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Onboarding Details */}
+        {/* Edit Profile Dialog (opens from Edit Profile buttons) */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Profile</DialogTitle>
+              <DialogDescription>
+                Update your display name and email address.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={profileInfo.name}
+                  onChange={(e) =>
+                    setProfileInfo((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={profileInfo.email || ""}
+                  onChange={(e) =>
+                    setProfileInfo((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <div className="flex w-full justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                  className="h-10 px-4 rounded-lg"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleSaveProfile();
+                    setDialogOpen(false);
+                  }}
+                  className="h-10 px-4 rounded-lg"
+                >
+                  Save
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Controls Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Your Details
-            </CardTitle>
+            <CardTitle>Controls</CardTitle>
           </CardHeader>
           <CardContent>
-            {onboardingInfo ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="detail-age">Age</Label>
-                  <Input
-                    id="detail-age"
-                    type="number"
-                    value={onboardingInfo.age || ""}
-                    onChange={(e) =>
-                      setOnboardingInfo((prev) => {
-                        const base = prev ?? DEFAULT_ONBOARDING;
-                        return { ...base, age: e.target.value };
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="detail-height">Height</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="detail-height"
-                      type="number"
-                      value={onboardingInfo.height || ""}
-                      onChange={(e) =>
-                        setOnboardingInfo((prev) => {
-                          const base = prev ?? DEFAULT_ONBOARDING;
-                          return { ...base, height: e.target.value };
-                        })
-                      }
-                    />
-                    <select
-                      className="rounded border border-border bg-background px-2 text-sm"
-                      value={onboardingInfo.heightUnit}
-                      onChange={(e) =>
-                        setOnboardingInfo((prev) => {
-                          const base = prev ?? DEFAULT_ONBOARDING;
-                          return {
-                            ...base,
-                            heightUnit:
-                              e.target.value === "inch" ? "inch" : "cm",
-                          };
-                        })
-                      }
-                    >
-                      <option value="cm">cm</option>
-                      <option value="inch">inch</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="sm:col-span-2 space-y-2">
-                  <Label htmlFor="detail-goals">Fitness Goals</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Select all that apply. These match the options you chose
-                    when you first signed up.
-                  </p>
-                  <div className="flex flex-wrap gap-2" id="detail-goals">
-                    {FITNESS_GOAL_OPTIONS.map((goal) => {
-                      const selected = onboardingInfo.goals.includes(goal.id);
-                      return (
-                        <button
-                          key={goal.id}
-                          type="button"
-                          onClick={() =>
-                            setOnboardingInfo((prev) => {
-                              const base = prev ?? DEFAULT_ONBOARDING;
-                              const has = base.goals.includes(goal.id);
-                              return {
-                                ...base,
-                                goals: has
-                                  ? base.goals.filter((g) => g !== goal.id)
-                                  : [...base.goals, goal.id],
-                              };
-                            })
-                          }
-                          className={`rounded-full border px-3 py-1 text-xs sm:text-sm transition-colors ${
-                            selected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-background text-muted-foreground hover:border-primary/60 hover:text-foreground"
-                          }`}
-                        >
-                          {goal.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="sm:col-span-2 flex justify-end mt-2">
-                  <Button size="sm" onClick={handleSaveDetails}>
-                    Save Details
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Complete onboarding to see your goals and body metrics here.
-              </p>
-            )}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={() => setDialogOpen(true)}>Edit Profile</Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/profile/account")}
+              >
+                Account Settings
+              </Button>
+              <Button variant="destructive" onClick={handleSignOut}>
+                Sign Out
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

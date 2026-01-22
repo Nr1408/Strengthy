@@ -1,5 +1,5 @@
 const GRID_TEMPLATE =
-  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
+  "minmax(25px, 0.3fr) minmax(65px, 0.75fr) 6px minmax(25px, 0.6fr) minmax(30px, 0.35fr) 28px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
@@ -2397,7 +2397,7 @@ export default function NewWorkout() {
             }
           }}
         >
-          <DialogContent className="fixed inset-x-0 bottom-4 left-1/2 z-[100] -translate-x-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6">
+          <DialogContent className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden">
             {/* Grab handle */}
             <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mt-3 mb-2" />
 
@@ -2453,7 +2453,7 @@ export default function NewWorkout() {
               </div>
             </div>
 
-            <div className="mt-3 flex-1 overflow-y-auto">
+            <div className="mt-3 flex-1 overflow-y-auto min-h-[200px]">
               {filteredExercises.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No exercises found matching "{exerciseSearch}"

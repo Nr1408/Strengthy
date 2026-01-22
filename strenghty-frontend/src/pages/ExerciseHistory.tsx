@@ -11,10 +11,10 @@ import { SetRow } from "@/components/workout/SetRow";
 import { Trophy } from "lucide-react";
 
 const GRID_TEMPLATE =
-  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
+  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px";
 
 const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px";
 
 export default function ExerciseHistory() {
   const { id } = useParams();
@@ -88,7 +88,12 @@ export default function ExerciseHistory() {
         return {
           workoutId: wid,
           workoutName: workout ? workout.name : `Workout ${wid}`,
-          date: workout && workout.date ? workout.date : undefined,
+          date:
+            workout && workout.createdAt
+              ? workout.createdAt
+              : workout && workout.date
+                ? workout.date
+                : undefined,
           sets,
         };
       });
@@ -162,8 +167,16 @@ export default function ExerciseHistory() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-base font-semibold text-white">
-                        {g.workoutName}
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/workouts/${g.workoutId}/view`)
+                          }
+                          className="pt-2 text-lg font-semibold text-white text-left hover:underline"
+                        >
+                          {g.workoutName}
+                        </button>
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
                         {g.date
@@ -190,7 +203,6 @@ export default function ExerciseHistory() {
                           <span className="flex justify-center">DISTANCE</span>
                           <span className="flex justify-center">LEVEL</span>
                           <span className="flex justify-center">PR</span>
-                          <div />
                         </>
                       ) : (
                         <>
@@ -202,7 +214,6 @@ export default function ExerciseHistory() {
                           <span className="flex justify-center">
                             <Trophy className="h-3.5 w-3.5" />
                           </span>
-                          <div />
                         </>
                       )}
                     </div>

@@ -157,7 +157,7 @@ export function getExerciseIconFile(name: string, muscleGroup?: string) {
     "barbell reverse wrist curl": "forearms.svg",
     "dumbbell wrist curl": "forearms.svg",
     "dumbbell reverse wrist curl": "forearms.svg",
-    "dumbbell zottman curl": "forearms.svg",
+    
     "barbell reverse bicep curl": "forearms.svg",
     "ez-bar reverse bicep curl": "forearms.svg",
     "cable reverse bicep curl": "forearms.svg",
@@ -181,8 +181,23 @@ export function getExerciseIconFile(name: string, muscleGroup?: string) {
   };
 
   if (exactMap[n]) return exactMap[n];
+  // Cardio-specific icons: only apply for cardio exercises
+  if (muscleGroup && muscleGroup.toLowerCase() === "cardio") {
+    // Prefer equipment-specific icons when the exercise name references them.
+    if (n.includes("treadmill")) return "treadmill.svg";
+    if (n.includes("ellipt")) return "elliptical.svg";
+    if (n.includes("row") || n.includes("rower") || n.includes("rowing"))
+      return "rowing.svg";
+    if (n.includes("stair") || n.includes("step") || n.includes("climb"))
+      return "stair climber.svg";
+    if (n.includes("bike") || n.includes("cycle") || n.includes("stationary"))
+      return "stationary bike.svg";
 
-  // Try muscle group fallback
+    // Default cardio icon when muscleGroup is 'cardio' but no keyword matched
+    return "treadmill.svg";
+  }
+
+  // Try muscle group fallback for non-cardio exercises
   if (muscleGroup) {
     const mg = muscleGroup.toLowerCase();
     const mgToFile: { [k: string]: string } = {

@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 // Grid templates for strength vs cardio rows
 const GRID_TEMPLATE_STRENGTH =
-  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
+  "minmax(25px, 0.3fr) minmax(65px, 0.75fr) 6px minmax(25px, 0.6fr) minmax(30px, 0.35fr) 28px 30px";
+// same as above but without the final check column (30px)
+const GRID_TEMPLATE_STRENGTH_NO_CHECK =
+  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px";
 
 // Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
   "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px 30px";
+const GRID_TEMPLATE_CARDIO_NO_CHECK =
+  "minmax(20px, 0.4fr) minmax(60px, 0.6fr) minmax(60px, 0.8fr) minmax(30px, 0.25fr) 28px";
 
 import { Check, Trophy } from "lucide-react";
 import type { WorkoutSet } from "@/types/workout";
@@ -302,6 +307,15 @@ export function SetRow({
     Math.max(1, Math.min(5, Number(set.halfReps) || 1)),
   );
 
+  const [rpeDialogOpen, setRpeDialogOpen] = useState(false);
+  const [localRpe, setLocalRpe] = useState<number>(sliderValue);
+
+  useEffect(() => {
+    if (rpeDialogOpen) {
+      setLocalRpe(sliderValue);
+    }
+  }, [rpeDialogOpen, sliderValue]);
+
   useEffect(() => {
     if (halfDialogOpen) {
       setHalfSliderValue(Math.max(1, Math.min(5, Number(set.halfReps) || 1)));
@@ -318,8 +332,12 @@ export function SetRow({
       className="grid gap-2 rounded-lg border border-border px-2 py-1 items-center mx-auto"
       style={{
         gridTemplateColumns: isCardio
-          ? GRID_TEMPLATE_CARDIO
-          : GRID_TEMPLATE_STRENGTH,
+          ? showComplete
+            ? GRID_TEMPLATE_CARDIO
+            : GRID_TEMPLATE_CARDIO_NO_CHECK
+          : showComplete
+            ? GRID_TEMPLATE_STRENGTH
+            : GRID_TEMPLATE_STRENGTH_NO_CHECK,
         maxWidth: "100%",
         boxSizing: "border-box",
         overflow: "hidden",
@@ -761,8 +779,8 @@ export function SetRow({
       {/* Column 5: RPE control (centered dialog on click) - strength only */}
       {!isCardio && (
         <Cell>
-          {!readOnly ? (
-            <Dialog>
+              {!readOnly ? (
+            <Dialog open={rpeDialogOpen} onOpenChange={setRpeDialogOpen}>
               <DialogTrigger asChild>
                 <button
                   type="button"
@@ -771,7 +789,7 @@ export function SetRow({
                   {hasRpe ? sliderValue.toFixed(1) : "RPE"}
                 </button>
               </DialogTrigger>
-              <DialogContent className="fixed left-1/2 top-1/3 z-50 max-w-sm -translate-x-1/2">
+              <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 min-h-[280px] pb-20 overflow-visible">
                 <DialogHeader>
                   <DialogTitle>Log Set RPE</DialogTitle>
                   <div className="text-xs text-muted-foreground mt-1">
@@ -781,31 +799,137 @@ export function SetRow({
 
                 <div className="flex flex-col gap-4 py-2">
                   <div className="text-4xl font-bold text-center text-white">
-                    {sliderValue.toFixed(1)}
+                    {(rpeDialogOpen ? localRpe : sliderValue).toFixed(1)}
                   </div>
                   <div className="text-sm text-center text-muted-foreground min-h-[2.25rem]">
                     {rpeInfo}
                   </div>
-                  <div className="px-4">
-                    <Slider
-                      min={7}
-                      max={10}
-                      step={0.5}
-                      value={[sliderValue]}
-                      onValueChange={(vals) =>
-                        onUpdate({ rpe: vals[0] ?? sliderValue })
-                      }
-                    />
-                  </div>
+                  <div className="px-6 w-full">
+                    <div
+                      className="relative w-full"
+                      style={{
+                        // CSS variable to tune the usable track inset (half thumb width)
+                        // Adjust if your slider thumb is a different size.
+                        ["--rpe-edge-gap" as any]: "12px",
+                      }}
+                    >
+                      {/* Slider occupies full width of the inner area */}
+                      <div className="w-full z-10">
+                        <Slider
+                          className="w-full"
+                          min={7}
+                          max={10}
+                          step={0.5}
+                          value={[rpeDialogOpen ? localRpe : sliderValue]}
+                          onValueChange={(vals) => setLocalRpe(vals[0] ?? localRpe)}
+                        />
+                      </div>
 
-                  <div className="flex justify-between items-center text-sm text-muted-foreground px-6">
-                    <span>7</span>
-                    <span>7.5</span>
-                    <span>8</span>
-                    <span>8.5</span>
-                    <span>9</span>
-                    <span>9.5</span>
-                    <span>10</span>
+                      {/* Absolute tick overlay positioned relative to the slider track's usable width */}
+                      <div
+                        className="pointer-events-none"
+                        style={{
+                          position: "absolute",
+                          left: "var(--rpe-edge-gap)",
+                          right: "var(--rpe-edge-gap)",
+                          top: "100%",
+                          marginTop: 8,
+                        }}
+                      >
+                        {/* Each tick uses percentage positions across the usable track */}
+                        <div className="relative h-5">
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "0%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            7
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "16.6666667%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            7.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "33.3333333%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            8
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "50%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            8.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "66.6666667%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            9
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "83.3333333%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            9.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "100%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            10
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "var(--rpe-edge-gap)",
+                          right: "var(--rpe-edge-gap)",
+                          top: "calc(100% + 38px)",
+                        }}
+                        className="pointer-events-auto"
+                      >
+                        <Button
+                          className="w-full"
+                          onClick={() => {
+                            onUpdate({ rpe: Number(localRpe) });
+                            setRpeDialogOpen(false);
+                          }}
+                        >
+                          Done 
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </DialogContent>
@@ -980,9 +1104,9 @@ export function SetRow({
       </Cell>
 
       {/* Column 8: Complete / check button (optional) */}
-      <Cell className="flex items-center justify-center">
-        {showComplete ? (
-          readOnly ? (
+      {showComplete && (
+        <Cell className="flex items-center justify-center">
+          {readOnly ? (
             <div className="h-8 w-full max-w-[2rem] flex items-center justify-center rounded-md border border-border bg-neutral-900/60 text-xs text-muted-foreground">
               <Check className="h-4 w-4" />
             </div>
@@ -998,11 +1122,9 @@ export function SetRow({
             >
               <Check className="h-4 w-4" />
             </Button>
-          )
-        ) : (
-          <div className="h-8 w-full max-w-[2rem]" />
-        )}
-      </Cell>
+          )}
+        </Cell>
+      )}
     </div>
   );
 }

@@ -880,11 +880,10 @@ export default function Onboarding() {
               onClick={stepPrev}
               disabled={currentStep === 0}
               className={cn(
-                "transition-opacity duration-300 text-white",
+                "transition-opacity duration-300 text-white pl-0",
                 currentStep === 0 && "opacity-0 pointer-events-none",
               )}
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
 
@@ -898,8 +897,8 @@ export default function Onboarding() {
                 }
               }}
               disabled={!canProceed()}
-              size="lg"
-              className="min-w-[140px] transition-all duration-300 hover:scale-105"
+              size="md"
+              className="min-w-[120px] text-sm py-2 transition-all duration-300 hover:scale-103"
             >
               {currentStep === totalSteps - 1 ? (
                 <>

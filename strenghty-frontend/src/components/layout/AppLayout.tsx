@@ -12,6 +12,31 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { loadSettings } from "@/lib/settings";
+import { Capacitor } from "@capacitor/core";
+
+// Lazy import local notifications helper when needed to avoid bundling issues
+async function checkNativeNotificationPermission() {
+  try {
+    const mod = await import("@capacitor/local-notifications");
+    const LocalNotifications = mod.LocalNotifications;
+    const perm = await LocalNotifications.checkPermissions();
+    return perm && perm.display === "granted";
+  } catch {
+    return false;
+  }
+}
+
+async function requestNativeNotificationPermission() {
+  try {
+    const mod = await import("@capacitor/local-notifications");
+    const LocalNotifications = mod.LocalNotifications;
+    const req = await LocalNotifications.requestPermissions();
+    return req && req.display === "granted";
+  } catch {
+    return false;
+  }
+}
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -28,6 +53,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [showPausedDialog, setShowPausedDialog] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const { toast } = useToast();
 
   // When navigating away from NewWorkout while a workout is in progress,
@@ -53,6 +79,47 @@ export function AppLayout({ children }: AppLayoutProps) {
       // ignore
     }
   }, [location.pathname]);
+
+  // On initial app load, if user wants notifications but permission not granted,
+  // show a small prompt asking them to enable notifications. Respect a
+  // dismiss flag so we don't repeatedly nag the user.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const settings = loadSettings();
+        if (!settings.notifications) return;
+
+        const dismissed = !!localStorage.getItem(
+          "notifications:promptDismissed",
+        );
+        if (dismissed) return;
+
+        // Native (Capacitor) permission check
+        if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+          const granted = await checkNativeNotificationPermission();
+          if (!granted && mounted) setShowNotifPrompt(true);
+          // Warm up native haptics plugin so vibration calls succeed on APKs
+          try {
+            await import("@capacitor/haptics");
+          } catch {}
+          return;
+        }
+
+        // Web permission check
+        if (typeof Notification !== "undefined") {
+          if (Notification.permission !== "granted") {
+            if (mounted) setShowNotifPrompt(true);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
@@ -150,6 +217,71 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main Content */}
       <main className="w-full max-w-screen-lg mx-auto px-3 pb-24 pt-[50px] md:pb-6">
+        {/* Notification enable prompt (non-blocking) */}
+        {showNotifPrompt && (
+          <div className="mb-4 rounded-md border border-border bg-neutral-900/90 p-3 shadow-md">
+            <div className="flex items-center justify-between gap-4">
+              <div className="text-sm text-white">
+                Enable notifications to receive workout alerts and reminders.
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="h-9 px-3 rounded-lg bg-amber-500 text-white font-semibold"
+                  onClick={async () => {
+                    try {
+                      // Native flow
+                      if (
+                        Capacitor.isNativePlatform &&
+                        Capacitor.isNativePlatform()
+                      ) {
+                        const ok = await requestNativeNotificationPermission();
+                        if (ok) {
+                          setShowNotifPrompt(false);
+                          try {
+                            localStorage.removeItem(
+                              "notifications:promptDismissed",
+                            );
+                          } catch {}
+                          return;
+                        }
+                      } else if (typeof Notification !== "undefined") {
+                        const res = await Notification.requestPermission();
+                        if (res === "granted") {
+                          setShowNotifPrompt(false);
+                          try {
+                            localStorage.removeItem(
+                              "notifications:promptDismissed",
+                            );
+                          } catch {}
+                          return;
+                        }
+                      }
+                    } catch (e) {
+                      // ignore
+                    }
+                    // If we reach here, user didn't grant — keep prompt or let them dismiss
+                  }}
+                >
+                  Enable
+                </button>
+                <button
+                  className="h-9 px-3 rounded-lg border border-border text-muted-foreground bg-transparent"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem(
+                        "notifications:promptDismissed",
+                        "1",
+                      );
+                    } catch {}
+                    setShowNotifPrompt(false);
+                  }}
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {children}
       </main>
       {/* Paused workout small dialog (top) */}

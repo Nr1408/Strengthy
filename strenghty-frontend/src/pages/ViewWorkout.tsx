@@ -1,5 +1,5 @@
 const GRID_TEMPLATE =
-  "minmax(25px, 0.25fr) minmax(65px, 0.7fr) 6px minmax(25px, 0.65fr) minmax(30px, 0.35fr) 28px 30px";
+  "minmax(25px, 0.3fr) minmax(65px, 0.75fr) 6px minmax(25px, 0.6fr) minmax(30px, 0.35fr) 28px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
