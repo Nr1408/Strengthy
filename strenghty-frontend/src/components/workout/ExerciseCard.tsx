@@ -18,7 +18,7 @@ export function ExerciseCard({
 }: ExerciseCardProps) {
   return (
     <Card
-      className="relative cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+      className="relative cursor-pointer transition-all hover:border-primary/50 hover:shadow-md rounded-2xl overflow-hidden"
       onClick={onClick}
     >
       <CardContent className="p-4">

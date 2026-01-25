@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User } from "lucide-react";
+import { User, ChevronLeft } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,9 +34,7 @@ export default function AccountSettings() {
           name?: string;
           email?: string;
         };
-        if (parsed.email) {
-          setAccountEmail(parsed.email);
-        }
+        if (parsed.email) setAccountEmail(parsed.email);
       }
     } catch {}
   }, []);
@@ -67,16 +72,11 @@ export default function AccountSettings() {
         let name = "Strenghty User";
         if (rawProfile) {
           const parsed = JSON.parse(rawProfile) as { name?: string };
-          if (parsed.name) {
-            name = parsed.name;
-          }
+          if (parsed.name) name = parsed.name;
         }
         localStorage.setItem(
           "user:profile",
-          JSON.stringify({
-            name,
-            email: updatedEmail,
-          })
+          JSON.stringify({ name, email: updatedEmail }),
         );
       } catch {}
 
@@ -99,7 +99,7 @@ export default function AccountSettings() {
 
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm(
-      "This will permanently delete your account and all associated data in Strengthy. This action cannot be undone. Do you want to continue?"
+      "This will permanently delete your account and all associated data in Strengthy. This action cannot be undone. Do you want to continue?",
     );
     if (!confirmed) return;
 
@@ -132,28 +132,44 @@ export default function AccountSettings() {
     <AppLayout>
       <div className="space-y-6 w-full px-4">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Account Settings</h1>
-            <p className="text-muted-foreground">
-              Manage your login email, password, and account deletion.
-            </p>
+          <div className="flex items-start gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/profile")}
+              aria-label="Back to profile"
+            >
+              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-white">
+                Account Settings
+              </h1>
+              <p className="text-muted-foreground">
+                Manage your login email, password, and account deletion.
+              </p>
+            </div>
           </div>
-          <Button variant="outline" onClick={() => navigate("/profile")}>
-            Back to Profile
-          </Button>
+          <div className="text-sm text-muted-foreground">&nbsp;</div>
         </div>
 
-        <Card>
+        <Card className="rounded-2xl overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
               Login & Security
             </CardTitle>
+            <CardDescription>Manage your credentials</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+
+          <CardContent className="p-6 sm:p-8">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="account-email">Login Email</Label>
+                <Label
+                  className="text-muted-foreground"
+                  htmlFor="account-email"
+                >
+                  Login Email
+                </Label>
                 <Input
                   id="account-email"
                   type="email"
@@ -162,7 +178,12 @@ export default function AccountSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
+                <Label
+                  className="text-muted-foreground"
+                  htmlFor="current-password"
+                >
+                  Current Password
+                </Label>
                 <Input
                   id="current-password"
                   type="password"
@@ -171,7 +192,9 @@ export default function AccountSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
+                <Label className="text-muted-foreground" htmlFor="new-password">
+                  New Password
+                </Label>
                 <Input
                   id="new-password"
                   type="password"
@@ -181,7 +204,12 @@ export default function AccountSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Label
+                  className="text-muted-foreground"
+                  htmlFor="confirm-password"
+                >
+                  Confirm New Password
+                </Label>
                 <Input
                   id="confirm-password"
                   type="password"
@@ -191,17 +219,31 @@ export default function AccountSettings() {
                 />
               </div>
             </div>
+          </CardContent>
 
-            <Separator />
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <CardFooter>
+            <div className="w-full flex justify-end">
               <Button onClick={handleUpdateAccount}>Update Account</Button>
+            </div>
+          </CardFooter>
+        </Card>
+
+        {/* Danger Zone */}
+        <div className="rounded-2xl border border-destructive/50 bg-destructive/10 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Danger Zone</h2>
+              <p className="text-sm text-muted-foreground">
+                Permanent account actions. Use with caution.
+              </p>
+            </div>
+            <div>
               <Button variant="destructive" onClick={handleDeleteAccount}>
                 Delete Account
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );

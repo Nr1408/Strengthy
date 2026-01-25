@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,10 +40,14 @@ export default function Exercises() {
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | "all">(
     "all",
   );
+  const [selectedEquipment, setSelectedEquipment] = useState<string | "all">(
+    "all",
+  );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   // default to user's exercises view when opening the page
-  const [showLibrary, setShowLibrary] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [newExercise, setNewExercise] = useState({
     name: "",
@@ -98,7 +103,10 @@ export default function Exercises() {
       .includes(search.toLowerCase());
     const matchesMuscle =
       selectedMuscle === "all" || exercise.muscleGroup === selectedMuscle;
-    return matchesSearch && matchesMuscle;
+    const matchesEquipment =
+      selectedEquipment === "all" ||
+      (exercise as any).equipment === selectedEquipment;
+    return matchesSearch && matchesMuscle && matchesEquipment;
   });
 
   const filteredLibrary = libraryExercises.filter((exercise) => {
@@ -112,7 +120,10 @@ export default function Exercises() {
         : exercise.muscleGroup;
     const matchesMuscle =
       selectedMuscle === "all" || normalizedGroup === selectedMuscle;
-    return matchesSearch && matchesMuscle;
+    const matchesEquipment =
+      selectedEquipment === "all" ||
+      (exercise as any).equipment === selectedEquipment;
+    return matchesSearch && matchesMuscle && matchesEquipment;
   });
 
   // compute available muscle groups from user's exercises + library, preserve friendly order
@@ -125,11 +136,13 @@ export default function Exercises() {
     "forearms",
     "quads",
     "hamstrings",
+    "glutes",
     "calves",
     "core",
     "cardio",
   ];
   const [availableMuscles, setAvailableMuscles] = useState<MuscleGroup[]>([]);
+  const [availableEquipments, setAvailableEquipments] = useState<string[]>([]);
 
   useEffect(() => {
     const present = new Set<string>();
@@ -148,6 +161,19 @@ export default function Exercises() {
     }
     const filtered = allMusclesOrder.filter((m) => present.has(m));
     setAvailableMuscles(filtered);
+    // compute equipment list from library + user's custom exercises
+    const equipSet = new Set<string>();
+    exercises
+      .filter((e) => e.custom)
+      .forEach((e) => {
+        if ((e as any).equipment) equipSet.add((e as any).equipment as string);
+      });
+    if (showLibrary) {
+      libraryExercises.forEach((e) => {
+        if ((e as any).equipment) equipSet.add((e as any).equipment as string);
+      });
+    }
+    setAvailableEquipments(Array.from(equipSet));
     if (
       selectedMuscle !== "all" &&
       !filtered.includes(selectedMuscle as MuscleGroup)
@@ -187,7 +213,20 @@ export default function Exercises() {
     filteredLibrary.length > 0 ? (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredLibrary.map((exercise) => (
-          <ExerciseCard key={exercise.id} exercise={exercise} />
+          <ExerciseCard
+            key={exercise.id}
+            exercise={exercise}
+            onClick={() => {
+              try {
+                navigate(`/exercises/${exercise.id}/history`, {
+                  state: {
+                    exerciseName: exercise.name,
+                    muscleGroup: exercise.muscleGroup,
+                  },
+                });
+              } catch (e) {}
+            }}
+          />
         ))}
       </div>
     ) : (
@@ -205,6 +244,16 @@ export default function Exercises() {
           key={exercise.id}
           exercise={exercise}
           onDelete={handleDelete}
+          onClick={() => {
+            try {
+              navigate(`/exercises/${exercise.id}/history`, {
+                state: {
+                  exerciseName: exercise.name,
+                  muscleGroup: exercise.muscleGroup,
+                },
+              });
+            } catch (e) {}
+          }}
         />
       ))}
     </div>
@@ -302,15 +351,29 @@ export default function Exercises() {
                           <SelectValue placeholder="Select muscle group" />
                         </SelectTrigger>
                         <SelectContent className="p-0">
-                          {allMusclesOrder.map((muscle) => (
-                            <SelectItem
-                              key={muscle}
-                              value={muscle}
-                              className="px-6 py-4"
-                            >
-                              {muscle.charAt(0).toUpperCase() + muscle.slice(1)}
-                            </SelectItem>
-                          ))}
+                          {allMusclesOrder
+                            .filter((m) => m !== "other")
+                            .map((muscle) => {
+                              const raw =
+                                (muscleGroupColors as any)[muscle] ||
+                                "bg-muted/20 text-muted-foreground";
+                              const display =
+                                muscle.charAt(0).toUpperCase() +
+                                muscle.slice(1);
+                              return (
+                                <SelectItem
+                                  key={muscle}
+                                  value={muscle}
+                                  className="px-6 py-4"
+                                >
+                                  <span
+                                    className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${raw}`}
+                                  >
+                                    {display}
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -372,28 +435,66 @@ export default function Exercises() {
           {/* Filter select removed - use pills below */}
         </div>
 
-        {/* Muscle Group Filter Pills */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedMuscle === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedMuscle("all")}
-          >
-            All
-          </Button>
-          {availableMuscles.map((muscle) => (
-            <Button
-              key={muscle}
-              variant={selectedMuscle === muscle ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedMuscle(muscle)}
-              className={`${muscleGroupColors[muscle]} ${
-                selectedMuscle === muscle ? "ring-2 ring-primary" : ""
-              }`}
-            >
-              {muscle.charAt(0).toUpperCase() + muscle.slice(1)}
-            </Button>
-          ))}
+        {/* Filters: Equipment + Muscle */}
+        <div className="pt-3">
+          <div className="flex items-center gap-3 flex-nowrap overflow-x-auto">
+            <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">
+              Filter by:
+            </span>
+
+            <div className="flex items-center gap-2 flex-nowrap">
+              <Select
+                value={selectedEquipment}
+                onValueChange={(v) => setSelectedEquipment(v)}
+              >
+                <SelectTrigger className="w-[120px] sm:w-[160px] bg-transparent border border-white/5">
+                  <SelectValue placeholder="All Equipment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Equipment</SelectItem>
+                  {availableEquipments.map((eq) => (
+                    <SelectItem key={eq} value={eq} className="px-4 py-2">
+                      {eq.charAt(0).toUpperCase() + eq.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedMuscle}
+                onValueChange={(v) => setSelectedMuscle(v as MuscleGroup)}
+              >
+                <SelectTrigger className="w-[120px] sm:w-[160px] bg-transparent border border-white/5">
+                  <SelectValue placeholder="All Muscles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Muscles</SelectItem>
+                  {availableMuscles
+                    .filter((m) => m !== "other")
+                    .map((muscle) => {
+                      const raw =
+                        (muscleGroupColors as any)[muscle] ||
+                        "bg-muted/20 text-muted-foreground";
+                      const display =
+                        muscle.charAt(0).toUpperCase() + muscle.slice(1);
+                      return (
+                        <SelectItem
+                          key={muscle}
+                          value={muscle}
+                          className="px-4 py-2"
+                        >
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${raw}`}
+                          >
+                            {display}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {/* Exercise Grid */}

@@ -543,7 +543,7 @@ export default function Auth() {
           className="w-full max-w-md transition-transform"
           style={pendingAction ? { transform: "translateY(-6vh)" } : undefined}
         >
-          <Card className="w-full">
+          <Card className="w-full rounded-2xl overflow-hidden">
             <CardHeader className="text-center">
               <CardTitle className="font-heading text-2xl">
                 {pendingAction

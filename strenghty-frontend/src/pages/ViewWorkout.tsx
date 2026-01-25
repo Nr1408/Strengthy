@@ -544,7 +544,7 @@ export default function ViewWorkout() {
         {/* Exercise Cards List */}
         <div className="space-y-6">
           {grouped.map((we) => (
-            <Card key={we.id} className="w-full">
+            <Card key={we.id} className="w-full rounded-2xl overflow-hidden">
               <CardContent className="px-1 py-3 sm:p-4 overflow-hidden">
                 <div className="mb-3">
                   <ExerciseHeader

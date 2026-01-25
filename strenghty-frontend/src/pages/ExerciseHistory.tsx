@@ -8,7 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getSetsForExercise, getWorkouts } from "@/lib/api";
 import { format } from "date-fns";
 import { SetRow } from "@/components/workout/SetRow";
-import { Trophy } from "lucide-react";
+import { Trophy, PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Exercise history uses a slightly tighter grid so entries align closer
 // to the card edges without affecting other pages.
@@ -206,7 +207,7 @@ export default function ExerciseHistory() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
+        <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => navigate(-1)}
@@ -214,38 +215,71 @@ export default function ExerciseHistory() {
           >
             ◀
           </button>
+
+          <h2 className="text-xl md:text-2xl font-heading font-semibold text-white text-center">
+            Exercise History
+          </h2>
+
+          <div className="w-9" />
         </div>
 
-        <div>
-          <div className="flex items-start gap-4">
-            <div className="h-16 w-16 flex items-center justify-center rounded-md bg-zinc-800 border border-white/10">
-              <img
-                src={`/icons/${getExerciseIconFile(exerciseName || "", muscleGroup || "")}`}
-                alt={exerciseName}
-                className="h-12 w-12 object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="font-heading text-lg font-semibold text-white leading-tight">
-                {exerciseName || `Exercise ${id}`}
-              </h1>
-              {muscleGroup && <MuscleTag muscle={muscleGroup} />}
-            </div>
+        <div className="flex items-start gap-4">
+          <div className="h-16 w-16 flex items-center justify-center rounded-md bg-zinc-800 border border-white/10">
+            <img
+              src={
+                "/icons/" +
+                getExerciseIconFile(exerciseName || "", muscleGroup || "")
+              }
+              alt={exerciseName}
+              className="h-12 w-12 object-contain"
+            />
+          </div>
+          <div>
+            <h1 className="font-heading text-lg font-semibold text-white leading-tight">
+              {exerciseName || "Exercise " + id}
+            </h1>
+            {muscleGroup && <MuscleTag muscle={muscleGroup} />}
           </div>
         </div>
 
         <div className="space-y-4">
           {grouped.length === 0 ? (
-            <Card>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">
-                  No history found.
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-center">
+              <Card className="w-full max-w-2xl">
+                <CardContent>
+                  <div className="flex flex-col items-center text-center gap-4 py-6">
+                    <div className="h-16 w-16 rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center">
+                      <PlusCircle className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-white">
+                      No history yet
+                    </h2>
+                    <p className="text-sm text-muted-foreground max-w-xl">
+                      We couldn't find any logged sets for this exercise. Try
+                      logging a workout that includes this exercise, or browse
+                      the exercise library for alternatives.
+                    </p>
+                    <div className="flex gap-3 mt-2">
+                      <Button
+                        onClick={() => navigate("/workouts/new")}
+                        className="bg-primary"
+                      >
+                        Log a workout
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate("/exercises")}
+                      >
+                        Browse exercises
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           ) : (
             grouped.map((g) => (
-              <Card key={`h-${g.workoutId}`}>
+              <Card key={"h-" + g.workoutId}>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
@@ -303,7 +337,7 @@ export default function ExerciseHistory() {
                     <div className="space-y-2">
                       {g.sets.map((s: any, idx: number) => (
                         <SetRow
-                          key={`${g.workoutId}-${idx}`}
+                          key={g.workoutId + "-" + idx}
                           set={s}
                           exerciseName={exerciseName || ""}
                           unit={s.unit || "kg"}

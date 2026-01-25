@@ -162,7 +162,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
 
   return (
     <Card
-      className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+      className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md rounded-2xl overflow-hidden"
       onClick={onClick}
     >
       <CardContent className="p-4">

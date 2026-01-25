@@ -1,7 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { User, Calendar, Target, TrendingUp, Award } from "lucide-react";
+import {
+  User,
+  Calendar,
+  Target,
+  TrendingUp,
+  Award,
+  LogOut,
+  Settings,
+  Camera,
+  Image,
+} from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +26,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   differenceInCalendarDays,
@@ -185,12 +194,20 @@ export default function Profile() {
   const [profileInfo, setProfileInfo] = useState<{
     name: string;
     email?: string | null;
+    avatar?: string | null;
   }>(() => ({ name: "Strenghty User", email: "" }));
   const [onboardingInfo, setOnboardingInfo] = useState<OnboardingInfo | null>(
     null,
   );
   const [monthlyGoal, setMonthlyGoal] = useState<number>(getInitialMonthlyGoal);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // local editing state separated from display
+  const [editing, setEditing] = useState(false);
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+  const [tempAvatar, setTempAvatar] = useState<string | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     try {
@@ -199,10 +216,12 @@ export default function Profile() {
         const parsed = JSON.parse(rawProfile) as {
           name?: string;
           email?: string;
+          avatar?: string | null;
         };
         const name = parsed.name || "Strenghty User";
         const email = parsed.email || "";
-        setProfileInfo({ name, email });
+        const avatar = parsed.avatar || null;
+        setProfileInfo({ name, email, avatar });
       }
     } catch {}
 
@@ -230,13 +249,7 @@ export default function Profile() {
 
   const handleSaveProfile = () => {
     try {
-      localStorage.setItem(
-        "user:profile",
-        JSON.stringify({
-          name: profileInfo.name,
-          email: profileInfo.email || "",
-        }),
-      );
+      localStorage.setItem("user:profile", JSON.stringify(profileInfo));
       toast({
         title: "Profile saved",
         description: "Your changes were saved.",
@@ -307,149 +320,245 @@ export default function Profile() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 w-full px-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Profile</h1>
-          <p className="text-muted-foreground">
-            Manage your account and preferences
-          </p>
-        </div>
-
-        {/* Reworked Profile layout: identity, fitness identity, progress, controls */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Profile Header (identity) */}
-          <Card className="lg:col-span-2">
-            <CardContent className="p-6">
-              {/* Identity row: avatar + text stack (primary anchor) */}
-              <div className="flex items-center gap-6">
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
-                  <User className="h-12 w-12 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-white">
-                    {profileInfo.name}
-                  </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {onboardingInfo?.experience
-                      ? `${EXPERIENCE_LABELS[onboardingInfo.experience] || "Intermediate"} • ${onboardingInfo.goals && onboardingInfo.goals.length ? onboardingInfo.goals.map((g) => g.replace(/-/g, " ")).join(", ") : "Fitness Enthusiast"}`
-                      : "Fitness Enthusiast"}
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Member since {memberSinceLabel}
-                  </p>
-                </div>
+      <main className="w-full max-w-3xl mx-auto px-4 pb-32">
+        {/* Compact header with avatar, info and actions */}
+        <header className="pt-6 pb-4 flex items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setTempAvatar(profileInfo.avatar || null);
+                  setAvatarDialogOpen(true);
+                }}
+                className="relative h-14 w-14 rounded-full bg-primary/12 flex items-center justify-center overflow-hidden"
+                aria-label="Change avatar"
+              >
+                {profileInfo.avatar ? (
+                  <img
+                    src={profileInfo.avatar}
+                    alt="avatar"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center">
+                    <div className="h-full w-full flex items-center justify-center bg-primary/15">
+                      <span className="text-xl font-bold text-primary select-none">
+                        S
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </button>
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold text-white truncate">
+                  {profileInfo.name}
+                </span>
               </div>
-
-              {/* Actions row: secondary, centered below identity */}
-              <div className="mt-4 flex justify-center gap-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setDialogOpen(true)}
-                >
-                  Edit Profile
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigate("/profile/account")}
-                >
-                  Account Settings
-                </Button>
+              <div className="mt-1 text-sm text-muted-foreground truncate">
+                {onboardingInfo?.experience
+                  ? EXPERIENCE_LABELS[onboardingInfo.experience] || "Member"
+                  : "Member"}
               </div>
-            </CardContent>
-          </Card>
+              <div className="mt-1 text-xs text-muted-foreground">
+                Member since {memberSinceLabel}
+              </div>
+              <div className="mt-3 flex flex-col md:flex-row items-start gap-2 md:gap-4">
+                <div className="flex flex-row items-start md:items-center gap-2">
+                  <div className="w-max">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditing(true)}
+                      className="min-w-[120px]"
+                    >
+                      Edit Profile
+                    </Button>
+                  </div>
 
-          {/* Progress Snapshot */}
-          <div className="space-y-4 flex flex-col justify-center h-full">
-            <Card>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg border border-border bg-secondary/50 p-6 flex flex-col items-center justify-center">
-                    <p className="text-sm text-muted-foreground">
-                      Total Workouts
-                    </p>
-                    <p className="text-2xl font-bold">{totalWorkouts}</p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-secondary/50 p-6 flex flex-col items-center justify-center">
-                    <p className="text-sm text-muted-foreground">
-                      Current Streak
-                    </p>
-                    <p className="text-2xl font-bold">{streak} days</p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-secondary/50 p-6 flex flex-col items-center justify-center">
-                    <p className="text-sm text-muted-foreground">This Month</p>
-                    <p className="text-2xl font-bold">{workoutsThisMonth}</p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-secondary/50 p-6 flex flex-col items-center justify-center">
-                    <p className="text-sm text-muted-foreground">PRs</p>
-                    <p className="text-2xl font-bold">{totalPRs}</p>
+                  <div className="w-max">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate("/profile/account")}
+                    >
+                      Account Settings
+                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
 
-        {/* Fitness Identity Card (read-only) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              Fitness Identity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Goal</span>
-                <span className="font-medium text-white">
-                  {onboardingInfo?.goals && onboardingInfo.goals.length
-                    ? onboardingInfo.goals
-                        .map((g) => g.replace(/-/g, " "))
-                        .join(", ")
-                    : "—"}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Experience</span>
-                <span className="font-medium text-white">
-                  {onboardingInfo?.experience
-                    ? EXPERIENCE_LABELS[onboardingInfo.experience]
-                    : "—"}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Equipment</span>
-                <span className="font-medium text-white">
-                  {onboardingInfo?.heightUnit
-                    ? onboardingInfo.heightUnit === "cm"
-                      ? "Full Gym"
-                      : "Bodyweight"
-                    : "—"}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Monthly Goal</span>
-                <span className="font-medium text-white">
-                  {monthlyGoal} workouts
-                </span>
+                <div className="mt-1 md:mt-0">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleSignOut}
+                    className="min-w-[120px]"
+                  >
+                    Sign Out
+                  </Button>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </header>
 
-        {/* Edit Profile Dialog (opens from Edit Profile buttons) */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        {/* actions shown next to Edit Profile (no fixed top-right buttons) */}
+
+        {/* Section 2 — Performance Bento Grid (2x2 square cards) */}
+        <section className="mt-6">
+          <div className="grid grid-cols-2 gap-3">
+            <MetricCard
+              label="Total Workouts"
+              value={String(totalWorkouts)}
+              icon={<Calendar className="h-5 w-5 text-primary" />}
+            />
+            <MetricCard
+              label="Current Streak"
+              value={`${streak}d`}
+              icon={<TrendingUp className="h-5 w-5 text-primary" />}
+            />
+            <MetricCard
+              label="This Month"
+              value={String(workoutsThisMonth)}
+              icon={<Calendar className="h-5 w-5 text-primary" />}
+            />
+            <MetricCard
+              label="PRs"
+              value={String(totalPRs)}
+              icon={<Award className="h-5 w-5 text-primary" />}
+            />
+          </div>
+        </section>
+
+        {/* Section 3 — Goals + Physical Stats */}
+        <section className="mt-6">
+          <div className="rounded-2xl bg-surface/5 p-4">
+            <h2 className="text-sm font-medium text-white">Goals & Physical</h2>
+            <div className="mt-3">
+              <div className="flex flex-wrap gap-2">
+                {onboardingInfo?.goals && onboardingInfo.goals.length ? (
+                  onboardingInfo.goals.map((g) => (
+                    <span
+                      key={g}
+                      className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-sm text-white"
+                    >
+                      {g.replace(/-/g, " ")}
+                    </span>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground">—</div>
+                )}
+              </div>
+
+              <div className="mt-4 flex items-center justify-between gap-6">
+                <div className="flex-1 text-center">
+                  <div className="text-sm text-muted-foreground">Height</div>
+                  <div className="text-lg font-semibold text-white">
+                    {onboardingInfo?.height || "—"}{" "}
+                    {onboardingInfo?.heightUnit || ""}
+                  </div>
+                </div>
+                <div className="flex-1 text-center">
+                  <div className="text-sm text-muted-foreground">Weight</div>
+                  <div className="text-lg font-semibold text-white">
+                    {onboardingInfo?.currentWeight || "—"}
+                  </div>
+                </div>
+                <div className="flex-1 text-center">
+                  <div className="text-sm text-muted-foreground">Age</div>
+                  <div className="text-lg font-semibold text-white">
+                    {onboardingInfo?.age || "—"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ProfileRow
+                  label="Experience"
+                  value={
+                    onboardingInfo?.experience
+                      ? EXPERIENCE_LABELS[onboardingInfo.experience]
+                      : "—"
+                  }
+                />
+                <ProfileRow
+                  label="Monthly Target"
+                  value={`${monthlyGoal} workouts`}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4 — Personal Summary (read-only) */}
+        <section className="mt-6">
+          <div className="rounded-2xl bg-surface/6 p-4">
+            <h2 className="text-sm font-medium text-white">Personal</h2>
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="col-span-1">
+                <div className="text-sm text-muted-foreground">Full name</div>
+                <div className="text-sm font-medium text-white">
+                  {profileInfo.name}
+                </div>
+              </div>
+              <div>
+                {/* Section 2 — Performance Bento Grid (2x2 square cards) */}
+                <div className="text-sm font-medium text-white">
+                  {profileInfo.email || "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">
+                  Member since
+                </div>
+                <div className="text-sm font-medium text-white">
+                  {memberSinceLabel}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="text-sm text-muted-foreground">Physical</div>
+              <div className="mt-2 flex gap-4">
+                <div className="text-sm">
+                  <div className="text-muted-foreground">Height</div>
+                  <div className="font-medium text-white">
+                    {onboardingInfo?.height || "—"}{" "}
+                    {onboardingInfo?.heightUnit || ""}
+                  </div>
+                </div>
+                <div className="text-sm">
+                  <div className="text-muted-foreground">Weight</div>
+                  <div className="font-medium text-white">
+                    {onboardingInfo?.currentWeight || "—"}
+                  </div>
+                </div>
+                <div className="text-sm">
+                  <div className="text-muted-foreground">Age</div>
+                  <div className="font-medium text-white">
+                    {onboardingInfo?.age || "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* small spacer */}
+        <div className="h-3" />
+
+        {/* Edit dialog (small) */}
+        <Dialog open={editing} onOpenChange={setEditing}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Profile</DialogTitle>
-              <DialogDescription>
-                Update your display name and email address.
-              </DialogDescription>
+              <DialogDescription>Update personal details.</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 pt-2">
-              <div className="space-y-2">
+
+            <div className="grid gap-3 pt-2">
+              <div>
                 <Label htmlFor="edit-name">Full Name</Label>
                 <Input
                   id="edit-name"
@@ -462,7 +571,8 @@ export default function Profile() {
                   }
                 />
               </div>
-              <div className="space-y-2">
+
+              <div>
                 <Label htmlFor="edit-email">Email</Label>
                 <Input
                   id="edit-email"
@@ -476,22 +586,60 @@ export default function Profile() {
                   }
                 />
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="edit-age">Age</Label>
+                  <Input
+                    id="edit-age"
+                    value={onboardingInfo?.age || ""}
+                    onChange={(e) =>
+                      setOnboardingInfo((prev) =>
+                        prev ? { ...prev, age: e.target.value } : prev,
+                      )
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-height">Height</Label>
+                  <Input
+                    id="edit-height"
+                    value={onboardingInfo?.height || ""}
+                    onChange={(e) =>
+                      setOnboardingInfo((prev) =>
+                        prev ? { ...prev, height: e.target.value } : prev,
+                      )
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-weight">Current Weight</Label>
+                  <Input
+                    id="edit-weight"
+                    value={onboardingInfo?.currentWeight || ""}
+                    onChange={(e) =>
+                      setOnboardingInfo((prev) =>
+                        prev
+                          ? { ...prev, currentWeight: e.target.value }
+                          : prev,
+                      )
+                    }
+                  />
+                </div>
+              </div>
             </div>
+
             <DialogFooter>
-              <div className="flex w-full justify-end space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                  className="h-10 px-4 rounded-lg"
-                >
+              <div className="flex w-full justify-end gap-3">
+                <Button variant="outline" onClick={() => setEditing(false)}>
                   Cancel
                 </Button>
                 <Button
                   onClick={() => {
                     handleSaveProfile();
-                    setDialogOpen(false);
+                    handleSaveDetails();
+                    setEditing(false);
                   }}
-                  className="h-10 px-4 rounded-lg"
                 >
                   Save
                 </Button>
@@ -500,27 +648,152 @@ export default function Profile() {
           </DialogContent>
         </Dialog>
 
-        {/* Controls Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Controls</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={() => setDialogOpen(true)}>Edit Profile</Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate("/profile/account")}
-              >
-                Account Settings
-              </Button>
-              <Button variant="destructive" onClick={handleSignOut}>
-                Sign Out
-              </Button>
+        {/* Avatar picker dialog */}
+        <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Avatar</DialogTitle>
+              <DialogDescription>
+                Choose from gallery or take a photo.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-3 pt-2">
+              <div className="flex items-center justify-center">
+                <div className="h-36 w-36 rounded-full bg-surface/6 overflow-hidden">
+                  {tempAvatar ? (
+                    <img
+                      src={tempAvatar}
+                      alt="preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <User className="h-10 w-10 text-primary" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (!f) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      setTempAvatar(String(reader.result || ""));
+                    };
+                    reader.readAsDataURL(f);
+                  }}
+                />
+
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (!f) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      setTempAvatar(String(reader.result || ""));
+                    };
+                    reader.readAsDataURL(f);
+                  }}
+                />
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => galleryInputRef.current?.click()}
+                  >
+                    <Image className="mr-2 h-4 w-4" /> Gallery
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => cameraInputRef.current?.click()}
+                  >
+                    <Camera className="mr-2 h-4 w-4" /> Camera
+                  </Button>
+                  <Button variant="ghost" onClick={() => setTempAvatar(null)}>
+                    Remove
+                  </Button>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+
+            <DialogFooter>
+              <div className="flex w-full justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setAvatarDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    const updated = { ...profileInfo, avatar: tempAvatar };
+                    try {
+                      localStorage.setItem(
+                        "user:profile",
+                        JSON.stringify(updated),
+                      );
+                    } catch (e) {}
+                    setProfileInfo(updated);
+                    setAvatarDialogOpen(false);
+                    toast({ title: "Avatar updated" });
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Floating control removed — actions moved to header and dialog */}
+      </main>
     </AppLayout>
+  );
+}
+
+/* Helper subcomponents */
+function MetricCard({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="relative w-full h-36 rounded-2xl bg-surface/6 p-4 flex items-center justify-center border border-surface/8">
+      <div className="absolute left-4 top-1 p-2 rounded-md bg-primary/8 z-10">
+        {icon}
+      </div>
+      <div className="text-center">
+        <div className="text-3xl font-extrabold text-white">{value}</div>
+        <div className="mt-1 text-sm text-muted-foreground">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="py-3 flex items-center justify-between gap-4">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="text-sm font-medium text-white text-right max-w-xs break-words">
+        {value}
+      </div>
+    </div>
   );
 }

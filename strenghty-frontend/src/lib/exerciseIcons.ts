@@ -79,6 +79,7 @@ export function getExerciseIconFile(name: string, muscleGroup?: string) {
     "meadows row": "upper back.svg",
     "machine t-bar row": "upper back.svg",
     "hammer strength row machine": "upper back.svg",
+    "landmine row": "upper back.svg",
 
     // Traps
     "dumbbell farmer's walk": "traps.svg",
@@ -96,6 +97,7 @@ export function getExerciseIconFile(name: string, muscleGroup?: string) {
     "dumbbell front raise": "front delts.svg",
     "barbell front raise": "front delts.svg",
     "cable front raise": "front delts.svg",
+    "landmine press": "front delts.svg",
 
     // Side Delts
     "dumbbell lateral raise": "side delts.svg",
@@ -203,6 +205,7 @@ export function getExerciseIconFile(name: string, muscleGroup?: string) {
     const mgToFile: { [k: string]: string } = {
       quads: "quads.svg",
       hamstrings: "hamstrings.svg",
+      glutes: "glutes.svg",
       calves: "calves.svg",
       chest: "chest.svg",
       lats: "lats.svg",

@@ -31,6 +31,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -115,7 +124,17 @@ export default function EditWorkout() {
   }, [userExercises]);
 
   const availableMuscleGroups = useMemo(() => {
-    return Array.from(new Set(allExercises.map((e) => e.muscleGroup)));
+    return Array.from(
+      new Set(
+        allExercises.map((e) => e.muscleGroup).filter((m) => m !== "other"),
+      ),
+    );
+  }, [allExercises]);
+
+  const availableEquipmentGroups = useMemo(() => {
+    return Array.from(
+      new Set(allExercises.map((e) => (e as any).equipment).filter(Boolean)),
+    );
   }, [allExercises]);
 
   const chipClassFor = (mg: string, active: boolean) => {
@@ -135,8 +154,10 @@ export default function EditWorkout() {
   const [replaceFilter, setReplaceFilter] = useState<string | null>(null);
   // Add-exercise dialog state (reuse NewWorkout UI)
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
+  const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [filterMuscle, setFilterMuscle] = useState<"all" | string>("all");
+  const [filterEquipment, setFilterEquipment] = useState<"all" | string>("all");
   const [exerciseInfoOpen, setExerciseInfoOpen] = useState(false);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
     null,
@@ -149,13 +170,53 @@ export default function EditWorkout() {
     return allExercises.filter((exercise) => {
       if (filterMuscle !== "all" && exercise.muscleGroup !== filterMuscle)
         return false;
+      if (
+        filterEquipment !== "all" &&
+        (exercise as any).equipment !== filterEquipment
+      )
+        return false;
       if (!q) return true;
       return (
         exercise.name.toLowerCase().includes(q) ||
         exercise.muscleGroup.toLowerCase().includes(q)
       );
     });
-  }, [exerciseSearch, allExercises, filterMuscle]);
+  }, [exerciseSearch, allExercises, filterMuscle, filterEquipment]);
+
+  // create exercise state for inline creation
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseMuscle, setNewExerciseMuscle] = useState<string | "">("");
+  const [newExerciseDescription, setNewExerciseDescription] = useState("");
+  const createExerciseMutation = useMutation({
+    mutationFn: async () =>
+      createExercise(
+        newExerciseName,
+        (newExerciseMuscle as any) || "other",
+        newExerciseDescription,
+        { custom: true },
+      ),
+    onSuccess: (created: any) => {
+      try {
+        queryClient.invalidateQueries({ queryKey: ["exercises"] });
+      } catch (e) {}
+      try {
+        if (replaceTarget) replaceExercise(replaceTarget, created);
+        else addExercise(created);
+      } catch (e) {}
+      setIsCreateExerciseOpen(false);
+      setIsExerciseDialogOpen(false);
+      setNewExerciseName("");
+      setNewExerciseMuscle("");
+      setNewExerciseDescription("");
+      toast({ title: "Exercise created" });
+    },
+    onError: (err: any) =>
+      toast({
+        title: "Create failed",
+        description: String(err),
+        variant: "destructive",
+      }),
+  });
 
   const replaceExercise = (exerciseLocalId: string, newEx: Exercise) => {
     setExercises((prev) =>
@@ -1519,7 +1580,10 @@ export default function EditWorkout() {
 
         <div className="space-y-6">
           {exercises.map((workoutExercise) => (
-            <Card key={workoutExercise.id}>
+            <Card
+              key={workoutExercise.id}
+              className="rounded-2xl overflow-hidden"
+            >
               <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
                 <div className="mb-4 flex items-start justify-between">
                   <div className="flex flex-col">
@@ -1735,67 +1799,128 @@ export default function EditWorkout() {
             }
           }}
         >
-          <DialogContent className="max-h-[85vh] flex flex-col bg-[#0f0f0f] border border-neutral-800/40 text-white">
-            <DialogHeader>
-              <DialogTitle>
-                {replaceTarget ? "Replace Exercise" : "Add Exercise"}
-              </DialogTitle>
-              <DialogDescription className="text-zinc-400">
-                {replaceTarget
-                  ? "Select an exercise to replace the current exercise."
-                  : "Select an exercise from your library."}
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent
+            hideClose
+            className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden"
+          >
+            {/* Grab handle */}
+            <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mt-3 mb-2" />
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search exercises..."
-                value={exerciseSearch}
-                onChange={(e) => setExerciseSearch(e.target.value)}
-                className="pl-10 bg-muted/20 border border-neutral-800/30 focus:ring-primary"
-              />
-            </div>
-
-            <div className="pt-3">
-              <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
+            <div className="sticky top-0 z-10 bg-transparent pt-1">
+              <div className="flex items-center justify-between">
                 <button
-                  onClick={() => setFilterMuscle("all")}
-                  className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                    filterMuscle === "all"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted/20 text-muted-foreground hover:bg-muted/30"
-                  }`}
+                  type="button"
+                  onClick={() => {
+                    setIsExerciseDialogOpen(false);
+                    setExerciseSearch("");
+                    setReplaceTarget(null);
+                    setReplaceFilter(null);
+                    setFilterMuscle("all");
+                  }}
+                  className="text-sm text-muted-foreground"
                 >
-                  All Muscles
+                  Cancel
                 </button>
-                {availableMuscleGroups.map((m) => {
-                  const active = filterMuscle === m;
-                  const colorClass =
-                    (muscleGroupColors as any)[m] ||
-                    "bg-muted/20 text-muted-foreground";
-                  return (
-                    <button
-                      key={m}
-                      onClick={() => setFilterMuscle(m)}
-                      className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-all ${colorClass} ${
-                        active
-                          ? "ring-2 ring-offset-2 ring-[#0f0f0f] font-bold"
-                          : "opacity-80 hover:opacity-100"
-                      }`}
+
+                <div className="text-center">
+                  <DialogTitle>
+                    {replaceTarget ? "Replace Exercise" : "Add Exercise"}
+                  </DialogTitle>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreateExerciseOpen(true)}
+                >
+                  Create
+                </Button>
+              </div>
+
+              <div className="relative mt-3">
+                <Search className="absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search exercises..."
+                  value={exerciseSearch}
+                  onChange={(e) => setExerciseSearch(e.target.value)}
+                  className="pl-10 bg-zinc-950 text-sm focus:ring-1 focus:ring-orange-500 rounded-full"
+                />
+              </div>
+
+              <div className="pt-3">
+                <div className="flex items-center gap-3 flex-nowrap overflow-x-auto">
+                  <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">
+                    Filter by:
+                  </span>
+
+                  <div className="flex items-center gap-2 flex-nowrap">
+                    <Select
+                      value={filterEquipment}
+                      onValueChange={(v) => setFilterEquipment(v)}
                     >
-                      {m}
-                    </button>
-                  );
-                })}
+                      <SelectTrigger className="w-[120px] sm:w-[160px] bg-transparent border border-white/5">
+                        <SelectValue placeholder="All Equipment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Equipment</SelectItem>
+                        {availableEquipmentGroups.map((eq) => (
+                          <SelectItem key={eq} value={eq} className="px-4 py-2">
+                            {eq}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={filterMuscle}
+                      onValueChange={(v) => setFilterMuscle(v)}
+                    >
+                      <SelectTrigger className="w-[120px] sm:w-[160px] bg-transparent border border-white/5">
+                        <SelectValue placeholder="All Muscles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Muscles</SelectItem>
+                        {availableMuscleGroups
+                          .filter((m) => m !== "other")
+                          .map((m) => {
+                            const raw =
+                              (muscleGroupColors as any)[m] ||
+                              "bg-muted/20 text-muted-foreground";
+                            const display =
+                              m.charAt(0).toUpperCase() + m.slice(1);
+                            return (
+                              <SelectItem
+                                key={m}
+                                value={m}
+                                className="px-4 py-2"
+                              >
+                                <span
+                                  className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${raw}`}
+                                >
+                                  {display}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="mt-3 flex-1 overflow-y-auto min-h-[200px]">
               {filteredExercises.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No exercises found matching "{exerciseSearch}"
-                </p>
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">
+                    No such exercise available
+                  </p>
+                  <div className="mt-4">
+                    <Button onClick={() => setIsCreateExerciseOpen(true)}>
+                      Create Exercise
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="flex flex-col">
                   {filteredExercises.map((exercise) => (
@@ -1834,6 +1959,89 @@ export default function EditWorkout() {
                 </div>
               )}
               <div className="h-6" />
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Exercise dialog (inline) */}
+        <Dialog
+          open={isCreateExerciseOpen}
+          onOpenChange={setIsCreateExerciseOpen}
+        >
+          <DialogContent className="max-w-[420px] rounded-[28px] bg-neutral-950 border border-neutral-800/40 text-white p-5">
+            <div className="text-center mb-2">
+              <DialogTitle className="text-lg font-semibold">
+                Create Exercise
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Add a new exercise to your library
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="create-name">Exercise Name</Label>
+                <Input
+                  id="create-name"
+                  value={newExerciseName}
+                  onChange={(e) => setNewExerciseName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="create-muscle">Muscle Group</Label>
+                <Select
+                  value={newExerciseMuscle}
+                  onValueChange={(v) => setNewExerciseMuscle(v)}
+                >
+                  <SelectTrigger id="create-muscle">
+                    <SelectValue placeholder="Select muscle group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMuscleGroups
+                      .filter((m) => m !== "other")
+                      .map((m) => {
+                        const raw =
+                          (muscleGroupColors as any)[m] ||
+                          "bg-muted/20 text-muted-foreground";
+                        const display = m.charAt(0).toUpperCase() + m.slice(1);
+                        return (
+                          <SelectItem key={m} value={m}>
+                            <span
+                              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${raw}`}
+                            >
+                              {display}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="create-desc">Description (optional)</Label>
+                <Textarea
+                  id="create-desc"
+                  value={newExerciseDescription}
+                  onChange={(e) => setNewExerciseDescription(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateExerciseOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => createExerciseMutation.mutate()}
+                disabled={createExerciseMutation.isLoading}
+              >
+                {createExerciseMutation.isLoading ? "Creating..." : "Create"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

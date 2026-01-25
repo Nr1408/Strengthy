@@ -211,8 +211,10 @@ export const muscleGroupColors: Record<MuscleGroup, string> = {
   triceps: 'bg-yellow-500/20 text-yellow-400',
   quads: 'bg-orange-500/20 text-orange-400',
   hamstrings: 'bg-violet-500/20 text-violet-400',
+  glutes: 'bg-rose-500/20 text-rose-400',
   calves: 'bg-amber-500/20 text-amber-400',
   forearms: 'bg-emerald-500/20 text-emerald-400',
   core: 'bg-pink-500/20 text-pink-400',
   cardio: 'bg-cyan-500/20 text-cyan-400',
+  other: 'bg-slate-500/20 text-slate-400',
 };

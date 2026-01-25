@@ -1,5 +1,5 @@
 const GRID_TEMPLATE =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.75fr) minmax(28px, 0.3fr) 32px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Trophy, ArrowLeft } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SetRow } from "@/components/workout/SetRow";
+import MuscleTag from "@/components/workout/MuscleTag";
+import ExerciseHeader from "@/components/workout/ExerciseHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { mockRoutines } from "@/data/mockData";
 import { getUnit } from "@/lib/utils";
@@ -124,23 +126,30 @@ export default function ViewRoutine() {
 
         <div className="space-y-6">
           {exercises.map((we: any) => (
-            <Card key={we.id}>
-              <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
+            <Card key={we.id} className="w-full rounded-2xl overflow-hidden">
+              <CardContent className="px-1 py-3 sm:p-4 overflow-hidden">
                 <div className="mb-3">
-                  <h3 className="font-heading text-lg font-semibold text-white">
-                    {we.exercise.name}
-                  </h3>
-                  <div className="text-sm text-muted-foreground">
-                    {we.exercise.muscleGroup === "other"
-                      ? "calves"
-                      : we.exercise.muscleGroup}
-                  </div>
+                  <ExerciseHeader
+                    exerciseName={we.exercise.name}
+                    muscleGroup={we.exercise.muscleGroup}
+                    onClick={() => {
+                      try {
+                        const exId = String(we.exercise.id);
+                        navigate(`/exercises/${exId}/history`, {
+                          state: {
+                            exerciseName: we.exercise.name,
+                            muscleGroup: we.exercise.muscleGroup,
+                          },
+                        });
+                      } catch (e) {}
+                    }}
+                  />
                 </div>
 
                 {/* Sets Header */}
                 {we.exercise.muscleGroup === "cardio" ? (
                   <div
-                    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                     style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
                   >
                     <>
@@ -170,7 +179,7 @@ export default function ViewRoutine() {
                   </div>
                 ) : (
                   <div
-                    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                    className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                     style={{ gridTemplateColumns: GRID_TEMPLATE }}
                   >
                     <>

@@ -133,7 +133,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       />
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container relative h-16 flex items-center justify-center">
+        <div className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 relative h-16 flex items-center justify-center">
           <Link
             to="/dashboard"
             className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2"
@@ -196,7 +196,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       </header>
 
       {/* Mobile Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background rounded-t-2xl md:hidden">
         <div className="flex items-center justify-around py-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -219,10 +219,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       </nav>
 
       {/* Main Content */}
-      <main className="w-full max-w-screen-lg mx-auto px-3 pb-24 pt-[50px] md:pb-6">
+      <main className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 pb-24 pt-[50px] md:pb-6">
         {/* Notification enable prompt (non-blocking) */}
         {showNotifPrompt && (
-          <div className="mb-4 rounded-md border border-border bg-neutral-900/90 p-3 shadow-md">
+          <div className="mb-4 rounded-2xl border border-border bg-neutral-900/90 p-3 shadow-md">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="text-sm text-white break-words min-w-0">
                 Enable notifications to receive workout alerts and reminders.
@@ -294,8 +294,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       </main>
       {/* Paused workout small dialog (top) */}
       {showPausedDialog && (
-        <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 w-[min(640px,75%)]">
-          <div className="rounded-lg border border-border bg-neutral-900/95 p-4 shadow-lg">
+        <div className="fixed left-1/2 bottom-16 z-50 -translate-x-1/2 w-[min(900px,95%)]">
+          <div className="rounded-2xl border border-border bg-neutral-900/95 p-6 shadow-lg min-h-[88px]">
             <div className="mb-1 text-center text-lg font-semibold text-muted-foreground">
               Workout in Progress
             </div>
@@ -339,7 +339,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Discard confirmation dialog */}
       {showDiscardConfirm && (
         <div className="fixed left-1/2 top-1/3 z-[9999] -translate-x-1/2 w-[min(520px,90%)]">
-          <div className="rounded-lg border border-border bg-neutral-900 p-6 shadow-lg">
+          <div className="rounded-2xl border border-border bg-neutral-900 p-6 shadow-lg">
             <div className="mb-4 text-center text-lg font-semibold text-white">
               Discard Workout?
             </div>

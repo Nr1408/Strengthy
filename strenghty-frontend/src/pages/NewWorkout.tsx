@@ -5,7 +5,7 @@ const GRID_TEMPLATE =
 const GRID_TEMPLATE_CARDIO =
   "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -21,13 +21,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SetRow } from "@/components/workout/SetRow";
-import { getUnit, setUnit } from "@/lib/utils";
+import { getUnit, setUnit, cn } from "@/lib/utils";
 import type {
   WorkoutExercise,
   WorkoutSet,
   Exercise,
   Routine,
   CardioMode,
+  MuscleGroup,
 } from "@/types/workout";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -37,6 +38,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { getExerciseIconFile } from "@/lib/exerciseIcons";
 import ExerciseInfo from "@/components/workout/ExerciseInfo";
@@ -61,6 +71,22 @@ import {
 import { recommendNextRoutine } from "@/lib/onboarding";
 import { triggerHaptic } from "@/lib/haptics";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
+
+// consistent friendly muscle ordering used across library and create dialogs
+const allMusclesOrder: MuscleGroup[] = [
+  "chest",
+  "back",
+  "shoulders",
+  "biceps",
+  "triceps",
+  "forearms",
+  "quads",
+  "hamstrings",
+  "glutes",
+  "calves",
+  "core",
+  "cardio",
+];
 
 export default function NewWorkout() {
   const getCardioModeForExercise = (exercise: Exercise): CardioMode => {
@@ -126,14 +152,27 @@ export default function NewWorkout() {
   const [prBanner, setPrBanner] = useState<PrBanner | null>(null);
   const [prQueue, setPrQueue] = useState<PrBanner[]>([]);
   const [prVisible, setPrVisible] = useState(false);
-  type UnusualSetState = {
-    exerciseId: string;
-    setId: string;
-    previousBestText: string;
-    newSetText: string;
-  };
+  type UnusualSetState =
+    | {
+        type: "history";
+        exerciseId: string;
+        setId: string;
+        previousBestText: string;
+        newSetText: string;
+      }
+    | {
+        type: "firstTime";
+        exerciseId: string;
+        setId: string;
+        previousBestText: null;
+        newSetText: string;
+        weightKg: number;
+        reps: number;
+      };
   const [unusualSet, setUnusualSet] = useState<UnusualSetState | null>(null);
+  const recentForced = useRef<Set<string>>(new Set());
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
+  const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
   const [exerciseToReplace, setExerciseToReplace] = useState<string | null>(
     null,
   );
@@ -171,6 +210,48 @@ export default function NewWorkout() {
   }, [startedFromRoutine]);
   const [workoutId, setWorkoutId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Create exercise form state (used by create dialog inside the add/replace flow)
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseMuscle, setNewExerciseMuscle] = useState<string | "">("");
+  const [newExerciseDescription, setNewExerciseDescription] = useState("");
+
+  const createExerciseMutation = useMutation({
+    mutationFn: async () =>
+      createExercise(
+        newExerciseName,
+        (newExerciseMuscle as any) || "other",
+        newExerciseDescription,
+        { custom: true },
+      ),
+    onSuccess: (created: any) => {
+      try {
+        queryClient.invalidateQueries({ queryKey: ["exercises"] });
+      } catch (e) {}
+
+      try {
+        if (exerciseToReplace) {
+          replaceExerciseForCard(exerciseToReplace, created);
+        } else {
+          addExercise(created);
+        }
+      } catch (e) {}
+
+      setIsCreateExerciseOpen(false);
+      setIsExerciseDialogOpen(false);
+      setNewExerciseName("");
+      setNewExerciseMuscle("");
+      setNewExerciseDescription("");
+      toast({ title: "Exercise created" });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Create failed",
+        description: String(err),
+        variant: "destructive",
+      });
+    },
+  });
 
   const hasToken = typeof window !== "undefined" && !!getToken();
 
@@ -399,10 +480,26 @@ export default function NewWorkout() {
     return Array.from(set);
   }, [allExercises]);
 
+  const [filterEquipment, setFilterEquipment] = useState<"all" | string>("all");
+
+  const availableEquipments = useMemo(() => {
+    const set = new Set<string>();
+    allExercises.forEach((e) => {
+      const eq = (e as any).equipment;
+      if (eq) set.add(eq);
+    });
+    return Array.from(set);
+  }, [allExercises]);
+
   const filteredExercises = useMemo(() => {
     const q = exerciseSearch.trim().toLowerCase();
     return allExercises.filter((exercise) => {
       if (filterMuscle !== "all" && exercise.muscleGroup !== filterMuscle)
+        return false;
+      if (
+        filterEquipment !== "all" &&
+        (exercise as any).equipment !== filterEquipment
+      )
         return false;
       if (!q) return true;
       return (
@@ -410,7 +507,7 @@ export default function NewWorkout() {
         exercise.muscleGroup.toLowerCase().includes(q)
       );
     });
-  }, [exerciseSearch, allExercises, filterMuscle]);
+  }, [exerciseSearch, allExercises, filterMuscle, filterEquipment]);
 
   const formatDuration = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -765,9 +862,12 @@ export default function NewWorkout() {
         hadPrior = false;
       }
 
-      // If this set is wildly above the user's previous best for this
-      // exercise, ask them to confirm before logging it.
-      if (hadPrior && !force) {
+      // Compute new-set metrics and determine whether to show the
+      // confirmation dialog. Relative comparison remains the primary
+      // trigger (requires prior history and not forced). Absolute
+      // thresholds are a fail-safe and should trigger regardless of
+      // history.
+      {
         const LBS_PER_KG = 2.20462;
         const newWeight =
           typeof set.weight === "number" && !isNaN(set.weight) ? set.weight : 0;
@@ -790,39 +890,82 @@ export default function NewWorkout() {
 
         const UNUSUAL_THRESHOLD = 3; // 3x or more vs previous best
 
-        if (ratio >= UNUSUAL_THRESHOLD) {
-          // Revert the optimistic completion toggle so the user stays in edit mode.
-          setExercises((prev) =>
-            prev.map((e) =>
-              e.id === exerciseId
-                ? {
-                    ...e,
-                    sets: e.sets.map((s) =>
-                      s.id === setId ? { ...s, completed: false } : s,
-                    ),
-                  }
-                : e,
-            ),
-          );
+        const relativeTrigger =
+          hadPrior && !force && ratio >= UNUSUAL_THRESHOLD;
 
-          const prevSummary =
-            bestVolumeKg > 0
-              ? `${bestVolumeKg.toFixed(1)} kg volume (approx.)`
-              : best1rmKg > 0
-                ? `${best1rmKg.toFixed(1)} kg est. 1RM`
-                : "Previous best unknown";
+        // Absolute thresholds act as a secondary safety layer. They do not
+        // replace the relative comparison; they only trigger the same
+        // confirmation dialog when an entry is implausibly large.
+        const absoluteWeightTrigger = newKg > 500; // kg per set
+        const absoluteVolumeTrigger = newVolumeKg > 10000; // kg * reps per set
+        const absoluteTrigger = absoluteWeightTrigger || absoluteVolumeTrigger;
 
-          const newSummary =
-            newKg > 0 && newReps > 0
-              ? `${newKg.toFixed(1)} kg x ${newReps} reps`
-              : "Current entry has no load/reps";
+        // Temporary debug logs to validate values during testing.
+        // Remove these once verified.
+        // eslint-disable-next-line no-console
+        console.log("unusual-set-check", {
+          weightKg: newKg,
+          reps: newReps,
+          setVolume: newVolumeKg,
+          relativeTrigger,
+          absoluteTrigger,
+        });
 
-          setUnusualSet({
-            exerciseId,
-            setId,
-            previousBestText: prevSummary,
-            newSetText: newSummary,
-          });
+        if (relativeTrigger || absoluteTrigger) {
+          // If the user recently forced this set (confirmed), do not re-open the dialog.
+          if (recentForced.current.has(setId)) {
+            // clear the marker and continue saving
+            recentForced.current.delete(setId);
+          } else {
+            // Revert the optimistic completion toggle so the user stays in edit mode.
+            setExercises((prev) =>
+              prev.map((e) =>
+                e.id === exerciseId
+                  ? {
+                      ...e,
+                      sets: e.sets.map((s) =>
+                        s.id === setId ? { ...s, completed: false } : s,
+                      ),
+                    }
+                  : e,
+              ),
+            );
+
+            const prevSummary =
+              bestVolumeKg > 0
+                ? `${bestVolumeKg.toFixed(1)} kg volume (approx.)`
+                : best1rmKg > 0
+                  ? `${best1rmKg.toFixed(1)} kg est. 1RM`
+                  : null;
+
+            const newSummary =
+              newKg > 0 && newReps > 0
+                ? `${newKg.toFixed(1)} kg x ${newReps} reps`
+                : "Current entry has no load/reps";
+
+            // Branch the dialog type in the validation layer:
+            // history-based anomaly when previous data exists
+            // first-time extreme entry when no prior data is available
+            if (hadPrior) {
+              setUnusualSet({
+                type: "history",
+                exerciseId,
+                setId,
+                previousBestText: prevSummary ?? "Previous best unknown",
+                newSetText: newSummary,
+              });
+            } else {
+              setUnusualSet({
+                type: "firstTime",
+                exerciseId,
+                setId,
+                previousBestText: null,
+                newSetText: newSummary,
+                weightKg: newKg,
+                reps: newReps,
+              });
+            }
+          }
           return;
         }
       }
@@ -1996,40 +2139,44 @@ export default function NewWorkout() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
-            {/* Unusual set entry confirmation */}
+            {/* History-based anomaly dialog */}
             <Dialog
-              open={!!unusualSet}
+              open={!!unusualSet && unusualSet?.type === "history"}
               onOpenChange={(open) => {
                 if (!open) setUnusualSet(null);
               }}
             >
               <DialogContent className="max-w-sm">
                 <DialogHeader>
-                  <DialogTitle>Unusual set entry</DialogTitle>
+                  <DialogTitle>Review set entry</DialogTitle>
                   <DialogDescription>
-                    This set looks much heavier or higher volume than your
-                    previous best for this exercise.
+                    This entry differs significantly from your previous best for
+                    this exercise. Please review the values before logging.
                   </DialogDescription>
                 </DialogHeader>
-                {unusualSet && (
-                  <div className="space-y-3 pt-2 text-sm">
-                    <div>
-                      <span className="font-medium text-white">
-                        Previous best:
-                      </span>{" "}
-                      <span className="text-muted-foreground">
-                        {unusualSet.previousBestText}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-white">
-                        Current entry:
-                      </span>{" "}
-                      <span className="text-muted-foreground">
-                        {unusualSet.newSetText}
-                      </span>
-                    </div>
-                    <div className="mt-4 flex justify-end gap-3">
+                {unusualSet && unusualSet.type === "history" && (
+                  <div className="pt-3 text-sm">
+                    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="flex flex-col">
+                        <dt className="text-xs font-medium text-muted-foreground">
+                          Previous best
+                        </dt>
+                        <dd className="mt-1 text-sm text-white truncate">
+                          {unusualSet.previousBestText}
+                        </dd>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <dt className="text-xs font-medium text-muted-foreground">
+                          Current entry
+                        </dt>
+                        <dd className="mt-1 text-sm text-white truncate">
+                          {unusualSet.newSetText}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div className="mt-5 flex justify-end gap-3">
                       <Button
                         variant="outline"
                         onClick={() => setUnusualSet(null)}
@@ -2040,13 +2187,82 @@ export default function NewWorkout() {
                         onClick={() => {
                           if (!unusualSet) return;
                           const { exerciseId, setId } = unusualSet;
+                          // mark this set as recently forced so detection won't re-open
+                          recentForced.current.add(setId);
+                          setTimeout(
+                            () => recentForced.current.delete(setId),
+                            3000,
+                          );
                           setUnusualSet(null);
-                          // Re-run completion with the unusual check bypassed so
-                          // the set is actually logged.
                           void toggleSetComplete(exerciseId, setId, true);
                         }}
                       >
                         Log set
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* First-time extreme entry dialog */}
+            <Dialog
+              open={!!unusualSet && unusualSet?.type === "firstTime"}
+              onOpenChange={(open) => {
+                if (!open) setUnusualSet(null);
+              }}
+            >
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>Confirm first record</DialogTitle>
+                  <DialogDescription>
+                    This is your first recorded set for this exercise and the
+                    values are unusually high. Please confirm before saving.
+                  </DialogDescription>
+                </DialogHeader>
+                {unusualSet && unusualSet.type === "firstTime" && (
+                  <div className="pt-3 text-sm">
+                    <dl className="space-y-3">
+                      <div>
+                        <dt className="text-xs font-medium text-muted-foreground">
+                          First record
+                        </dt>
+                        <dd className="mt-1 text-sm text-muted-foreground">
+                          No previous data available
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium text-muted-foreground">
+                          Entered
+                        </dt>
+                        <dd className="mt-1 text-sm text-white">
+                          {unusualSet.weightKg.toFixed(1)} kg ×{" "}
+                          {unusualSet.reps} reps
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div className="mt-5 flex justify-end gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setUnusualSet(null)}
+                      >
+                        Edit set
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (!unusualSet) return;
+                          const { exerciseId, setId } = unusualSet;
+                          recentForced.current.add(setId);
+                          setTimeout(
+                            () => recentForced.current.delete(setId),
+                            3000,
+                          );
+                          setUnusualSet(null);
+                          void toggleSetComplete(exerciseId, setId, true);
+                        }}
+                      >
+                        Confirm & log
                       </Button>
                     </div>
                   </div>
@@ -2259,7 +2475,10 @@ export default function NewWorkout() {
 
         <div className="space-y-6">
           {exercises.map((workoutExercise) => (
-            <Card key={workoutExercise.id} className="sm:mx-0 w-full">
+            <Card
+              key={workoutExercise.id}
+              className="sm:mx-0 w-full rounded-2xl overflow-hidden"
+            >
               <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
                 <div className="mb-4 flex items-start justify-between">
                   <div className="flex flex-col">
@@ -2496,15 +2715,38 @@ export default function NewWorkout() {
             }
           }}
         >
-          <DialogContent className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden">
+          <DialogContent
+            hideClose
+            className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden"
+          >
             {/* Grab handle */}
             <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mt-3 mb-2" />
 
             <div className="sticky top-0 z-10 bg-transparent pt-1">
-              <div className="text-center">
-                <DialogTitle className="font-heading text-base font-semibold">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExerciseDialogOpen(false);
+                    setExerciseSearch("");
+                    setExerciseToReplace(null);
+                  }}
+                  className="text-sm text-muted-foreground"
+                >
+                  Cancel
+                </button>
+
+                <DialogTitle className="font-heading text-base font-semibold mx-auto">
                   {exerciseToReplace ? "Replace Exercise" : "Add Exercise"}
                 </DialogTitle>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreateExerciseOpen(true)}
+                >
+                  Create
+                </Button>
               </div>
 
               <div className="relative mt-3">
@@ -2518,45 +2760,79 @@ export default function NewWorkout() {
               </div>
 
               <div className="pt-3">
-                <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
-                  <button
-                    onClick={() => setFilterMuscle("all")}
-                    className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                      filterMuscle === "all"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted/20 text-muted-foreground hover:bg-muted/30"
-                    }`}
-                  >
-                    All Muscles
-                  </button>
-                  {availableMuscles.map((m) => {
-                    const colorClass =
-                      muscleGroupColors[m as keyof typeof muscleGroupColors] ||
-                      "bg-muted/20 text-muted-foreground";
-                    const active = filterMuscle === m;
-                    return (
-                      <button
-                        key={m}
-                        onClick={() => setFilterMuscle(m)}
-                        className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition-all ${colorClass} ${
-                          active
-                            ? "ring-2 ring-offset-2 ring-[#0f0f0f] font-bold"
-                            : "opacity-80 hover:opacity-100"
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center gap-3 flex-nowrap overflow-x-auto">
+                  <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">
+                    Filter by:
+                  </span>
+
+                  <div className="flex items-center gap-2 flex-nowrap">
+                    <Select
+                      value={filterEquipment}
+                      onValueChange={(v) => setFilterEquipment(v)}
+                    >
+                      <SelectTrigger className="w-[120px] sm:w-[160px] bg-transparent border border-white/5">
+                        <SelectValue placeholder="" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Equipment</SelectItem>
+                        {availableEquipments.map((eq) => (
+                          <SelectItem key={eq} value={eq} className="px-4 py-2">
+                            {eq.charAt(0).toUpperCase() + eq.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={filterMuscle}
+                      onValueChange={(v) => setFilterMuscle(v)}
+                    >
+                      <SelectTrigger className="w-[120px] sm:w-[160px] bg-transparent border border-white/5">
+                        <SelectValue placeholder="All Muscles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Muscles</SelectItem>
+                        {availableMuscles
+                          .filter((m) => m !== "other")
+                          .map((m) => {
+                            const raw =
+                              (muscleGroupColors as any)[m] ||
+                              "bg-muted/20 text-muted-foreground";
+                            const display =
+                              m.charAt(0).toUpperCase() + m.slice(1);
+                            return (
+                              <SelectItem
+                                key={m}
+                                value={m}
+                                className="px-4 py-2"
+                              >
+                                <span
+                                  className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${raw}`}
+                                >
+                                  {display}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-3 flex-1 overflow-y-auto min-h-[200px]">
               {filteredExercises.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No exercises found matching "{exerciseSearch}"
-                </p>
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">
+                    No such exercise available
+                  </p>
+                  <div className="mt-4">
+                    <Button onClick={() => setIsCreateExerciseOpen(true)}>
+                      Create Exercise
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="flex flex-col">
                   {filteredExercises.map((exercise) => (
@@ -2595,6 +2871,90 @@ export default function NewWorkout() {
                 </div>
               )}
               <div className="h-6" />
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Exercise dialog (global for this page) */}
+        <Dialog
+          open={isCreateExerciseOpen}
+          onOpenChange={setIsCreateExerciseOpen}
+        >
+          <DialogContent className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-6 pb-6 pt-4">
+            <div className="text-center">
+              <DialogTitle className="text-lg font-semibold">
+                Create Exercise
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Add a new exercise to your library
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <Label htmlFor="create-name">Exercise Name</Label>
+                <Input
+                  id="create-name"
+                  value={newExerciseName}
+                  onChange={(e) => setNewExerciseName(e.target.value)}
+                  placeholder="e.g., Incline Dumbbell Press"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="create-muscle">Muscle Group</Label>
+                <Select
+                  value={newExerciseMuscle}
+                  onValueChange={(v) => setNewExerciseMuscle(v)}
+                >
+                  <SelectTrigger id="create-muscle">
+                    <SelectValue placeholder="Select muscle group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allMusclesOrder
+                      .filter((m) => m !== "other")
+                      .map((m) => {
+                        const raw =
+                          (muscleGroupColors as any)[m] ||
+                          "bg-muted/20 text-muted-foreground";
+                        const display = m.charAt(0).toUpperCase() + m.slice(1);
+                        return (
+                          <SelectItem key={m} value={m} className="px-6 py-3">
+                            <span
+                              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${raw}`}
+                            >
+                              {display}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="create-desc">Description (optional)</Label>
+                <Textarea
+                  id="create-desc"
+                  value={newExerciseDescription}
+                  onChange={(e) => setNewExerciseDescription(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateExerciseOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => createExerciseMutation.mutate()}
+                disabled={createExerciseMutation.isLoading}
+              >
+                {createExerciseMutation.isLoading ? "Creating..." : "Create"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

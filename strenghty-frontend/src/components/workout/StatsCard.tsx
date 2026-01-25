@@ -21,7 +21,7 @@ export function StatsCard({
   className,
 }: StatsCardProps) {
   return (
-    <Card className={cn("overflow-hidden", className)}>
+    <Card className={cn("rounded-2xl overflow-hidden", className)}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -31,7 +31,7 @@ export function StatsCard({
               <p
                 className={cn(
                   "text-xs font-medium",
-                  trend.isPositive ? "text-success" : "text-destructive"
+                  trend.isPositive ? "text-success" : "text-destructive",
                 )}
               >
                 {trend.isPositive ? "+" : ""}

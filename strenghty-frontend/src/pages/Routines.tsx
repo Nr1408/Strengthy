@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -238,7 +237,7 @@ export default function Routines() {
                     >
                       Description (optional)
                     </Label>
-                    <Textarea
+                    <Input
                       id="description"
                       placeholder="What does this routine focus on?"
                       value={newRoutine.description}
@@ -248,8 +247,7 @@ export default function Routines() {
                           description: e.target.value,
                         })
                       }
-                      className="p-4 text-sm bg-[#1E1E1E] border border-[#2A2A2A] placeholder:text-[#555555] focus-visible:border-[#FF7000] focus-visible:ring-0"
-                      rows={4}
+                      className="bg-[#1E1E1E] border border-[#2A2A2A] placeholder:text-[#555555] focus-visible:border-[#FF7000] focus-visible:ring-0 px-4"
                     />
                   </div>
                 </div>

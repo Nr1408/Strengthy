@@ -6,6 +6,8 @@ export type MuscleGroup =
   | 'triceps' 
   | 'quads'
   | 'hamstrings'
+  | 'glutes'
+  | 'other'
   | 'calves'
   | 'forearms'
   | 'core' 
@@ -22,6 +24,7 @@ export interface Exercise {
   id: string;
   name: string;
   muscleGroup: MuscleGroup;
+  equipment?: string;
   description?: string;
   createdAt: Date;
 }
