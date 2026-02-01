@@ -1,9 +1,15 @@
 const GRID_TEMPLATE =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.75fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
   "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
+
+// HIIT / bodyweight cardio header layout: Set | Duration | Reps | RPE | PR | Check
+const GRID_TEMPLATE_HIIT =
+  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(40px,0.4fr) minmax(80px,0.6fr) minmax(28px,0.25fr) 30px";
+const GRID_TEMPLATE_HIIT_NO_CHECK =
+  "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(40px,0.5fr) minmax(80px,0.8fr) minmax(28px,0.25fr)";
 
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -11,8 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Trophy, ArrowLeft } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SetRow } from "@/components/workout/SetRow";
-import MuscleTag from "@/components/workout/MuscleTag";
-import ExerciseHeader from "@/components/workout/ExerciseHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { mockRoutines } from "@/data/mockData";
 import { getUnit } from "@/lib/utils";
@@ -126,60 +130,80 @@ export default function ViewRoutine() {
 
         <div className="space-y-6">
           {exercises.map((we: any) => (
-            <Card key={we.id} className="w-full rounded-2xl overflow-hidden">
-              <CardContent className="px-1 py-3 sm:p-4 overflow-hidden">
+            <Card key={we.id} className="rounded-2xl overflow-hidden">
+              <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
                 <div className="mb-3">
-                  <ExerciseHeader
-                    exerciseName={we.exercise.name}
-                    muscleGroup={we.exercise.muscleGroup}
-                    onClick={() => {
-                      try {
-                        const exId = String(we.exercise.id);
-                        navigate(`/exercises/${exId}/history`, {
-                          state: {
-                            exerciseName: we.exercise.name,
-                            muscleGroup: we.exercise.muscleGroup,
-                          },
-                        });
-                      } catch (e) {}
-                    }}
-                  />
+                  <h3 className="font-heading text-lg font-semibold text-white">
+                    {we.exercise.name}
+                  </h3>
+                  <div className="text-sm text-muted-foreground">
+                    {we.exercise.muscleGroup === "other"
+                      ? "calves"
+                      : we.exercise.muscleGroup}
+                  </div>
                 </div>
 
                 {/* Sets Header */}
                 {we.exercise.muscleGroup === "cardio" ? (
-                  <div
-                    className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
-                  >
-                    <>
-                      <span className="flex justify-center">SET</span>
-                      <span className="flex justify-center">DURATION</span>
+                  (() => {
+                    const name = (we.exercise.name || "").toLowerCase();
+                    const isHiit =
+                      name.includes("burpee") ||
+                      name.includes("mountain") ||
+                      name.includes("climb") ||
+                      name.includes("jump squat") ||
+                      name.includes("plank jack") ||
+                      name.includes("skater");
 
-                      <span className="flex justify-center">
-                        {we.exercise.name.toLowerCase().includes("stair")
-                          ? "FLOORS"
-                          : "DISTANCE"}
-                      </span>
+                    return (
+                      <div
+                        className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                        style={{
+                          gridTemplateColumns: isHiit
+                            ? GRID_TEMPLATE_HIIT
+                            : GRID_TEMPLATE_CARDIO,
+                        }}
+                      >
+                        <>
+                          <span className="flex justify-center">SET</span>
+                          <span className="flex justify-center">DURATION</span>
 
-                      <span className="flex justify-center">
-                        {we.exercise.name.toLowerCase().includes("treadmill")
-                          ? "INCLINE"
-                          : we.exercise.name.toLowerCase().includes("row")
-                            ? "SPLIT"
-                            : "LEVEL"}
-                      </span>
+                          {isHiit ? (
+                            <span className="flex justify-center">REPS</span>
+                          ) : (
+                            <span className="flex justify-center">
+                              {we.exercise.name.toLowerCase().includes("stair")
+                                ? "FLOORS"
+                                : "DISTANCE"}
+                            </span>
+                          )}
 
-                      <span className="flex justify-center">
-                        <Trophy className="h-3.5 w-3.5" />
-                      </span>
+                          {isHiit ? (
+                            <span className="flex justify-center">RPE</span>
+                          ) : (
+                            <span className="flex justify-center">
+                              {we.exercise.name
+                                .toLowerCase()
+                                .includes("treadmill")
+                                ? "INCLINE"
+                                : we.exercise.name.toLowerCase().includes("row")
+                                  ? "SPLIT"
+                                  : "LEVEL"}
+                            </span>
+                          )}
 
-                      <div />
-                    </>
-                  </div>
+                          <span className="flex justify-center">
+                            <Trophy className="h-3.5 w-3.5" />
+                          </span>
+
+                          <div />
+                        </>
+                      </div>
+                    );
+                  })()
                 ) : (
                   <div
-                    className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
+                    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
                     style={{ gridTemplateColumns: GRID_TEMPLATE }}
                   >
                     <>

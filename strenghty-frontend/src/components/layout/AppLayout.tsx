@@ -294,8 +294,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       </main>
       {/* Paused workout small dialog (top) */}
       {showPausedDialog && (
-        <div className="fixed left-1/2 bottom-16 z-50 -translate-x-1/2 w-[min(900px,95%)]">
-          <div className="rounded-2xl border border-border bg-neutral-900/95 p-6 shadow-lg min-h-[88px]">
+        <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 w-[min(640px,75%)]">
+          <div className="rounded-2xl border border-border bg-neutral-900/95 p-4 shadow-lg">
             <div className="mb-1 text-center text-lg font-semibold text-muted-foreground">
               Workout in Progress
             </div>

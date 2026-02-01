@@ -1,38 +1,17 @@
 // In EditWorkout.tsx (or ViewWorkout.tsx)
 const GRID_TEMPLATE =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 
+// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
 const GRID_TEMPLATE_CARDIO =
-  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 
-import { useEffect, useMemo, useState } from "react";
+// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
+const GRID_TEMPLATE_HIIT =
+  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Plus,
-  Save,
-  Trash2,
-  Clock,
-  ChevronDown,
-  ChevronRight,
-  Trophy,
-  Search,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { SetRow } from "@/components/workout/SetRow";
-import { Input } from "@/components/ui/input";
-import { getUnit, formatMinutes } from "@/lib/utils";
-import type { WorkoutExercise, WorkoutSet, Exercise } from "@/types/workout";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -41,151 +20,73 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogPortal,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import MuscleTag from "@/components/workout/MuscleTag";
-import ExerciseHeader from "@/components/workout/ExerciseHeader";
-import { muscleGroupColors } from "@/data/mockData";
 import { getExerciseIconFile } from "@/lib/exerciseIcons";
 import ExerciseInfo from "@/components/workout/ExerciseInfo";
+import MuscleTag from "@/components/workout/MuscleTag";
+import ExerciseHeader from "@/components/workout/ExerciseHeader";
+import { SetRow } from "@/components/workout/SetRow";
+import { muscleGroupColors } from "@/data/mockData";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Trophy,
+  Clock,
+  Save,
+  ChevronDown,
+  Trash2,
+  Plus,
+  ChevronRight,
+  Search,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getExercises,
+  createWorkout,
+  createSet,
+  updateSet,
+  createCardioSet,
+  updateCardioSet,
+  finishWorkout,
+  getCardioSetsForWorkout,
+  deleteCardioSet,
   getSets,
+  getExercises,
+  getSetsForExercise,
   getWorkouts,
   createExercise,
-  createSet,
-  createCardioSet,
-  updateSet,
+  getToken,
   updateWorkout,
   deleteSet,
-  createWorkout,
 } from "@/lib/api";
-import { updateCardioSet } from "@/lib/api";
-import { getCardioSetsForWorkout } from "@/lib/api";
+import { recommendNextRoutine } from "@/lib/onboarding";
+import { getUnit, formatMinutes } from "@/lib/utils";
+import { triggerHaptic } from "@/lib/haptics";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 
 export default function EditWorkout() {
-  const { id } = useParams();
-  const workoutId = id || null;
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const params = useParams();
+  const workoutId = (params as any)?.id;
   const queryClient = useQueryClient();
-
-  const [workoutName, setWorkoutName] = useState("Workout");
-  const [notes, setNotes] = useState("");
-  const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
-  const [startTime, setStartTime] = useState(new Date());
-  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
-  const [isDurationDialogOpen, setIsDurationDialogOpen] = useState(false);
-  const [editDurationHours, setEditDurationHours] = useState(0);
-  const [editDurationMinutes, setEditDurationMinutes] = useState(0);
-  const [showDurationPicker, setShowDurationPicker] = useState(false);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-
-  const { data: userExercises = [] } = useQuery({
-    queryKey: ["exercises"],
-    queryFn: getExercises,
-  });
-  const [prBanner, setPrBanner] = useState<{
-    exerciseName: string;
-    label: string;
-    value: string;
-  } | null>(null);
-  const [prQueue, setPrQueue] = useState<
-    {
-      exerciseName: string;
-      label: string;
-      value: string;
-    }[]
-  >([]);
-  const [prVisible, setPrVisible] = useState(false);
-
-  const getCardioModeForExercise = (exercise: Exercise): string => {
-    const name = (exercise?.name || "").toLowerCase();
-    if (name.includes("treadmill")) return "treadmill";
-    if (name.includes("bike") || name.includes("cycle")) return "bike";
-    if (name.includes("elliptical")) return "elliptical";
-    if (name.includes("stair") || name.includes("step")) return "stairs";
-    if (name.includes("row")) return "row";
-    return "treadmill";
-  };
-
-  const allExercises = useMemo(() => {
-    const map = new Map<string, Exercise>();
-    staticLibraryExercises.forEach((e) => map.set(e.name.toLowerCase(), e));
-    userExercises.forEach((e) => map.set(e.name.toLowerCase(), e));
-    return Array.from(map.values());
-  }, [userExercises]);
-
-  const availableMuscleGroups = useMemo(() => {
-    return Array.from(
-      new Set(
-        allExercises.map((e) => e.muscleGroup).filter((m) => m !== "other"),
-      ),
-    );
-  }, [allExercises]);
-
-  const availableEquipmentGroups = useMemo(() => {
-    return Array.from(
-      new Set(allExercises.map((e) => (e as any).equipment).filter(Boolean)),
-    );
-  }, [allExercises]);
-
-  const chipClassFor = (mg: string, active: boolean) => {
-    const raw = muscleGroupColors[mg] || "bg-muted/20 text-white";
-    const parts = raw.split(" ");
-    const bg = parts[0] || "bg-muted/20";
-    if (active) {
-      // make solid bg by removing slash opacity if present
-      const solid = bg.replace("/20", "");
-      return `${solid} text-white`;
-    }
-    return `${bg} text-white`;
-  };
-
-  // replacement dropdown state
-  const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
-  const [replaceFilter, setReplaceFilter] = useState<string | null>(null);
-  // Add-exercise dialog state (reuse NewWorkout UI)
-  const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
-  const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
-  const [exerciseSearch, setExerciseSearch] = useState("");
-  const [filterMuscle, setFilterMuscle] = useState<"all" | string>("all");
-  const [filterEquipment, setFilterEquipment] = useState<"all" | string>("all");
-  const [exerciseInfoOpen, setExerciseInfoOpen] = useState(false);
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
-    null,
-  );
-  const [selectedExerciseName, setSelectedExerciseName] = useState<string>();
-  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>();
-
-  const filteredExercises = useMemo(() => {
-    const q = exerciseSearch.trim().toLowerCase();
-    return allExercises.filter((exercise) => {
-      if (filterMuscle !== "all" && exercise.muscleGroup !== filterMuscle)
-        return false;
-      if (
-        filterEquipment !== "all" &&
-        (exercise as any).equipment !== filterEquipment
-      )
-        return false;
-      if (!q) return true;
-      return (
-        exercise.name.toLowerCase().includes(q) ||
-        exercise.muscleGroup.toLowerCase().includes(q)
-      );
-    });
-  }, [exerciseSearch, allExercises, filterMuscle, filterEquipment]);
-
+  const { toast } = useToast();
   // create exercise state for inline creation
   const [newExerciseName, setNewExerciseName] = useState("");
   const [newExerciseMuscle, setNewExerciseMuscle] = useState<string | "">("");
+  const [newExerciseEquipment, setNewExerciseEquipment] = useState<
+    "all" | string
+  >("all");
   const [newExerciseDescription, setNewExerciseDescription] = useState("");
   const createExerciseMutation = useMutation({
     mutationFn: async () =>
@@ -207,6 +108,7 @@ export default function EditWorkout() {
       setIsExerciseDialogOpen(false);
       setNewExerciseName("");
       setNewExerciseMuscle("");
+      setNewExerciseEquipment("all");
       setNewExerciseDescription("");
       toast({ title: "Exercise created" });
     },
@@ -217,6 +119,250 @@ export default function EditWorkout() {
         variant: "destructive",
       }),
   });
+
+  // Validation modal for create exercise
+  const [isCreateValidationOpen, setIsCreateValidationOpen] = useState(false);
+  const [createValidationMessage, setCreateValidationMessage] =
+    useState<string>("");
+
+  const handleCreateExercise = () => {
+    const missing: string[] = [];
+    if (!newExerciseName.trim()) missing.push("a name");
+    if (!newExerciseMuscle) missing.push("a muscle group");
+    if (newExerciseEquipment === "all") missing.push("equipment");
+    if (missing.length > 0) {
+      const msg = `Please provide ${missing.join(", ")} before creating.`;
+      setCreateValidationMessage(msg);
+      setIsCreateValidationOpen(true);
+      return;
+    }
+    createExerciseMutation.mutate();
+  };
+
+  const hasToken = typeof window !== "undefined" && !!getToken();
+
+  const { data: userExercises = [] } = useQuery({
+    queryKey: ["exercises", hasToken],
+    queryFn: getExercises,
+    enabled: hasToken,
+  });
+
+  type PrBanner = {
+    exerciseName: string;
+    label: string;
+    value: string;
+  };
+  const [prBanner, setPrBanner] = useState<PrBanner | null>(null);
+  const [prQueue, setPrQueue] = useState<PrBanner[]>([]);
+  const [prVisible, setPrVisible] = useState(false);
+
+  type UnusualSetState =
+    | {
+        type: "history";
+        exerciseId: string;
+        setId: string;
+        previousBestText: string;
+        newSetText: string;
+      }
+    | {
+        type: "firstTime";
+        exerciseId: string;
+        setId: string;
+        previousBestText: null;
+        newSetText: string;
+        weightKg: number;
+        reps: number;
+      };
+  const [workoutName, setWorkoutName] = useState<string>("Workout");
+  const [notes, setNotes] = useState("");
+  const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
+  const [unusualSet, setUnusualSet] = useState<UnusualSetState | null>(null);
+  const recentForced = useRef<Set<string>>(new Set());
+  const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
+  const [exerciseDialogSheet, setExerciseDialogSheet] = useState<
+    null | "equipment" | "muscle"
+  >(null);
+  const [pendingSheet, setPendingSheet] = useState<
+    null | "equipment" | "muscle"
+  >(null);
+  const [isEquipmentPickerOpen, setIsEquipmentPickerOpen] = useState(false);
+  const [isMusclePickerOpen, setIsMusclePickerOpen] = useState(false);
+  const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
+  const [isCreateEquipmentPickerOpen, setIsCreateEquipmentPickerOpen] =
+    useState(false);
+  const [isCreateMusclePickerOpen, setIsCreateMusclePickerOpen] =
+    useState(false);
+  const [exerciseToReplace, setExerciseToReplace] = useState<string | null>(
+    null,
+  );
+  const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
+  const [replaceFilter, setReplaceFilter] = useState<string | null>(null);
+  const [exerciseInfoOpen, setExerciseInfoOpen] = useState(false);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
+    null,
+  );
+  const [selectedExerciseName, setSelectedExerciseName] = useState<string>();
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>();
+  const [exerciseSearch, setExerciseSearch] = useState("");
+  const [startTime, setStartTime] = useState<Date>(() => new Date());
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [isDurationDialogOpen, setIsDurationDialogOpen] = useState(false);
+  const [adjustHours, setAdjustHours] = useState(0);
+  const [adjustMinutes, setAdjustMinutes] = useState(0);
+  const [startTimeInput, setStartTimeInput] = useState("");
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [paused, setPaused] = useState<boolean>(() => {
+    try {
+      return !!localStorage.getItem("workout:paused");
+    } catch (e) {
+      return false;
+    }
+  });
+  const [filterMuscle, setFilterMuscle] = useState<"all" | string>("all");
+  const [filterEquipment, setFilterEquipment] = useState<"all" | string>("all");
+
+  // Disable background scroll while Create Exercise modal is open
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    if (isCreateExerciseOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = prev;
+    }
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isCreateExerciseOpen]);
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
+  const [editDurationHours, setEditDurationHours] = useState<number>(0);
+  const [editDurationMinutes, setEditDurationMinutes] = useState<number>(0);
+
+  const allExercises = useMemo(() => {
+    const map = new Map<string, Exercise>();
+    const isHiitName = (name: string) => {
+      const n = (name || "").toLowerCase();
+      return (
+        n.includes("burpee") ||
+        n.includes("mountain") ||
+        n.includes("climb") ||
+        n.includes("jump squat") ||
+        n.includes("plank jack") ||
+        n.includes("skater")
+      );
+    };
+
+    const normalize = (e: Exercise): Exercise => ({
+      ...e,
+      muscleGroup: isHiitName(e.name)
+        ? "cardio"
+        : e.muscleGroup === "other"
+          ? "calves"
+          : e.muscleGroup,
+    });
+    staticLibraryExercises.forEach((e) =>
+      map.set(e.name.toLowerCase(), normalize(e)),
+    );
+    (userExercises as Exercise[]).forEach((e) => {
+      const key = e.name.toLowerCase();
+      const existing = map.get(key);
+      map.set(
+        key,
+        normalize({
+          ...e,
+          equipment: (e as any).equipment ?? existing?.equipment,
+        }),
+      );
+    });
+
+    return Array.from(map.values());
+  }, [userExercises]);
+
+  const availableMuscles = useMemo(() => {
+    const s = new Set<string>();
+    allExercises.forEach((e) => s.add(e.muscleGroup));
+    return Array.from(s);
+  }, [allExercises]);
+
+  const filteredExercises = useMemo(() => {
+    const q = exerciseSearch.trim().toLowerCase();
+    const isHiitName = (name: string) => {
+      const n = (name || "").toLowerCase();
+      return (
+        n.includes("burpee") ||
+        n.includes("mountain") ||
+        n.includes("climb") ||
+        n.includes("jump squat") ||
+        n.includes("plank jack") ||
+        n.includes("skater")
+      );
+    };
+    if (filterEquipment !== "all") {
+      try {
+        const normalize = (s: string) =>
+          s
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]/g, "");
+        const sel = normalize(String(filterEquipment));
+        const mismatches = allExercises
+          .filter(
+            (e) =>
+              !(e as any).equipment ||
+              normalize((e as any).equipment.toString()) !== sel,
+          )
+          .slice(0, 6)
+          .map((e) => ({ name: e.name, equipment: (e as any).equipment }));
+        // eslint-disable-next-line no-console
+        console.log(
+          "[DEBUG] EditWorkout filterEquipment=",
+          filterEquipment,
+          "sel=",
+          sel,
+          "mismatchSample=",
+          mismatches,
+        );
+      } catch (e) {}
+    }
+
+    return allExercises.filter((exercise) => {
+      if (filterMuscle !== "all") {
+        if (
+          !(
+            exercise.muscleGroup === filterMuscle ||
+            (filterMuscle === "cardio" && isHiitName(exercise.name))
+          )
+        )
+          return false;
+      }
+      if (filterEquipment !== "all") {
+        const eqRaw = (exercise as any).equipment?.toString();
+        if (!eqRaw) return false;
+        const normalize = (s: string) =>
+          s
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]/g, "");
+        const eq = normalize(eqRaw);
+        const sel = normalize(String(filterEquipment));
+        if (eq !== sel) return false;
+      }
+      if (!q) return true;
+      return (
+        exercise.name.toLowerCase().includes(q) ||
+        exercise.muscleGroup.toLowerCase().includes(q)
+      );
+    });
+  }, [exerciseSearch, allExercises, filterMuscle, filterEquipment]);
+
+  const availableEquipments = useMemo(() => {
+    const s = new Set<string>();
+    allExercises.forEach((e) => {
+      if ((e as any).equipment) s.add((e as any).equipment);
+    });
+    return Array.from(s);
+  }, [allExercises]);
 
   const replaceExercise = (exerciseLocalId: string, newEx: Exercise) => {
     setExercises((prev) =>
@@ -305,8 +451,25 @@ export default function EditWorkout() {
             (ue) => String(ue.id) === String(exerciseId),
           );
           const exerciseName = (exerciseRecord || { name: exerciseId }).name;
-          const exerciseMuscle = (exerciseRecord || { muscleGroup: "calves" })
+          let exerciseMuscle = (exerciseRecord || { muscleGroup: "calves" })
             .muscleGroup;
+
+          // Normalize HIIT/bodyweight exercises to cardio for display so
+          // they show the cardio tag instead of calves/quads/etc.
+          try {
+            const n = String(exerciseName || "").toLowerCase();
+            const isHiitName =
+              n.includes("burpee") ||
+              n.includes("mountain") ||
+              n.includes("climb") ||
+              n.includes("jump squat") ||
+              n.includes("plank jack") ||
+              n.includes("skater");
+            if (isHiitName) {
+              exerciseMuscle = "cardio";
+            }
+          } catch (e) {}
+
           const noteKey = exerciseName.toLowerCase();
           const exerciseNotes = notesMap[noteKey] || "";
 
@@ -380,9 +543,41 @@ export default function EditWorkout() {
                   uiStat = typeof level === "number" ? level : 0;
                 else uiStat = typeof level === "number" ? level : 0;
 
+                // For HIIT/bodyweight cardio exercises, recover reps from
+                // where we store them in CardioSet. For non-stairs HIIT we
+                // stash reps in the `floors` field to avoid DecimalField
+                // limits on level; fall back to the level-based stat for
+                // older data that didn't use floors.
+                const nameLower = exerciseName.toLowerCase();
+                const isHiitName =
+                  nameLower.includes("burpee") ||
+                  nameLower.includes("mountain") ||
+                  nameLower.includes("climb") ||
+                  nameLower.includes("jump squat") ||
+                  nameLower.includes("plank jack") ||
+                  nameLower.includes("skater");
+
+                let mappedReps = 0;
+                if (isHiitName) {
+                  if (
+                    mode !== "stairs" &&
+                    typeof floors === "number" &&
+                    !isNaN(floors) &&
+                    floors > 0
+                  ) {
+                    mappedReps = floors;
+                  } else if (
+                    typeof uiStat === "number" &&
+                    !isNaN(uiStat) &&
+                    uiStat > 0
+                  ) {
+                    mappedReps = uiStat;
+                  }
+                }
+
                 return {
                   id: String(s.id),
-                  reps: 0,
+                  reps: mappedReps,
                   weight: 0,
                   unit: getUnit(),
                   isPR: !!s.isPR,
@@ -462,6 +657,16 @@ export default function EditWorkout() {
       month: "short",
       year: "numeric",
     });
+
+  const getCardioModeForExercise = (exercise: Exercise): CardioMode => {
+    const name = exercise.name.toLowerCase();
+    if (name.includes("treadmill")) return "treadmill";
+    if (name.includes("bike") || name.includes("cycle")) return "bike";
+    if (name.includes("elliptical")) return "elliptical";
+    if (name.includes("stair") || name.includes("step")) return "stairs";
+    if (name.includes("row")) return "row";
+    return "treadmill";
+  };
 
   const setStartDateOnly = (date: Date) => {
     const today = new Date();
@@ -659,12 +864,11 @@ export default function EditWorkout() {
         rpe: typeof (s as any).rpe === "number" ? (s as any).rpe : undefined,
       };
 
-      const isCardioSet = !!(
-        (s as any).cardioMode ||
-        typeof (s as any).cardioDurationSeconds === "number" ||
-        typeof (s as any).cardioDistance === "number" ||
-        typeof (s as any).cardioStat === "number"
-      );
+      // Treat a set as cardio-backed only when it originated from a cardio
+      // record (i.e. has a cardioMode). This prevents HIIT/bodyweight sets
+      // that are stored as strength records from incorrectly using the
+      // cardio endpoints when they gain duration/reps fields in the UI.
+      const isCardioSet = !!(s as any).cardioMode;
 
       // Determine whether this workout should be allowed to introduce new PRs.
       // For past-dated workouts we keep existing PR flags but do not create
@@ -1208,12 +1412,22 @@ export default function EditWorkout() {
         date: workoutDate,
       });
 
-      // delete existing sets then recreate
+      // delete existing strength and cardio sets then recreate
       const original = await getSets(workoutId);
       for (const s of original) {
         try {
           await deleteSet(String(s.id));
         } catch (e) {}
+      }
+      try {
+        const cardioExisting = await getCardioSetsForWorkout(String(workoutId));
+        for (const cs of cardioExisting) {
+          try {
+            await deleteCardioSet(String(cs.id));
+          } catch (e) {}
+        }
+      } catch (e) {
+        // ignore errors deleting cardio sets - continue
       }
 
       // ensure exercises exist and create sets
@@ -1243,13 +1457,48 @@ export default function EditWorkout() {
         for (let i = 0; i < ex.sets.length; i++) {
           const s = ex.sets[i];
           try {
+            // Skip empty sets that the user hasn't completed (avoid server validation errors)
+            const isCardioExercise = ex.exercise.muscleGroup === "cardio";
+            const isEmptyStrength =
+              !isCardioExercise &&
+              !s.completed &&
+              (typeof s.reps !== "number" || s.reps <= 0) &&
+              (typeof s.weight !== "number" || s.weight <= 0);
+            const isEmptyCardio =
+              isCardioExercise &&
+              !s.completed &&
+              (typeof (s as any).cardioDurationSeconds !== "number" ||
+                (s as any).cardioDurationSeconds <= 0) &&
+              (typeof (s as any).cardioDistance !== "number" ||
+                (s as any).cardioDistance <= 0) &&
+              (typeof (s as any).cardioStat !== "number" ||
+                (s as any).cardioStat <= 0);
+
+            if (isEmptyStrength || isEmptyCardio) {
+              // Do not persist empty placeholder sets to the backend.
+              continue;
+            }
+
             // If this exercise is a cardio exercise, call the cardio endpoint
             let created: any;
             if (ex.exercise.muscleGroup === "cardio") {
               const mode = s.cardioMode || "treadmill";
               const durationSeconds = s.cardioDurationSeconds ?? 0;
               const rawDistance = s.cardioDistance ?? 0;
-              const rawStat = s.cardioStat ?? 0;
+              const rawStatBase = s.cardioStat ?? 0;
+
+              // For HIIT/bodyweight cardio, treat the generic stat as reps so
+              // we can persist rep counts via the cardio schema without
+              // hitting DecimalField limits on `level`.
+              const nameLower = ex.exercise.name.toLowerCase();
+              const isHiitName =
+                nameLower.includes("burpee") ||
+                nameLower.includes("mountain") ||
+                nameLower.includes("climb") ||
+                nameLower.includes("jump squat") ||
+                nameLower.includes("plank jack") ||
+                nameLower.includes("skater");
+              const rawStat = isHiitName ? s.reps || 0 : rawStatBase;
               const distanceUnit =
                 (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
 
@@ -1273,7 +1522,17 @@ export default function EditWorkout() {
                   splitSeconds = rawStat || undefined;
                 } else {
                   distance = distanceMeters || undefined;
-                  level = rawStat || undefined;
+                  // For HIIT/bodyweight cardio, stash reps in the `floors`
+                  // field so we avoid DecimalField limits on `level` while
+                  // still persisting large rep counts. Cardio PR logic for
+                  // treadmill/bike/elliptical ignores `floors`, so this is
+                  // safe.
+                  if (isHiitName) {
+                    floors = (s.reps || 0) || undefined;
+                    level = undefined;
+                  } else {
+                    level = rawStat || undefined;
+                  }
                 }
               }
 
@@ -1311,6 +1570,7 @@ export default function EditWorkout() {
               };
               if (typeof setNumberToUseMain === "number")
                 payloadMain.setNumber = setNumberToUseMain;
+
               created = await createCardioSet(payloadMain);
             } else {
               created = await createSet({
@@ -1379,7 +1639,17 @@ export default function EditWorkout() {
                 const mode = s.cardioMode || "treadmill";
                 const durationSeconds = s.cardioDurationSeconds ?? 0;
                 const rawDistance = s.cardioDistance ?? 0;
-                const rawStat = s.cardioStat ?? 0;
+                const rawStatBase = s.cardioStat ?? 0;
+
+                const nameLower = ex.exercise.name.toLowerCase();
+                const isHiitName =
+                  nameLower.includes("burpee") ||
+                  nameLower.includes("mountain") ||
+                  nameLower.includes("climb") ||
+                  nameLower.includes("jump squat") ||
+                  nameLower.includes("plank jack") ||
+                  nameLower.includes("skater");
+                const rawStat = isHiitName ? s.reps || 0 : rawStatBase;
                 const distanceUnit =
                   (s as any).cardioDistanceUnit === "mile" ? "mile" : "km";
 
@@ -1403,7 +1673,12 @@ export default function EditWorkout() {
                     splitSeconds = rawStat || undefined;
                   } else {
                     distance = distanceMeters || undefined;
-                    level = rawStat || undefined;
+                    if (isHiitName) {
+                      floors = (s.reps || 0) || undefined;
+                      level = undefined;
+                    } else {
+                      level = rawStat || undefined;
+                    }
                   }
                 }
 
@@ -1434,18 +1709,14 @@ export default function EditWorkout() {
                   exerciseId: exId,
                   mode,
                   durationSeconds,
-                  distance: distanceMeters,
-                  floors:
-                    mode === "stairs"
-                      ? typeof (s as any).cardioDistance === "number"
-                        ? Math.round((s as any).cardioDistance)
-                        : undefined
-                      : undefined,
+                  distance,
+                  floors,
                   level,
                   splitSeconds,
                 };
                 if (typeof setNumberToUseRetry === "number")
                   payloadRetry.setNumber = setNumberToUseRetry;
+
                 createdRetry = await createCardioSet(payloadRetry);
               }
               try {
@@ -1663,30 +1934,65 @@ export default function EditWorkout() {
                 </div>
 
                 {workoutExercise.exercise.muscleGroup === "cardio" ? (
-                  <div
-                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE_CARDIO }}
-                  >
-                    <span className="flex items-center justify-center">
-                      SET
-                    </span>
-                    <span className="flex items-center justify-center">
-                      DURATION
-                    </span>
-                    <span className="flex items-center justify-center">
-                      {getCardioModeForExercise(workoutExercise.exercise) ===
-                      "stairs"
-                        ? "CLIMB"
-                        : "DISTANCE"}
-                    </span>
-                    <span className="flex items-center justify-center">
-                      LEVEL
-                    </span>
-                    <span className="flex items-center justify-center">
-                      <Trophy className="h-3.5 w-3.5" />
-                    </span>
-                    <div />
-                  </div>
+                  (() => {
+                    const name = (
+                      workoutExercise.exercise.name || ""
+                    ).toLowerCase();
+                    const isHiit =
+                      name.includes("burpee") ||
+                      name.includes("mountain") ||
+                      name.includes("climb") ||
+                      name.includes("jump squat") ||
+                      name.includes("plank jack") ||
+                      name.includes("skater");
+
+                    return (
+                      <div
+                        className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
+                        style={{
+                          gridTemplateColumns: isHiit
+                            ? GRID_TEMPLATE_HIIT
+                            : GRID_TEMPLATE_CARDIO,
+                        }}
+                      >
+                        <span className="flex items-center justify-center">
+                          SET
+                        </span>
+                        <span className="flex items-center justify-center">
+                          DURATION
+                        </span>
+
+                        {isHiit ? (
+                          <span className="flex items-center justify-center">
+                            REPS
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center">
+                            {getCardioModeForExercise(
+                              workoutExercise.exercise,
+                            ) === "stairs"
+                              ? "CLIMB"
+                              : "DISTANCE"}
+                          </span>
+                        )}
+
+                        {isHiit ? (
+                          <span className="flex items-center justify-center">
+                            RPE
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center">
+                            LEVEL
+                          </span>
+                        )}
+
+                        <span className="flex items-center justify-center">
+                          <Trophy className="h-3.5 w-3.5" />
+                        </span>
+                        <div />
+                      </div>
+                    );
+                  })()
                 ) : (
                   <div
                     className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
@@ -1801,7 +2107,8 @@ export default function EditWorkout() {
         >
           <DialogContent
             hideClose
-            className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden"
+            style={{ animation: "none" }}
+            className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden data-[state=open]:animate-none data-[state=closed]:animate-none"
           >
             {/* Grab handle */}
             <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mt-3 mb-2" />
@@ -1814,24 +2121,21 @@ export default function EditWorkout() {
                     setIsExerciseDialogOpen(false);
                     setExerciseSearch("");
                     setReplaceTarget(null);
-                    setReplaceFilter(null);
-                    setFilterMuscle("all");
                   }}
                   className="text-sm text-muted-foreground"
                 >
                   Cancel
                 </button>
 
-                <div className="text-center">
-                  <DialogTitle>
-                    {replaceTarget ? "Replace Exercise" : "Add Exercise"}
-                  </DialogTitle>
-                </div>
+                <DialogTitle className="font-heading text-base font-semibold mx-auto">
+                  {replaceTarget ? "Replace Exercise" : "Add Exercise"}
+                </DialogTitle>
 
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsCreateExerciseOpen(true)}
+                  className="hover:bg-transparent active:bg-transparent focus:bg-transparent"
                 >
                   Create
                 </Button>
@@ -1847,129 +2151,340 @@ export default function EditWorkout() {
                 />
               </div>
 
-              <div className="pt-3">
-                <div className="flex items-center gap-3 flex-nowrap overflow-x-auto">
+              <div className="pt-3 overflow-x-hidden">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 overflow-x-hidden">
                   <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">
                     Filter by:
                   </span>
 
-                  <div className="flex items-center gap-2 flex-nowrap">
-                    <Select
-                      value={filterEquipment}
-                      onValueChange={(v) => setFilterEquipment(v)}
-                    >
-                      <SelectTrigger className="w-[120px] sm:w-[160px] bg-transparent border border-white/5">
-                        <SelectValue placeholder="All Equipment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Equipment</SelectItem>
-                        {availableEquipmentGroups.map((eq) => (
-                          <SelectItem key={eq} value={eq} className="px-4 py-2">
-                            {eq}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-hidden">
+                    <>
+                      <div className="contents">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsEquipmentPickerOpen(true);
+                          }}
+                          className={`flex items-center gap-2 min-w-0 max-w-full truncate px-2 sm:px-3 py-1.5 rounded-full text-sm border transition-all duration-300 ease-in-out active:scale-95 active:opacity-80 ${
+                            filterEquipment === "all"
+                              ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
+                              : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
+                          }`}
+                        >
+                          <span className="truncate">
+                            {filterEquipment === "all"
+                              ? "All Equipment"
+                              : filterEquipment}
+                          </span>
+                          <ChevronDown
+                            className={`h-3.5 w-3.5 ${filterEquipment === "all" ? "text-zinc-400" : "text-zinc-200"}`}
+                          />
+                        </button>
+                      </div>
 
-                    <Select
-                      value={filterMuscle}
-                      onValueChange={(v) => setFilterMuscle(v)}
-                    >
-                      <SelectTrigger className="w-[120px] sm:w-[160px] bg-transparent border border-white/5">
-                        <SelectValue placeholder="All Muscles" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Muscles</SelectItem>
-                        {availableMuscleGroups
-                          .filter((m) => m !== "other")
-                          .map((m) => {
-                            const raw =
-                              (muscleGroupColors as any)[m] ||
-                              "bg-muted/20 text-muted-foreground";
-                            const display =
-                              m.charAt(0).toUpperCase() + m.slice(1);
-                            return (
-                              <SelectItem
-                                key={m}
-                                value={m}
-                                className="px-4 py-2"
-                              >
-                                <span
-                                  className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${raw}`}
+                      <Dialog
+                        open={isEquipmentPickerOpen}
+                        onOpenChange={(o) => setIsEquipmentPickerOpen(o)}
+                      >
+                        <DialogPortal>
+                          <DialogContent
+                            style={{
+                              zIndex: 2147483647,
+                              boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
+                            }}
+                            className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90 backdrop-blur-sm border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                          >
+                            <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
+                              <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
+                              <div className="relative">
+                                <button
+                                  onClick={() =>
+                                    setIsEquipmentPickerOpen(false)
+                                  }
+                                  className="absolute right-3 top-0 text-zinc-400 hover:text-zinc-200"
+                                  aria-label="Close"
                                 >
-                                  {display}
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                      </SelectContent>
-                    </Select>
+                                  ×
+                                </button>
+                                <h3 className="text-center text-lg font-medium text-zinc-100">
+                                  Equipment
+                                </h3>
+                              </div>
+                            </div>
+                            <div className="space-y-2 px-1">
+                              <button
+                                className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${filterEquipment === "all" ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFilterEquipment("all");
+                                  setIsEquipmentPickerOpen(false);
+                                }}
+                              >
+                                <div className="flex items-center">
+                                  <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center mr-3">
+                                    <img
+                                      src="/icons/custom.svg"
+                                      alt="All Equipment icon"
+                                      className="h-4 w-4"
+                                    />
+                                  </div>
+                                  <span className="text-base font-medium">
+                                    All Equipment
+                                  </span>
+                                </div>
+                              </button>
+                              {availableEquipments.map((opt) => {
+                                const label = opt
+                                  .split(" ")
+                                  .map(
+                                    (w) =>
+                                      w[0]?.toUpperCase() +
+                                      w.slice(1).toLowerCase(),
+                                  )
+                                  .join(" ");
+                                const isSelected = filterEquipment === opt;
+                                return (
+                                  <button
+                                    key={opt}
+                                    className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${isSelected ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setFilterEquipment(opt as any);
+                                      setIsEquipmentPickerOpen(false);
+                                    }}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center flex-shrink-0 mr-3">
+                                          <img
+                                            src={((): string => {
+                                              const key = String(
+                                                opt || "",
+                                              ).toLowerCase();
+                                              if (key.includes("barbell"))
+                                                return "/icons/barbell.svg";
+                                              if (key.includes("dumbbell"))
+                                                return "/icons/dumbbell.svg";
+                                              if (key.includes("kettlebell"))
+                                                return "/icons/kettlebell.svg";
+                                              if (key.includes("cable"))
+                                                return "/icons/cable.svg";
+                                              if (key.includes("machine"))
+                                                return "/icons/machine.svg";
+                                              if (key.includes("bodyweight"))
+                                                return "/icons/bodyweight.svg";
+                                              return "/icons/custom.svg";
+                                            })()}
+                                            alt={label + " icon"}
+                                            className="h-4 w-4"
+                                          />
+                                        </div>
+                                        <span className="text-base font-medium truncate">
+                                          {label}
+                                        </span>
+                                      </div>
+                                      {isSelected ? (
+                                        <span className="text-zinc-200">✓</span>
+                                      ) : null}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </DialogContent>
+                        </DialogPortal>
+                      </Dialog>
+                    </>
+
+                    <div className="contents">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMusclePickerOpen(true);
+                        }}
+                        className={`flex items-center gap-2 min-w-0 max-w-full truncate px-2 sm:px-3 py-1.5 rounded-full text-sm border transition-all duration-300 ease-in-out active:scale-95 active:opacity-80 ${
+                          filterMuscle === "all"
+                            ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
+                            : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
+                        }`}
+                      >
+                        <span className="truncate">
+                          {filterMuscle === "all"
+                            ? "All Muscles"
+                            : filterMuscle}
+                        </span>
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 ${filterMuscle === "all" ? "text-zinc-400" : "text-zinc-200"}`}
+                        />
+                      </button>
+                    </div>
+
+                    <Dialog
+                      open={isMusclePickerOpen}
+                      onOpenChange={(o) => setIsMusclePickerOpen(o)}
+                    >
+                      <DialogPortal>
+                        <DialogContent
+                          style={{
+                            zIndex: 2147483647,
+                            boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
+                          }}
+                          className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-zinc-900/95 border border-white/6 backdrop-blur-sm rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                        >
+                          <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
+                            <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
+                            <div className="relative">
+                              <button
+                                onClick={() => setIsMusclePickerOpen(false)}
+                                className="absolute right-3 top-0 text-zinc-400 hover:text-zinc-200"
+                                aria-label="Close"
+                              >
+                                ×
+                              </button>
+                              <h3 className="text-center text-lg font-medium text-zinc-100">
+                                Muscles
+                              </h3>
+                            </div>
+                          </div>
+                          <div className="space-y-2 px-1">
+                            <button
+                              className="w-full text-left px-4 py-3 rounded-md hover:bg-white/5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFilterMuscle("all");
+                                setIsMusclePickerOpen(false);
+                              }}
+                            >
+                              <span className="text-lg text-zinc-200">
+                                All Muscles
+                              </span>
+                            </button>
+                            {availableMuscles
+                              .filter((m) => m !== "other")
+                              .map((opt) => {
+                                const label = opt
+                                  .split(" ")
+                                  .map(
+                                    (w) =>
+                                      w[0]?.toUpperCase() +
+                                      w.slice(1).toLowerCase(),
+                                  )
+                                  .join(" ");
+                                const color =
+                                  (muscleGroupColors as any)[opt as any] ||
+                                  "bg-slate-500/20 text-slate-400";
+                                return (
+                                  <button
+                                    key={opt}
+                                    className="w-full text-left px-4 py-3 rounded-md hover:bg-white/5"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setFilterMuscle(opt);
+                                      setIsMusclePickerOpen(false);
+                                    }}
+                                  >
+                                    <div className="flex items-center">
+                                      <span
+                                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${color}`}
+                                      >
+                                        {label}
+                                      </span>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        </DialogContent>
+                      </DialogPortal>
+                    </Dialog>
+
+                    {/* Reset button removed to match NewWorkout UI */}
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-3 flex-1 overflow-y-auto min-h-[200px]">
-              {filteredExercises.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground">
-                    No such exercise available
-                  </p>
-                  <div className="mt-4">
-                    <Button onClick={() => setIsCreateExerciseOpen(true)}>
-                      Create Exercise
-                    </Button>
+              <div className="mt-3 flex-1 min-h-0 max-h-[65vh] overflow-y-auto pb-6">
+                {filteredExercises.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">
+                      No such exercise available
+                    </p>
+                    <div className="mt-4">
+                      <Button
+                        onClick={() => setIsCreateExerciseOpen(true)}
+                        className="hover:bg-transparent active:bg-transparent focus:bg-transparent"
+                      >
+                        Create Exercise
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-col">
-                  {filteredExercises.map((exercise) => (
-                    <button
-                      key={exercise.id}
-                      onClick={() =>
-                        replaceTarget
-                          ? replaceExercise(replaceTarget, exercise)
-                          : addExercise(exercise)
-                      }
-                      className="flex w-full items-center gap-4 py-4 text-left transition-colors border-b border-white/5 hover:bg-white/2"
-                    >
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
-                        <img
-                          src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
-                          alt={exercise.name}
-                          className="h-10 w-10 object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-white">
-                          {exercise.name}
-                        </p>
-                        {(() => {
-                          const normalizedGroup =
-                            exercise.muscleGroup === "other" &&
-                            exercise.name.toLowerCase().includes("calf")
-                              ? "calves"
-                              : exercise.muscleGroup;
-                          return <MuscleTag muscle={normalizedGroup} />;
-                        })()}
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="h-6" />
+                ) : (
+                  <div className="flex flex-col">
+                    {filteredExercises.map((exercise) => (
+                      <button
+                        key={exercise.id}
+                        onClick={() =>
+                          replaceTarget
+                            ? replaceExercise(replaceTarget, exercise)
+                            : addExercise(exercise)
+                        }
+                        className="flex w-full items-center gap-4 py-4 text-left transition-colors border-b border-white/5 hover:bg-white/2"
+                      >
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
+                          <img
+                            src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+                            alt={exercise.name}
+                            className="h-10 w-10 object-contain"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white truncate">
+                            {exercise.name}
+                          </p>
+                          {(() => {
+                            const normalizedGroup =
+                              exercise.muscleGroup === "other" &&
+                              exercise.name.toLowerCase().includes("calf")
+                                ? "calves"
+                                : exercise.muscleGroup;
+                            return <MuscleTag muscle={normalizedGroup} />;
+                          })()}
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="h-6" />
+              </div>
             </div>
           </DialogContent>
         </Dialog>
 
         {/* Create Exercise dialog (inline) */}
+        {isCreateExerciseOpen && (
+          <div
+            className="fixed inset-0"
+            style={{
+              zIndex: 109,
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              background: "rgba(0,0,0,0.35)",
+            }}
+            onClick={() => setIsCreateExerciseOpen(false)}
+            aria-hidden
+          />
+        )}
+
         <Dialog
           open={isCreateExerciseOpen}
           onOpenChange={setIsCreateExerciseOpen}
         >
-          <DialogContent className="max-w-[420px] rounded-[28px] bg-neutral-950 border border-neutral-800/40 text-white p-5">
-            <div className="text-center mb-2">
+          <DialogContent
+            style={{ animation: "none" }}
+            className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-6 pb-6 pt-4 data-[state=open]:animate-none data-[state=closed]:animate-none"
+          >
+            <div className="text-center">
               <DialogTitle className="text-lg font-semibold">
                 Create Exercise
               </DialogTitle>
@@ -1978,45 +2493,248 @@ export default function EditWorkout() {
               </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="mt-4 space-y-4">
               <div>
                 <Label htmlFor="create-name">Exercise Name</Label>
                 <Input
                   id="create-name"
                   value={newExerciseName}
                   onChange={(e) => setNewExerciseName(e.target.value)}
+                  placeholder="e.g., Incline Dumbbell Press"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="create-muscle">Muscle Group</Label>
-                <Select
-                  value={newExerciseMuscle}
-                  onValueChange={(v) => setNewExerciseMuscle(v)}
-                >
-                  <SelectTrigger id="create-muscle">
-                    <SelectValue placeholder="Select muscle group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMuscleGroups
-                      .filter((m) => m !== "other")
-                      .map((m) => {
-                        const raw =
-                          (muscleGroupColors as any)[m] ||
-                          "bg-muted/20 text-muted-foreground";
-                        const display = m.charAt(0).toUpperCase() + m.slice(1);
-                        return (
-                          <SelectItem key={m} value={m}>
-                            <span
-                              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${raw}`}
+              <div className="flex items-center justify-between gap-4">
+                <Label className="whitespace-nowrap">Equipment:</Label>
+                <div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsCreateEquipmentPickerOpen(true);
+                    }}
+                    className={`flex items-center gap-2 max-w-[12rem] truncate px-3 py-1.5 rounded-full text-sm border transition-all duration-150 ease-out active:scale-[0.97] ${
+                      newExerciseEquipment === "all"
+                        ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
+                        : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
+                    }`}
+                  >
+                    <span className="truncate">
+                      {newExerciseEquipment === "all"
+                        ? "All Equipment"
+                        : newExerciseEquipment}
+                    </span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 ${newExerciseEquipment === "all" ? "text-zinc-400" : "text-zinc-200"}`}
+                    />
+                  </button>
+
+                  <Dialog
+                    open={isCreateEquipmentPickerOpen}
+                    onOpenChange={(o) => setIsCreateEquipmentPickerOpen(o)}
+                  >
+                    <DialogPortal>
+                      <DialogContent
+                        style={{
+                          zIndex: 2147483647,
+                          boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
+                        }}
+                        className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90 backdrop-blur-sm border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                      >
+                        <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
+                          <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
+                          <div className="relative">
+                            <button
+                              onClick={() =>
+                                setIsCreateEquipmentPickerOpen(false)
+                              }
+                              className="absolute right-3 top-0 text-zinc-400 hover:text-zinc-200"
+                              aria-label="Close"
                             >
-                              {display}
+                              ×
+                            </button>
+                            <h3 className="text-center text-lg font-medium text-zinc-100">
+                              Equipment
+                            </h3>
+                          </div>
+                        </div>
+                        <div className="space-y-2 px-1">
+                          <button
+                            className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${newExerciseEquipment === "all" ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNewExerciseEquipment("all");
+                              setIsCreateEquipmentPickerOpen(false);
+                            }}
+                          >
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center mr-3">
+                                <img
+                                  src="/icons/custom.svg"
+                                  alt="All Equipment icon"
+                                  className="h-4 w-4"
+                                />
+                              </div>
+                              <span className="text-base font-medium">
+                                All Equipment
+                              </span>
+                            </div>
+                          </button>
+                          {availableEquipments.map((opt) => {
+                            const label = opt
+                              .split(" ")
+                              .map(
+                                (w) =>
+                                  w[0]?.toUpperCase() +
+                                  w.slice(1).toLowerCase(),
+                              )
+                              .join(" ");
+                            const isSelected = newExerciseEquipment === opt;
+                            return (
+                              <button
+                                key={opt}
+                                className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${isSelected ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNewExerciseEquipment(opt as any);
+                                  setIsCreateEquipmentPickerOpen(false);
+                                }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center flex-shrink-0 mr-3">
+                                      <img
+                                        src={((): string => {
+                                          const key = String(
+                                            opt || "",
+                                          ).toLowerCase();
+                                          if (key.includes("barbell"))
+                                            return "/icons/barbell.svg";
+                                          if (key.includes("dumbbell"))
+                                            return "/icons/dumbbell.svg";
+                                          if (key.includes("kettlebell"))
+                                            return "/icons/kettlebell.svg";
+                                          if (key.includes("cable"))
+                                            return "/icons/cable.svg";
+                                          if (key.includes("machine"))
+                                            return "/icons/machine.svg";
+                                          if (key.includes("bodyweight"))
+                                            return "/icons/bodyweight.svg";
+                                          return "/icons/custom.svg";
+                                        })()}
+                                        alt={label + " icon"}
+                                        className="h-4 w-4"
+                                      />
+                                    </div>
+                                    <span className="text-base font-medium truncate">
+                                      {label}
+                                    </span>
+                                  </div>
+                                  {isSelected ? (
+                                    <span className="text-zinc-200">✓</span>
+                                  ) : null}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </DialogContent>
+                    </DialogPortal>
+                  </Dialog>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 mt-4">
+                <Label className="whitespace-nowrap">Muscle group:</Label>
+                <div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsCreateMusclePickerOpen(true);
+                    }}
+                    className={`flex items-center gap-2 max-w-[12rem] truncate px-3 py-1.5 rounded-full text-sm border transition-all duration-150 ease-out active:scale-[0.97] ${
+                      !newExerciseMuscle
+                        ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
+                        : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
+                    }`}
+                  >
+                    <span className="truncate">
+                      {newExerciseMuscle
+                        ? newExerciseMuscle
+                        : "Select muscle group"}
+                    </span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 ${!newExerciseMuscle ? "text-zinc-400" : "text-zinc-200"}`}
+                    />
+                  </button>
+
+                  <Dialog
+                    open={isCreateMusclePickerOpen}
+                    onOpenChange={(o) => setIsCreateMusclePickerOpen(o)}
+                  >
+                    <DialogPortal>
+                      <DialogContent
+                        style={{
+                          zIndex: 2147483647,
+                          boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
+                        }}
+                        className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-zinc-900/95 border border-white/6 backdrop-blur-sm rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                      >
+                        <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
+                          <div className="w-12 h-1 bg-zinc-800/50 rounded-full mx-auto mb-3" />
+                          <div className="relative">
+                            <button
+                              onClick={() => setIsCreateMusclePickerOpen(false)}
+                              className="absolute right-3 top-0 text-zinc-400 hover:text-zinc-200"
+                              aria-label="Close"
+                            >
+                              ×
+                            </button>
+                            <h3 className="text-center text-xl font-semibold text-zinc-100">
+                              Muscles
+                            </h3>
+                          </div>
+                        </div>
+                        <div className="space-y-2 px-1">
+                          <button
+                            className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNewExerciseMuscle("");
+                              setIsCreateMusclePickerOpen(false);
+                            }}
+                          >
+                            <span className="text-lg text-zinc-200">
+                              All Muscles
                             </span>
-                          </SelectItem>
-                        );
-                      })}
-                  </SelectContent>
-                </Select>
+                          </button>
+                          {availableMuscles
+                            .filter((m) => m !== "other")
+                            .map((opt) => (
+                              <button
+                                key={opt}
+                                className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNewExerciseMuscle(opt);
+                                  setIsCreateMusclePickerOpen(false);
+                                }}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span
+                                    className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${(muscleGroupColors as any)[opt as any] ?? "bg-zinc-800/30 text-zinc-200"}`}
+                                  >
+                                    {opt[0]?.toUpperCase() + opt.slice(1)}
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                        </div>
+                      </DialogContent>
+                    </DialogPortal>
+                  </Dialog>
+                </div>
               </div>
 
               <div>
@@ -2029,7 +2747,7 @@ export default function EditWorkout() {
               </div>
             </div>
 
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex gap-3 justify-end">
               <Button
                 variant="outline"
                 onClick={() => setIsCreateExerciseOpen(false)}
@@ -2037,10 +2755,33 @@ export default function EditWorkout() {
                 Cancel
               </Button>
               <Button
-                onClick={() => createExerciseMutation.mutate()}
+                onClick={handleCreateExercise}
                 disabled={createExerciseMutation.isLoading}
               >
                 {createExerciseMutation.isLoading ? "Creating..." : "Create"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Validation dialog shown when required create fields missing */}
+        <Dialog
+          open={isCreateValidationOpen}
+          onOpenChange={(o) => setIsCreateValidationOpen(o)}
+        >
+          <DialogContent className="max-w-[360px] rounded-[16px] bg-neutral-950 border border-neutral-800/40 text-white p-4">
+            <DialogTitle className="text-base font-semibold">
+              Missing information
+            </DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-muted-foreground">
+              {createValidationMessage}
+            </DialogDescription>
+            <div className="mt-4 flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateValidationOpen(false)}
+              >
+                OK
               </Button>
             </div>
           </DialogContent>

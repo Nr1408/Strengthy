@@ -173,6 +173,55 @@
   border: 1px solid rgba(255,255,255,0.06);
 }
 
+/* Drawer animations for picker dialogs (mobile iOS-style) */
+@keyframes drawer-in {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(-50%);
+    opacity: 1;
+  }
+}
+
+@keyframes drawer-out {
+  from {
+    transform: translateX(-50%) translateY(-50%);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+}
+
+.picker-drawer[data-state="open"] {
+  animation: drawer-in 360ms cubic-bezier(0.32, 0.72, 0, 1) both !important;
+  transform: translateX(-50%) translateY(-50%); /* ensure centered transform baseline */
+}
+.picker-drawer[data-state="closed"] {
+  animation: drawer-out 260ms cubic-bezier(0.32, 0.72, 0, 1) both !important;
+  transform: translateX(-50%) translateY(100%); /* ensure closed baseline */
+}
+
+/* Subtle overlay fade for dialogs */
+@keyframes overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes overlay-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.fixed.inset-0.bg-black\/80[data-state="open"] {
+  animation: overlay-fade-in 240ms ease both;
+}
+.fixed.inset-0.bg-black\/80[data-state="closed"] {
+  animation: overlay-fade-out 180ms ease both;
+}
+
 /* Hide Google Identity Services broken overlay while using popup fallback */
 #credential_picker_container,
 iframe[id^="gsi_"] {

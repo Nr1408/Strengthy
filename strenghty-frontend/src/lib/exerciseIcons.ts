@@ -1,5 +1,6 @@
-export function getExerciseIconFile(name: string, muscleGroup?: string) {
+export function getExerciseIconFile(name: string, muscleGroup?: string, isCustom?: boolean) {
   const n = (name || "").toLowerCase().trim();
+  if (isCustom) return "custom.svg";
 
   // Exact name -> file mapping (lowercase keys)
   const exactMap: Record<string, string> = {
@@ -180,6 +181,12 @@ export function getExerciseIconFile(name: string, muscleGroup?: string) {
     // Obliques
     "cable woodchop": "obliques.svg",
     "dumbbell russian twist": "obliques.svg",
+    // Kettlebell exact mappings
+    "kettlebell clean and press": "front delts.svg",
+    "kettlebell snatch": "shoulders.svg",
+    "kettlebell gorilla row": "lats.svg",
+    "kettlebell halo": "shoulders.svg",
+    "kettlebell turkish get-up": "abs.svg",
   };
 
   if (exactMap[n]) return exactMap[n];

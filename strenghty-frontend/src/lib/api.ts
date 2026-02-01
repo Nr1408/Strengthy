@@ -1172,6 +1172,17 @@ export async function deleteSet(id: string) {
   if (!res.ok && res.status !== 204) throw new Error(`Delete set failed: ${res.status}`);
 }
 
+export async function deleteCardioSet(id: string) {
+  const res = await fetch(`${API_BASE}/cardio-sets/${id}/`, {
+    method: 'DELETE',
+    headers: { ...authHeaders() },
+  });
+  // Ignore 404s when deleting cardio sets that may have already been removed
+  // on the server. Treat 204 (No Content) and 404 (Not Found) as success for
+  // idempotent delete semantics in the client save/recreate flow.
+  if (!res.ok && res.status !== 204 && res.status !== 404) throw new Error(`Delete cardio set failed: ${res.status}`);
+}
+
 export async function getCardioSetsForWorkout(workoutId: string): Promise<UiCardioSet[]> {
   const workoutNum = Number(workoutId);
   if (!Number.isFinite(workoutNum) || workoutNum <= 0) {
@@ -1240,11 +1251,26 @@ export async function createCardioSet(params: {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    let body = "";
+    let body: any = "";
     try {
-      body = await res.text();
+      const txt = await res.text();
+      body = txt || "";
+      try {
+        body = JSON.parse(txt);
+      } catch (e) {
+        // leave as text
+      }
     } catch (e) {}
-    throw new Error(`Create cardio set failed: ${res.status} ${body}`);
+
+    try {
+      // eslint-disable-next-line no-console
+      console.error("createCardioSet failed", { url: `${API_BASE}/cardio-sets/`, payload, status: res.status, body });
+    } catch (e) {}
+
+    const err = new Error(`Create cardio set failed: ${res.status} ${typeof body === 'string' ? body : JSON.stringify(body)}`);
+    // @ts-ignore attach parsed body for callers
+    (err as any).body = body;
+    throw err;
   }
   const data = (await res.json()) as ApiCardioSet;
   return mapCardioSet(data);

@@ -68,37 +68,50 @@ SelectScrollDownButton.displayName =
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      style={{
-        WebkitBackdropFilter: "saturate(120%) blur(8px)",
-        backdropFilter: "saturate(120%) blur(8px)",
-      }}
-      className={cn(
-        "relative z-[110] max-h-60 min-w-[8rem] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 text-white shadow-xl backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        position === "popper" &&
-          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-        className,
-      )}
-      position={position}
-      {...props}
-    >
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
+>(({ className, children, position = "popper", ...props }, ref) => {
+  const full = (className || "").toString().includes("full-screen");
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        ref={ref}
+        style={{
+          WebkitBackdropFilter: "saturate(120%) blur(8px)",
+          backdropFilter: "saturate(120%) blur(8px)",
+        }}
         className={cn(
-          "p-0 bg-transparent text-white max-h-60 overflow-y-auto",
+          // default (dropdown) styles
+          !full &&
+            "relative z-[110] max-h-60 min-w-[8rem] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 text-white shadow-xl backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          // full-screen sheet styles
+          full &&
+            "fixed inset-0 z-[120] m-0 w-full h-full rounded-none overflow-hidden border-none bg-zinc-950/95 text-white shadow-none backdrop-blur-xl",
           position === "popper" &&
-            "w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]",
+            !full &&
+            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          className,
         )}
+        position={position}
+        {...props}
       >
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-));
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            // viewport for default dropdown
+            !full && "p-0 bg-transparent text-white max-h-60 overflow-y-auto",
+            // viewport for full-screen sheet
+            full && "p-4 bg-transparent text-white h-full overflow-y-auto",
+            position === "popper" &&
+              !full &&
+              "w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]",
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  );
+});
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
 const SelectLabel = React.forwardRef<

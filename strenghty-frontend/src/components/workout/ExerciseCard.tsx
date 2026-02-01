@@ -25,7 +25,7 @@ export function ExerciseCard({
         <div className="flex items-start gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
             <img
-              src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+              src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup, (exercise as any).custom)}`}
               alt={exercise.muscleGroup || exercise.name}
               className="h-10 w-10 object-contain"
             />

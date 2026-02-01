@@ -16,10 +16,23 @@ import { Button } from "@/components/ui/button";
 // Use the same tightened "no-check" templates from SetRow so the
 // header labels line up exactly with the read-only set boxes below.
 const GRID_TEMPLATE =
+  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+// same as above but without the final check column
+const GRID_TEMPLATE_STRENGTH_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
 
+// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
 const GRID_TEMPLATE_CARDIO =
+  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
+const GRID_TEMPLATE_CARDIO_NO_CHECK =
   "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(56px, 0.8fr) minmax(28px, 0.25fr) 32px";
+
+// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
+const GRID_TEMPLATE_HIIT =
+  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+
+const GRID_TEMPLATE_HIIT_NO_CHECK =
+  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
 
 export default function ExerciseHistory() {
   const { id } = useParams();
@@ -207,7 +220,7 @@ export default function ExerciseHistory() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div>
           <button
             type="button"
             onClick={() => navigate(-1)}
@@ -215,30 +228,23 @@ export default function ExerciseHistory() {
           >
             ◀
           </button>
-
-          <h2 className="text-xl md:text-2xl font-heading font-semibold text-white text-center">
-            Exercise History
-          </h2>
-
-          <div className="w-9" />
         </div>
 
-        <div className="flex items-start gap-4">
-          <div className="h-16 w-16 flex items-center justify-center rounded-md bg-zinc-800 border border-white/10">
-            <img
-              src={
-                "/icons/" +
-                getExerciseIconFile(exerciseName || "", muscleGroup || "")
-              }
-              alt={exerciseName}
-              className="h-12 w-12 object-contain"
-            />
-          </div>
-          <div>
-            <h1 className="font-heading text-lg font-semibold text-white leading-tight">
-              {exerciseName || "Exercise " + id}
-            </h1>
-            {muscleGroup && <MuscleTag muscle={muscleGroup} />}
+        <div>
+          <div className="flex items-start gap-4">
+            <div className="h-16 w-16 flex items-center justify-center rounded-md bg-zinc-800 border border-white/10">
+              <img
+                src={`/icons/${getExerciseIconFile(exerciseName || "", muscleGroup || "")}`}
+                alt={exerciseName}
+                className="h-12 w-12 object-contain"
+              />
+            </div>
+            <div>
+              <h1 className="font-heading text-lg font-semibold text-white leading-tight">
+                {exerciseName || `Exercise ${id}`}
+              </h1>
+              {muscleGroup && <MuscleTag muscle={muscleGroup} />}
+            </div>
           </div>
         </div>
 
@@ -279,7 +285,7 @@ export default function ExerciseHistory() {
             </div>
           ) : (
             grouped.map((g) => (
-              <Card key={"h-" + g.workoutId}>
+              <Card key={`h-${g.workoutId}`}>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
@@ -306,20 +312,69 @@ export default function ExerciseHistory() {
                     <div
                       className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                       style={{
-                        gridTemplateColumns:
-                          g.sets && g.sets.length > 0 && g.sets[0].cardioMode
-                            ? GRID_TEMPLATE_CARDIO
-                            : GRID_TEMPLATE,
+                        gridTemplateColumns: ((): string => {
+                          const name = (exerciseName || "").toLowerCase();
+                          const isHiit =
+                            name.includes("burpee") ||
+                            name.includes("mountain") ||
+                            name.includes("climb") ||
+                            name.includes("jump squat") ||
+                            name.includes("plank jack") ||
+                            name.includes("skater");
+                          if (
+                            g.sets &&
+                            g.sets.length > 0 &&
+                            g.sets[0].cardioMode
+                          ) {
+                            return isHiit
+                              ? GRID_TEMPLATE_HIIT_NO_CHECK
+                              : GRID_TEMPLATE_CARDIO_NO_CHECK;
+                          }
+                          return GRID_TEMPLATE_STRENGTH_NO_CHECK;
+                        })(),
                       }}
                     >
                       {g.sets && g.sets[0] && g.sets[0].cardioMode ? (
-                        <>
-                          <span className="flex justify-center">SET</span>
-                          <span className="flex justify-center">DURATION</span>
-                          <span className="flex justify-center">DISTANCE</span>
-                          <span className="flex justify-center">LEVEL</span>
-                          <span className="flex justify-center">PR</span>
-                        </>
+                        (() => {
+                          const name = (exerciseName || "").toLowerCase();
+                          const isHiit =
+                            name.includes("burpee") ||
+                            name.includes("mountain") ||
+                            name.includes("climb") ||
+                            name.includes("jump squat") ||
+                            name.includes("plank jack") ||
+                            name.includes("skater");
+
+                          if (isHiit) {
+                            return (
+                              <>
+                                <span className="flex justify-center">SET</span>
+                                <span className="flex justify-center">
+                                  DURATION
+                                </span>
+                                <span className="flex justify-center">
+                                  REPS
+                                </span>
+                                <span className="flex justify-center">RPE</span>
+                                <span className="flex justify-center">PR</span>
+                              </>
+                            );
+                          }
+
+                          return (
+                            <>
+                              <span className="flex justify-center">SET</span>
+                              <span className="flex justify-center">
+                                DURATION
+                              </span>
+                              <span className="flex justify-center">
+                                DISTANCE
+                              </span>
+                              <span className="flex justify-center">LEVEL</span>
+                              <span className="flex justify-center">PR</span>
+                            </>
+                          );
+                        })()
                       ) : (
                         <>
                           <span className="flex justify-center">SET</span>
@@ -337,7 +392,7 @@ export default function ExerciseHistory() {
                     <div className="space-y-2">
                       {g.sets.map((s: any, idx: number) => (
                         <SetRow
-                          key={g.workoutId + "-" + idx}
+                          key={`${g.workoutId}-${idx}`}
                           set={s}
                           exerciseName={exerciseName || ""}
                           unit={s.unit || "kg"}

@@ -1,5 +1,14 @@
 import type { Exercise } from '@/types/workout';
 
+// Explicit equipment type used by the manual `raw` dataset
+export type Equipment =
+  | 'Barbell'
+  | 'Dumbbell'
+  | 'Kettlebell'
+  | 'Cable'
+  | 'Machine'
+  | 'Bodyweight';
+
 function mapGroup(g: string) {
   const s = g.trim().toLowerCase();
   if (s.includes('chest')) return 'chest';
@@ -18,7 +27,9 @@ function mapGroup(g: string) {
   return 'other';
 }
 
-const raw: Array<{ name: string; group: string; equipment: string }> = [
+// Manual exercise dataset. Each entry MUST include an explicit `equipment` string
+// from the `Equipment` union above — no keyword-based inference is used.
+const raw: Array<{ name: string; group: string; equipment: Equipment }> = [
   // --- BARBELL ---
   { name: 'Barbell High Bar Back Squat', group: 'QUADS', equipment: 'Barbell' },
   { name: 'Barbell Low Bar Back Squat', group: 'QUADS', equipment: 'Barbell' },
@@ -187,9 +198,41 @@ const raw: Array<{ name: string; group: string; equipment: string }> = [
   { name: 'Decline Push-ups', group: 'CHEST', equipment: 'Bodyweight' },
   { name: 'Bodyweight Squat', group: 'QUADS', equipment: 'Bodyweight' },
   { name: 'Back Extension', group: 'GLUTES', equipment: 'Bodyweight' }
+  ,
+  // --- KETTLEBELL ---
+  { name: 'Kettlebell Swing', group: 'HAMSTRINGS', equipment: 'Kettlebell' },
+  { name: 'Kettlebell Goblet Squat', group: 'QUADS', equipment: 'Kettlebell' },
+  { name: 'Kettlebell Turkish Get-Up', group: 'CORE', equipment: 'Kettlebell' },
+  { name: 'Kettlebell Clean and Press', group: 'SHOULDERS', equipment: 'Kettlebell' },
+  { name: 'Kettlebell Snatch', group: 'SHOULDERS', equipment: 'Kettlebell' },
+  { name: 'Kettlebell Single-Leg RDL', group: 'HAMSTRINGS', equipment: 'Kettlebell' },
+  { name: 'Kettlebell Farmer’s Walk', group: 'FOREARMS', equipment: 'Kettlebell' },
+  { name: 'Kettlebell Gorilla Row', group: 'BACK', equipment: 'Kettlebell' },
+  { name: 'Kettlebell Halo', group: 'SHOULDERS', equipment: 'Kettlebell' }
 ];
 
-export const libraryExercises: Exercise[] = raw.map((r, i) => ({
+// Sorting order for equipment groups. Kettlebell intentionally appears after
+// Dumbbell and before Cable.
+const equipmentOrder: Equipment[] = [
+  'Barbell',
+  'Dumbbell',
+  'Kettlebell',
+  'Cable',
+  'Machine',
+  'Bodyweight',
+];
+
+// Stable sort the raw dataset by equipment group according to the manual order.
+const sortedRaw = raw.slice().sort((a, b) => {
+  const ai = equipmentOrder.indexOf(a.equipment);
+  const bi = equipmentOrder.indexOf(b.equipment);
+  // Items with unknown equipment go last
+  const aPos = ai === -1 ? equipmentOrder.length : ai;
+  const bPos = bi === -1 ? equipmentOrder.length : bi;
+  return aPos - bPos;
+});
+
+export const libraryExercises: Exercise[] = sortedRaw.map((r, i) => ({
   id: `lib-${i + 1}`,
   name: r.name,
   muscleGroup: mapGroup(r.group),

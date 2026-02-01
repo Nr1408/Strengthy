@@ -1,9 +1,14 @@
 const GRID_TEMPLATE =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.75fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+// same as above but without the final check column
 
-// Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
+// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
 const GRID_TEMPLATE_CARDIO =
-  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
+
+// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
+const GRID_TEMPLATE_HIIT =
+  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 import { useMemo, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -153,12 +158,25 @@ export default function ViewWorkout() {
 
     return Array.from(m.entries()).map(([exerciseId, bucket]) => {
       const ex = bucket.exercise;
-      // If this bucket contains cardio sets, ensure the exercise is labeled as cardio
+      // Normalize HIIT/bodyweight cardio exercises to show as cardio in view,
+      // even if the backend muscleGroup is calves/quads/etc.
       try {
-        if (
+        const name = String(ex.name || "").toLowerCase();
+        const isHiitName =
+          name.includes("burpee") ||
+          name.includes("mountain") ||
+          name.includes("climb") ||
+          name.includes("jump squat") ||
+          name.includes("plank jack") ||
+          name.includes("skater");
+
+        if (isHiitName) {
+          ex.muscleGroup = "cardio";
+        } else if (
           Array.isArray(bucket.rawSets) &&
           bucket.rawSets.some((rs: any) => rs.__kind === "cardio")
         ) {
+          // If this bucket contains cardio sets, ensure the exercise is labeled as cardio
           if (
             !ex.muscleGroup ||
             ex.muscleGroup === "calves" ||
@@ -176,6 +194,15 @@ export default function ViewWorkout() {
         const bNum = typeof b.setNumber === "number" ? b.setNumber : 0;
         return aNum - bNum;
       });
+
+      const nameLower = String(ex.name || "").toLowerCase();
+      const isHiitName =
+        nameLower.includes("burpee") ||
+        nameLower.includes("mountain") ||
+        nameLower.includes("climb") ||
+        nameLower.includes("jump squat") ||
+        nameLower.includes("plank jack") ||
+        nameLower.includes("skater");
 
       const mapped = sortedRaw.map((s: any) => {
         if (s.__kind === "cardio" || s.mode) {
@@ -209,9 +236,26 @@ export default function ViewWorkout() {
                 : undefined;
           }
 
+          // For HIIT/bodyweight cardio exercises, treat the stored cardio
+          // fields as reps. We primarily stash HIIT reps in the `floors`
+          // field to avoid DecimalField limits on `level`, but fall back to
+          // the level-based stat if needed.
+          let repsFromCardio = 0;
+          if (isHiitName) {
+            if (typeof s.floors === "number" && !isNaN(s.floors) && s.floors > 0) {
+              repsFromCardio = s.floors;
+            } else if (
+              typeof cardioStat === "number" &&
+              !isNaN(cardioStat) &&
+              cardioStat > 0
+            ) {
+              repsFromCardio = cardioStat;
+            }
+          }
+
           return {
             id: String(s.id),
-            reps: 0,
+            reps: repsFromCardio,
             weight: 0,
             unit: getUnit(),
             isPR: !!s.isPR,
@@ -516,7 +560,7 @@ export default function ViewWorkout() {
               </div>
             )}
 
-            {(onlyCardio || mixedTypes) && (
+            {(onlyCardio || mixedTypes) && cardioDistanceDisplay !== "-" && (
               <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[80px] sm:min-w-[120px]">
                 <div className="text-lg sm:text-xl font-semibold">
                   {cardioDistanceDisplay}
@@ -576,37 +620,86 @@ export default function ViewWorkout() {
                       style={{
                         gridTemplateColumns:
                           we.exercise.muscleGroup === "cardio"
-                            ? GRID_TEMPLATE_CARDIO
+                            ? ((): string => {
+                                const name = (
+                                  we.exercise.name || ""
+                                ).toLowerCase();
+                                const isHiit =
+                                  name.includes("burpee") ||
+                                  name.includes("mountain") ||
+                                  name.includes("climb") ||
+                                  name.includes("jump squat") ||
+                                  name.includes("plank jack") ||
+                                  name.includes("skater");
+                                return isHiit
+                                  ? GRID_TEMPLATE_HIIT
+                                  : GRID_TEMPLATE_CARDIO;
+                              })()
                             : GRID_TEMPLATE,
                       }}
                     >
                       {we.exercise.muscleGroup === "cardio" ? (
-                        <>
-                          <span className="flex justify-center">SET</span>
-                          <span className="flex justify-center">DURATION</span>
+                        (() => {
+                          const name = (we.exercise.name || "").toLowerCase();
+                          const isHiit =
+                            name.includes("burpee") ||
+                            name.includes("mountain") ||
+                            name.includes("climb") ||
+                            name.includes("jump squat") ||
+                            name.includes("plank jack") ||
+                            name.includes("skater");
 
-                          <span className="flex justify-center">
-                            {we.exercise.name.toLowerCase().includes("stair")
-                              ? "FLOORS"
-                              : "DISTANCE"}
-                          </span>
+                          if (isHiit) {
+                            return (
+                              <>
+                                <span className="flex justify-center">SET</span>
+                                <span className="flex justify-center">
+                                  DURATION
+                                </span>
+                                <span className="flex justify-center">
+                                  REPS
+                                </span>
+                                <span className="flex justify-center">RPE</span>
+                                <span className="flex justify-center">
+                                  <Trophy className="h-3.5 w-3.5" />
+                                </span>
+                                <div />
+                              </>
+                            );
+                          }
 
-                          <span className="flex justify-center">
-                            {we.exercise.name
-                              .toLowerCase()
-                              .includes("treadmill")
-                              ? "INCLINE"
-                              : we.exercise.name.toLowerCase().includes("row")
-                                ? "SPLIT"
-                                : "LEVEL"}
-                          </span>
-
-                          <span className="flex justify-center">
-                            <Trophy className="h-3.5 w-3.5" />
-                          </span>
-
-                          <div />
-                        </>
+                          // Non-HIIT cardio header
+                          return (
+                            <>
+                              <span className="flex justify-center">SET</span>
+                              <span className="flex justify-center">
+                                DURATION
+                              </span>
+                              <span className="flex justify-center">
+                                {we.exercise.name
+                                  .toLowerCase()
+                                  .includes("stair")
+                                  ? "FLOORS"
+                                  : "DISTANCE"}
+                              </span>
+                              <span className="flex justify-center">
+                                {we.exercise.name
+                                  .toLowerCase()
+                                  .includes("treadmill")
+                                  ? "INCLINE"
+                                  : we.exercise.name
+                                        .toLowerCase()
+                                        .includes("row")
+                                    ? "SPLIT"
+                                    : "LEVEL"}
+                              </span>
+                              <span className="flex justify-center">
+                                <Trophy className="h-3.5 w-3.5" />
+                              </span>
+                              <div />
+                            </>
+                          );
+                        })()
                       ) : (
                         <>
                           <span className="flex justify-center">SET</span>

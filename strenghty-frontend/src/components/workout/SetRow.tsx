@@ -1,16 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 // Grid templates for strength vs cardio rows (tightened to reduce left/right gaps)
 const GRID_TEMPLATE_STRENGTH =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 // same as above but without the final check column
 const GRID_TEMPLATE_STRENGTH_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
 
 // Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
 const GRID_TEMPLATE_CARDIO =
-  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 const GRID_TEMPLATE_CARDIO_NO_CHECK =
   "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(56px, 0.8fr) minmax(28px, 0.25fr) 32px";
+
+// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
+const GRID_TEMPLATE_HIIT =
+  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+
+const GRID_TEMPLATE_HIIT_NO_CHECK =
+  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
 
 import { Check, Trophy } from "lucide-react";
 import type { WorkoutSet } from "@/types/workout";
@@ -78,6 +85,18 @@ export function SetRow({
   onComplete,
 }: SetRowProps) {
   const isCardio = !!set.cardioMode;
+  const name = (exerciseName || "").toLowerCase();
+  // Detect HIIT/bodyweight names from the exercise name. Use this to
+  // render HIIT-style columns even when the saved set is a strength
+  // record (no cardioMode) — ensures headers and rows align.
+  const isHiitName = (n: string) =>
+    n.includes("burpee") ||
+    n.includes("mountain") ||
+    n.includes("climb") ||
+    n.includes("jump squat") ||
+    n.includes("plank jack") ||
+    n.includes("skater");
+  const isHiitBodyweight = isHiitName(name);
   const currentType = (set.type || "S") as "W" | "S" | "F" | "D";
   const typeClasses: Record<"W" | "S" | "F" | "D", string> = {
     W: "bg-muted/30 text-yellow-400 border-yellow-400/60",
@@ -160,40 +179,13 @@ export function SetRow({
     const minutes = Number(parts[0]);
     const seconds = Number(parts[1]);
     if (isNaN(minutes) || isNaN(seconds)) return 0;
-    return minutes * 60 + seconds;
+    const total = minutes * 60 + seconds;
+    return total;
   };
-
-  useEffect(() => {
-    if (isCardio) {
-      setTimeInput(formatSecondsToMMSS(cardioDurationSeconds));
-    } else {
-      setTimeInput("");
-    }
-  }, [isCardio, cardioDurationSeconds]);
-
-  // Keep rowing pace text in sync with stored seconds
-  useEffect(() => {
-    if (isCardio && set.cardioMode === "row") {
-      setPaceInput(cardioStat > 0 ? formatSecondsToMMSS(cardioStat) : "");
-    } else {
-      setPaceInput("");
-    }
-  }, [isCardio, set.cardioMode, cardioStat]);
-
-  // Initialize picker values when the duration dialog opens
-  useEffect(() => {
-    if (!timePickerOpen || !isCardio) return;
-    const total = Math.max(0, Math.round(cardioDurationSeconds));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
-    setPickerHours(h);
-    setPickerMinutes(m);
-    setPickerSeconds(s);
-  }, [timePickerOpen, isCardio, cardioDurationSeconds]);
 
   type PrLine = { label: string; value: string };
   const prLines: PrLine[] = [];
+
   if (isCardio && set.cardioMode) {
     // `cardioDistance` is stored in user-facing units (km or miles).
     // Treat it as kilometers when the unit is `km`.
@@ -213,10 +205,6 @@ export function SetRow({
       }
 
       if (set.cardioPacePR && cardioDurationSeconds > 0) {
-        // `cardioDistance` here is stored in user-facing units (km or miles).
-        // Compute seconds-per-kilometer correctly:
-        // - if unit is km: secondsPerKm = duration / distance(km)
-        // - if unit is mile: convert miles -> km then secondsPerKm = duration / (distance_miles * 1.60934)
         let paceSecondsPerKm = 0;
         try {
           if (cardioDistance > 0) {
@@ -322,22 +310,34 @@ export function SetRow({
     }
   }, [halfDialogOpen, set.halfReps]);
   // Only show the trophy if the set is flagged as a PR and there are
-  // actual PR lines to display. Prevents showing the trophy when
-  // `isPR` is true but no PR details were detected.
+  // actual PR lines to display. This avoids showing a trophy on
+  // first-time or HIIT/bodyweight entries that don't have any PR
+  // metrics computed.
   const showTrophy =
     set.isPR && (readOnly || set.completed) && prLines.length > 0;
+
+  // For layout purposes, treat HIIT/bodyweight exercises as cardio-like so
+  // they always use the HIIT grid and column semantics (time, reps, RPE)
+  // even when the underlying record is a strength set (no cardioMode).
+  const isCardioLike = isCardio || isHiitBodyweight;
 
   return (
     <div
       className="grid gap-1 rounded-lg border border-border px-1 py-1 items-center mx-auto"
       style={{
-        gridTemplateColumns: isCardio
-          ? showComplete
-            ? GRID_TEMPLATE_CARDIO
-            : GRID_TEMPLATE_CARDIO_NO_CHECK
-          : showComplete
+        gridTemplateColumns: (() => {
+          if (isHiitBodyweight)
+            return showComplete
+              ? GRID_TEMPLATE_HIIT
+              : GRID_TEMPLATE_HIIT_NO_CHECK;
+          if (isCardio)
+            return showComplete
+              ? GRID_TEMPLATE_CARDIO
+              : GRID_TEMPLATE_CARDIO_NO_CHECK;
+          return showComplete
             ? GRID_TEMPLATE_STRENGTH
-            : GRID_TEMPLATE_STRENGTH_NO_CHECK,
+            : GRID_TEMPLATE_STRENGTH_NO_CHECK;
+        })(),
         maxWidth: "100%",
         boxSizing: "border-box",
         overflow: "hidden",
@@ -429,7 +429,7 @@ export function SetRow({
 
       {/* Column 2: Strength weight+unit OR Cardio time */}
       <Cell>
-        {isCardio ? (
+        {isCardioLike ? (
           <div className="flex w-full h-8 items-center">
             <label className="sr-only">Time</label>
             <button
@@ -440,7 +440,9 @@ export function SetRow({
               }}
               className="h-8 w-full rounded-md border border-border bg-neutral-900/60 px-2 text-center text-[11px] sm:text-[12.5px] text-white/90"
             >
-              {timeInput || "00:00"}
+              {timeInput ||
+                formatSecondsToMMSS(cardioDurationSeconds) ||
+                "00:00"}
             </button>
           </div>
         ) : (
@@ -495,46 +497,115 @@ export function SetRow({
         )}
       </Cell>
 
-      {/* Column 3: Strength spacer OR Cardio distance/floors with unit */}
+      {/* Column 3: Strength spacer OR Cardio distance/floors with unit OR HIIT reps */}
       <Cell>
-        {isCardio ? (
-          <div className="flex w-full h-8 items-center -space-x-[1px]">
-            <div className="flex-1">
-              <label className="sr-only">
-                {set.cardioMode === "stairs" ? "Floors" : "Distance"}
-              </label>
+        {isCardioLike ? (
+          isHiitBodyweight ? (
+            <div className="relative w-full h-8">
+              <label className="sr-only">Reps</label>
               <Input
                 type="number"
-                placeholder={
-                  set.cardioMode === "stairs"
-                    ? cardioDistanceUnit === "flr"
-                      ? "floors"
-                      : "meters"
-                    : "dist"
-                }
-                value={
-                  cardioDistance && cardioDistance > 0
-                    ? String(cardioDistance)
-                    : ""
-                }
+                placeholder="reps"
+                value={set.reps || ""}
                 onChange={(e) =>
-                  !readOnly &&
-                  onUpdate({ cardioDistance: Number(e.target.value) || 0 })
+                  !readOnly && onUpdate({ reps: Number(e.target.value) })
                 }
                 disabled={readOnly}
-                className="h-8 w-full px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] sm:text-[12.5px] rounded-r-none focus-visible:ring-1 focus-visible:ring-offset-0 border-border"
+                className="h-8 w-full px-1 pr-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
               />
             </div>
-            {set.cardioMode === "stairs" ? (
-              // For stairs allow choosing between floors and meters
-              !readOnly ? (
+          ) : (
+            <div className="flex w-full h-8 items-center -space-x-[1px]">
+              <div className="flex-1">
+                <label className="sr-only">
+                  {set.cardioMode === "stairs" ? "Floors" : "Distance"}
+                </label>
+                <Input
+                  type="number"
+                  placeholder={
+                    set.cardioMode === "stairs"
+                      ? cardioDistanceUnit === "flr"
+                        ? "floors"
+                        : "meters"
+                      : "dist"
+                  }
+                  value={
+                    cardioDistance && cardioDistance > 0
+                      ? String(cardioDistance)
+                      : ""
+                  }
+                  onChange={(e) =>
+                    !readOnly &&
+                    onUpdate({ cardioDistance: Number(e.target.value) || 0 })
+                  }
+                  disabled={readOnly}
+                  className="h-8 w-full px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] sm:text-[12.5px] rounded-r-none focus-visible:ring-1 focus-visible:ring-offset-0 border-border"
+                />
+              </div>
+              {set.cardioMode === "stairs" ? (
+                // For stairs allow choosing between floors and meters
+                !readOnly ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors"
+                      >
+                        {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                        <span className="text-[8px] opacity-50">▼</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
+                      style={{ transformOrigin: "top right" }}
+                    >
+                      <DropdownMenuItem
+                        className={cn(
+                          "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                          cardioDistanceUnit === "flr"
+                            ? "text-orange-500"
+                            : "text-muted-foreground",
+                        )}
+                        onClick={() =>
+                          onUpdate({ cardioDistanceUnit: "flr" as any })
+                        }
+                      >
+                        {cardioDistanceUnit === "flr" && (
+                          <Check className="h-4 w-4 text-orange-500" />
+                        )}
+                        <span>floors</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className={cn(
+                          "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                          cardioDistanceUnit === "m"
+                            ? "text-orange-500"
+                            : "text-muted-foreground",
+                        )}
+                        onClick={() =>
+                          onUpdate({ cardioDistanceUnit: "m" as any })
+                        }
+                      >
+                        {cardioDistanceUnit === "m" && (
+                          <Check className="h-4 w-4 text-orange-500" />
+                        )}
+                        <span>meters</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[10px] font-bold text-muted-foreground/60">
+                    {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                  </div>
+                )
+              ) : !readOnly ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
                       className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors"
                     >
-                      {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                      {cardioDistanceUnit === "mile" ? "mile" : "km"}
                       <span className="text-[8px] opacity-50">▼</span>
                     </button>
                   </DropdownMenuTrigger>
@@ -545,97 +616,44 @@ export function SetRow({
                     <DropdownMenuItem
                       className={cn(
                         "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
-                        cardioDistanceUnit === "flr"
+                        cardioDistanceUnit === "km"
                           ? "text-orange-500"
                           : "text-muted-foreground",
                       )}
                       onClick={() =>
-                        onUpdate({ cardioDistanceUnit: "flr" as any })
+                        onUpdate({ cardioDistanceUnit: "km" as any })
                       }
                     >
-                      {cardioDistanceUnit === "flr" && (
+                      {cardioDistanceUnit === "km" && (
                         <Check className="h-4 w-4 text-orange-500" />
                       )}
-                      <span>floors</span>
+                      <span>km</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className={cn(
                         "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
-                        cardioDistanceUnit === "m"
+                        cardioDistanceUnit === "mile"
                           ? "text-orange-500"
                           : "text-muted-foreground",
                       )}
                       onClick={() =>
-                        onUpdate({ cardioDistanceUnit: "m" as any })
+                        onUpdate({ cardioDistanceUnit: "mile" as any })
                       }
                     >
-                      {cardioDistanceUnit === "m" && (
+                      {cardioDistanceUnit === "mile" && (
                         <Check className="h-4 w-4 text-orange-500" />
                       )}
-                      <span>meters</span>
+                      <span>mile</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[10px] font-bold text-muted-foreground/60">
-                  {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                  {cardioDistanceUnit === "mile" ? "mile" : "km"}
                 </div>
-              )
-            ) : !readOnly ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors"
-                  >
-                    {cardioDistanceUnit === "mile" ? "mile" : "km"}
-                    <span className="text-[8px] opacity-50">▼</span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
-                  style={{ transformOrigin: "top right" }}
-                >
-                  <DropdownMenuItem
-                    className={cn(
-                      "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
-                      cardioDistanceUnit === "km"
-                        ? "text-orange-500"
-                        : "text-muted-foreground",
-                    )}
-                    onClick={() =>
-                      onUpdate({ cardioDistanceUnit: "km" as any })
-                    }
-                  >
-                    {cardioDistanceUnit === "km" && (
-                      <Check className="h-4 w-4 text-orange-500" />
-                    )}
-                    <span>km</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={cn(
-                      "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
-                      cardioDistanceUnit === "mile"
-                        ? "text-orange-500"
-                        : "text-muted-foreground",
-                    )}
-                    onClick={() =>
-                      onUpdate({ cardioDistanceUnit: "mile" as any })
-                    }
-                  >
-                    {cardioDistanceUnit === "mile" && (
-                      <Check className="h-4 w-4 text-orange-500" />
-                    )}
-                    <span>mile</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[10px] font-bold text-muted-foreground/60">
-                {cardioDistanceUnit === "mile" ? "mile" : "km"}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )
         ) : (
           <span>×</span>
         )}
@@ -643,48 +661,209 @@ export function SetRow({
 
       {/* Column 4: Strength reps OR Cardio machine-specific stat */}
       <Cell>
-        {isCardio ? (
-          <div className="w-full">
-            <label className="sr-only">
-              {set.cardioMode === "row"
-                ? "Pace (per 500m)"
-                : set.cardioMode === "stairs"
-                  ? "Level"
-                  : "Level"}
-            </label>
-            <Input
-              type={set.cardioMode === "row" ? "text" : "number"}
-              placeholder={
-                set.cardioMode === "row"
-                  ? "mm:ss"
+        {isCardioLike ? (
+          isHiitBodyweight ? (
+            // For HIIT/bodyweight cardio use RPE control in this column
+            <>
+              {!readOnly ? (
+                <Dialog open={rpeDialogOpen} onOpenChange={setRpeDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-8 w-full items-center justify-center rounded-md border border-border bg-neutral-900/70 px-1 text-[0.7rem] text-white/90"
+                    >
+                      {hasRpe ? sliderValue.toFixed(1) : "RPE"}
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 min-h-[280px] pb-20 overflow-visible">
+                    <DialogHeader>
+                      <DialogTitle>Log Set RPE</DialogTitle>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Adjust how hard this set felt.
+                      </div>
+                    </DialogHeader>
+
+                    <div className="flex flex-col gap-4 py-2">
+                      <div className="text-4xl font-bold text-center text-white">
+                        {(rpeDialogOpen ? localRpe : sliderValue).toFixed(1)}
+                      </div>
+                      <div className="text-sm text-center text-muted-foreground min-h-[2.25rem]">
+                        {rpeInfo}
+                      </div>
+                      <div className="px-6 w-full">
+                        <div
+                          className="relative w-full"
+                          style={{ ["--rpe-edge-gap" as any]: "12px" }}
+                        >
+                          <div className="w-full z-10">
+                            <Slider
+                              className="w-full"
+                              min={7}
+                              max={10}
+                              step={0.5}
+                              value={[rpeDialogOpen ? localRpe : sliderValue]}
+                              onValueChange={(vals) =>
+                                setLocalRpe(vals[0] ?? localRpe)
+                              }
+                            />
+                          </div>
+
+                          <div
+                            className="pointer-events-none"
+                            style={{
+                              position: "absolute",
+                              left: "var(--rpe-edge-gap)",
+                              right: "var(--rpe-edge-gap)",
+                              top: "100%",
+                              marginTop: 8,
+                            }}
+                          >
+                            <div className="relative h-5">
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: "0%",
+                                  transform: "translateX(-50%)",
+                                }}
+                                className="text-sm text-muted-foreground"
+                              >
+                                7
+                              </div>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: "16.6666667%",
+                                  transform: "translateX(-50%)",
+                                }}
+                                className="text-sm text-muted-foreground"
+                              >
+                                7.5
+                              </div>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: "33.3333333%",
+                                  transform: "translateX(-50%)",
+                                }}
+                                className="text-sm text-muted-foreground"
+                              >
+                                8
+                              </div>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: "50%",
+                                  transform: "translateX(-50%)",
+                                }}
+                                className="text-sm text-muted-foreground"
+                              >
+                                8.5
+                              </div>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: "66.6666667%",
+                                  transform: "translateX(-50%)",
+                                }}
+                                className="text-sm text-muted-foreground"
+                              >
+                                9
+                              </div>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: "83.3333333%",
+                                  transform: "translateX(-50%)",
+                                }}
+                                className="text-sm text-muted-foreground"
+                              >
+                                9.5
+                              </div>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: "100%",
+                                  transform: "translateX(-50%)",
+                                }}
+                                className="text-sm text-muted-foreground"
+                              >
+                                10
+                              </div>
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "var(--rpe-edge-gap)",
+                              right: "var(--rpe-edge-gap)",
+                              top: "calc(100% + 38px)",
+                            }}
+                            className="pointer-events-auto"
+                          >
+                            <Button
+                              className="w-full"
+                              onClick={() => {
+                                onUpdate({ rpe: Number(localRpe) });
+                                setRpeDialogOpen(false);
+                              }}
+                            >
+                              Done
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <div className="flex h-8 w-full items-center justify-center rounded-md border border-border bg-neutral-900/70 px-1 text-[0.7rem] text-white/90">
+                  {hasRpe ? sliderValue.toFixed(1) : "RPE"}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="w-full">
+              <label className="sr-only">
+                {set.cardioMode === "row"
+                  ? "Pace (per 500m)"
                   : set.cardioMode === "stairs"
-                    ? "lvl"
-                    : set.cardioMode === "treadmill"
-                      ? "%"
-                      : "lvl"
-              }
-              value={
-                set.cardioMode === "row"
-                  ? paceInput
-                  : cardioStat && cardioStat !== 0
-                    ? String(cardioStat)
-                    : ""
-              }
-              onChange={(e) => {
-                if (readOnly) return;
-                if (set.cardioMode === "row") {
-                  const val = e.target.value;
-                  setPaceInput(val);
-                  const seconds = parseTimeInput(val);
-                  onUpdate({ cardioStat: seconds });
-                } else {
-                  onUpdate({ cardioStat: Number(e.target.value) || 0 });
+                    ? "Level"
+                    : "Level"}
+              </label>
+              <Input
+                type={set.cardioMode === "row" ? "text" : "number"}
+                placeholder={
+                  set.cardioMode === "row"
+                    ? "mm:ss"
+                    : set.cardioMode === "stairs"
+                      ? "lvl"
+                      : set.cardioMode === "treadmill"
+                        ? "%"
+                        : "lvl"
                 }
-              }}
-              disabled={readOnly}
-              className="h-8 w-full px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
-            />
-          </div>
+                value={
+                  set.cardioMode === "row"
+                    ? paceInput
+                    : cardioStat && cardioStat !== 0
+                      ? String(cardioStat)
+                      : ""
+                }
+                onChange={(e) => {
+                  if (readOnly) return;
+                  if (set.cardioMode === "row") {
+                    const val = e.target.value;
+                    setPaceInput(val);
+                    const seconds = parseTimeInput(val);
+                    onUpdate({ cardioStat: seconds });
+                  } else {
+                    onUpdate({ cardioStat: Number(e.target.value) || 0 });
+                  }
+                }}
+                disabled={readOnly}
+                className="h-8 w-full px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
+              />
+            </div>
+          )
         ) : (
           <div className="relative w-full h-8">
             <label className="sr-only">Reps</label>
@@ -777,7 +956,7 @@ export function SetRow({
       </Cell>
 
       {/* Column 5: RPE control (centered dialog on click) - strength only */}
-      {!isCardio && (
+      {!isCardioLike && (
         <Cell>
           {!readOnly ? (
             <Dialog open={rpeDialogOpen} onOpenChange={setRpeDialogOpen}>
@@ -945,7 +1124,7 @@ export function SetRow({
       )}
 
       {/* Cardio duration picker dialog */}
-      {isCardio && !readOnly && (
+      {isCardioLike && !readOnly && (
         <Dialog open={timePickerOpen} onOpenChange={setTimePickerOpen}>
           <DialogContent className="max-w-[360px] rounded-[28px] bg-neutral-950 border border-neutral-800/40 text-white pb-4 pt-2">
             <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-neutral-800" />
