@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,15 +10,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createExercise, getExercises, deleteExercise } from "@/lib/api";
 import type { UiExercise } from "@/lib/api";
 import type { MuscleGroup } from "@/types/workout";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -31,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { libraryExercises } from "@/data/libraryExercises";
+import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog";
 
 // muscle group order used for display; available groups are computed at runtime
 // (removed static list so we only show groups actually present in data)
@@ -40,33 +31,62 @@ export default function Exercises() {
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | "all">(
     "all",
   );
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
   // default to user's exercises view when opening the page
   const [showLibrary, setShowLibrary] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const [newExercise, setNewExercise] = useState({
-    name: "",
-    muscleGroup: "" as MuscleGroup | "",
-    description: "",
-  });
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseMuscle, setNewExerciseMuscle] = useState<MuscleGroup | "">(
+    "",
+  );
+  const [newExerciseEquipment, setNewExerciseEquipment] = useState<
+    "all" | string
+  >("all");
+  const [newExerciseDescription, setNewExerciseDescription] = useState("");
+  const [isCreateEquipmentPickerOpen, setIsCreateEquipmentPickerOpen] =
+    useState(false);
+  const [isCreateMusclePickerOpen, setIsCreateMusclePickerOpen] =
+    useState(false);
+  const [isCreateValidationOpen, setIsCreateValidationOpen] = useState(false);
+  const [createValidationMessage, setCreateValidationMessage] =
+    useState<string>("");
 
   const queryClient = useQueryClient();
   const { data: exercises = [], isLoading } = useQuery<UiExercise[]>({
     queryKey: ["exercises"],
     queryFn: getExercises,
   });
-  const createMutation = useMutation({
+  const createExerciseMutation = useMutation({
     mutationFn: async () =>
       createExercise(
-        newExercise.name,
-        newExercise.muscleGroup as MuscleGroup,
-        newExercise.description,
-        { custom: true },
+        newExerciseName,
+        (newExerciseMuscle as MuscleGroup) || "other",
+        newExerciseDescription,
+        {
+          custom: true,
+          equipment:
+            newExerciseEquipment !== "all" ? newExerciseEquipment : undefined,
+        },
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exercises"] });
+      toast({
+        title: "Exercise created!",
+        description: `${newExerciseName} has been added.`,
+      });
+      setNewExerciseName("");
+      setNewExerciseMuscle("");
+      setNewExerciseEquipment("all");
+      setNewExerciseDescription("");
+      setIsCreateExerciseOpen(false);
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to create exercise",
+        variant: "destructive",
+      });
     },
   });
 
@@ -157,31 +177,31 @@ export default function Exercises() {
       setSelectedMuscle("all");
     }
   }, [exercises, selectedMuscle, showLibrary]);
+  const availableEquipments = useMemo(() => {
+    const set = new Set<string>();
+    (exercises as any[]).forEach((e) => {
+      const eq = (e as any).equipment;
+      if (eq) set.add(String(eq));
+    });
+    (libraryExercises as any[]).forEach((e) => {
+      const eq = (e as any).equipment;
+      if (eq) set.add(String(eq));
+    });
+    return Array.from(set);
+  }, [exercises]);
 
-  const handleCreateExercise = async () => {
-    if (!newExercise.name || !newExercise.muscleGroup) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in the exercise name and muscle group.",
-        variant: "destructive",
-      });
+  const handleCreateExercise = () => {
+    const missing: string[] = [];
+    if (!newExerciseName.trim()) missing.push("a name");
+    if (!newExerciseMuscle) missing.push("a muscle group");
+    if (newExerciseEquipment === "all") missing.push("equipment");
+    if (missing.length > 0) {
+      const msg = `Please provide ${missing.join(", ")} before creating.`;
+      setCreateValidationMessage(msg);
+      setIsCreateValidationOpen(true);
       return;
     }
-    try {
-      await createMutation.mutateAsync();
-      toast({
-        title: "Exercise created!",
-        description: `${newExercise.name} has been added.`,
-      });
-      setNewExercise({ name: "", muscleGroup: "", description: "" });
-      setIsDialogOpen(false);
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err?.message || "Failed to create exercise",
-        variant: "destructive",
-      });
-    }
+    createExerciseMutation.mutate();
   };
 
   // Precompute grid content to avoid deeply nested JSX ternaries
@@ -270,115 +290,34 @@ export default function Exercises() {
               Browse Library
             </Button>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4" />
-                  New Exercise
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="floating-card fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-[calc(100%-48px)] max-w-[420px] rounded-[32px] bg-zinc-900/80 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-8 pt-3 pb-10">
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  transition={{ duration: 0.18, ease: "easeOut" }}
-                >
-                  <div className="w-10 h-1 bg-zinc-800/50 rounded-full mx-auto mt-3 mb-6" />
+            <Button onClick={() => setIsCreateExerciseOpen(true)}>
+              <Plus className="h-4 w-4" />
+              New Exercise
+            </Button>
 
-                  <div className="text-center">
-                    <DialogTitle className="text-xl font-bold">
-                      Create Exercise
-                    </DialogTitle>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Add a new exercise to your personal library.
-                    </p>
-                  </div>
-
-                  <div className="mt-4 max-h-[50vh] overflow-y-auto pr-2 space-y-8">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Exercise Name</Label>
-                      <Input
-                        id="name"
-                        placeholder="e.g., Incline Dumbbell Press"
-                        value={newExercise.name}
-                        onChange={(e) =>
-                          setNewExercise({
-                            ...newExercise,
-                            name: e.target.value,
-                          })
-                        }
-                        className="bg-[#1E1E1E] border border-[#2A2A2A] placeholder:text-[#555555] focus-visible:border-[#FF7000] focus-visible:ring-0 px-4"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="muscle">Muscle Group</Label>
-                      <Select
-                        value={newExercise.muscleGroup}
-                        onValueChange={(value) =>
-                          setNewExercise({
-                            ...newExercise,
-                            muscleGroup: value as MuscleGroup,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="bg-black/20 border border-transparent focus-visible:border-orange-500 focus-visible:ring-1 focus-visible:ring-orange-500/40">
-                          <SelectValue placeholder="Select muscle group" />
-                        </SelectTrigger>
-                        <SelectContent className="p-0">
-                          {allMusclesOrder.map((muscle) => (
-                            <SelectItem
-                              key={muscle}
-                              value={muscle}
-                              className="px-6 py-4"
-                            >
-                              {muscle.charAt(0).toUpperCase() + muscle.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">
-                        Description (optional)
-                      </Label>
-                      <Textarea
-                        id="description"
-                        placeholder="Add notes about form, cues, or variations..."
-                        value={newExercise.description}
-                        onChange={(e) =>
-                          setNewExercise({
-                            ...newExercise,
-                            description: e.target.value,
-                          })
-                        }
-                        className="bg-[#1E1E1E] border border-[#2A2A2A] placeholder:text-[#555555] focus-visible:border-[#FF7000] focus-visible:ring-0 px-4"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-10">
-                    <div className="flex flex-row gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setIsDialogOpen(false)}
-                        className="flex-1 text-sm text-[#A0A0A0] font-medium rounded-xl bg-transparent px-3 py-2 hover:bg-white/5"
-                      >
-                        Cancel
-                      </button>
-                      <Button
-                        onClick={handleCreateExercise}
-                        className="flex-1 bg-[#FF7000] text-white font-bold rounded-xl"
-                      >
-                        Create
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              </DialogContent>
-            </Dialog>
+            <CreateExerciseDialog
+              isOpen={isCreateExerciseOpen}
+              onOpenChange={setIsCreateExerciseOpen}
+              newExerciseName={newExerciseName}
+              setNewExerciseName={setNewExerciseName}
+              newExerciseEquipment={newExerciseEquipment}
+              setNewExerciseEquipment={setNewExerciseEquipment}
+              availableEquipments={availableEquipments}
+              isEquipmentPickerOpen={isCreateEquipmentPickerOpen}
+              onEquipmentPickerOpenChange={setIsCreateEquipmentPickerOpen}
+              newExerciseMuscle={newExerciseMuscle}
+              setNewExerciseMuscle={setNewExerciseMuscle}
+              availableMuscles={availableMuscles}
+              isMusclePickerOpen={isCreateMusclePickerOpen}
+              onMusclePickerOpenChange={setIsCreateMusclePickerOpen}
+              newExerciseDescription={newExerciseDescription}
+              setNewExerciseDescription={setNewExerciseDescription}
+              onSubmit={handleCreateExercise}
+              isSubmitting={createExerciseMutation.isLoading}
+              isValidationOpen={isCreateValidationOpen}
+              onValidationOpenChange={setIsCreateValidationOpen}
+              validationMessage={createValidationMessage}
+            />
           </div>
         </div>
 

@@ -74,6 +74,7 @@ import { recommendNextRoutine } from "@/lib/onboarding";
 import { getUnit, formatMinutes } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
+import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog";
 
 export default function EditWorkout() {
   const navigate = useNavigate();
@@ -1528,7 +1529,7 @@ export default function EditWorkout() {
                   // treadmill/bike/elliptical ignores `floors`, so this is
                   // safe.
                   if (isHiitName) {
-                    floors = (s.reps || 0) || undefined;
+                    floors = s.reps || 0 || undefined;
                     level = undefined;
                   } else {
                     level = rawStat || undefined;
@@ -1674,7 +1675,7 @@ export default function EditWorkout() {
                   } else {
                     distance = distanceMeters || undefined;
                     if (isHiitName) {
-                      floors = (s.reps || 0) || undefined;
+                      floors = s.reps || 0 || undefined;
                       level = undefined;
                     } else {
                       level = rawStat || undefined;
@@ -2035,6 +2036,7 @@ export default function EditWorkout() {
                       onComplete={() =>
                         handleSetComplete(workoutExercise.id, set.id)
                       }
+                      useDialogForSetType
                     />
                   ))}
                 </div>
@@ -2461,331 +2463,29 @@ export default function EditWorkout() {
           </DialogContent>
         </Dialog>
 
-        {/* Create Exercise dialog (inline) */}
-        {isCreateExerciseOpen && (
-          <div
-            className="fixed inset-0"
-            style={{
-              zIndex: 109,
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-              background: "rgba(0,0,0,0.35)",
-            }}
-            onClick={() => setIsCreateExerciseOpen(false)}
-            aria-hidden
-          />
-        )}
-
-        <Dialog
-          open={isCreateExerciseOpen}
+        <CreateExerciseDialog
+          isOpen={isCreateExerciseOpen}
           onOpenChange={setIsCreateExerciseOpen}
-        >
-          <DialogContent
-            style={{ animation: "none" }}
-            className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-6 pb-6 pt-4 data-[state=open]:animate-none data-[state=closed]:animate-none"
-          >
-            <div className="text-center">
-              <DialogTitle className="text-lg font-semibold">
-                Create Exercise
-              </DialogTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Add a new exercise to your library
-              </p>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              <div>
-                <Label htmlFor="create-name">Exercise Name</Label>
-                <Input
-                  id="create-name"
-                  value={newExerciseName}
-                  onChange={(e) => setNewExerciseName(e.target.value)}
-                  placeholder="e.g., Incline Dumbbell Press"
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <Label className="whitespace-nowrap">Equipment:</Label>
-                <div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsCreateEquipmentPickerOpen(true);
-                    }}
-                    className={`flex items-center gap-2 max-w-[12rem] truncate px-3 py-1.5 rounded-full text-sm border transition-all duration-150 ease-out active:scale-[0.97] ${
-                      newExerciseEquipment === "all"
-                        ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
-                        : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
-                    }`}
-                  >
-                    <span className="truncate">
-                      {newExerciseEquipment === "all"
-                        ? "All Equipment"
-                        : newExerciseEquipment}
-                    </span>
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 ${newExerciseEquipment === "all" ? "text-zinc-400" : "text-zinc-200"}`}
-                    />
-                  </button>
-
-                  <Dialog
-                    open={isCreateEquipmentPickerOpen}
-                    onOpenChange={(o) => setIsCreateEquipmentPickerOpen(o)}
-                  >
-                    <DialogPortal>
-                      <DialogContent
-                        style={{
-                          zIndex: 2147483647,
-                          boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
-                        }}
-                        className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90 backdrop-blur-sm border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
-                      >
-                        <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
-                          <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
-                          <div className="relative">
-                            <button
-                              onClick={() =>
-                                setIsCreateEquipmentPickerOpen(false)
-                              }
-                              className="absolute right-3 top-0 text-zinc-400 hover:text-zinc-200"
-                              aria-label="Close"
-                            >
-                              ×
-                            </button>
-                            <h3 className="text-center text-lg font-medium text-zinc-100">
-                              Equipment
-                            </h3>
-                          </div>
-                        </div>
-                        <div className="space-y-2 px-1">
-                          <button
-                            className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${newExerciseEquipment === "all" ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewExerciseEquipment("all");
-                              setIsCreateEquipmentPickerOpen(false);
-                            }}
-                          >
-                            <div className="flex items-center">
-                              <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center mr-3">
-                                <img
-                                  src="/icons/custom.svg"
-                                  alt="All Equipment icon"
-                                  className="h-4 w-4"
-                                />
-                              </div>
-                              <span className="text-base font-medium">
-                                All Equipment
-                              </span>
-                            </div>
-                          </button>
-                          {availableEquipments.map((opt) => {
-                            const label = opt
-                              .split(" ")
-                              .map(
-                                (w) =>
-                                  w[0]?.toUpperCase() +
-                                  w.slice(1).toLowerCase(),
-                              )
-                              .join(" ");
-                            const isSelected = newExerciseEquipment === opt;
-                            return (
-                              <button
-                                key={opt}
-                                className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${isSelected ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setNewExerciseEquipment(opt as any);
-                                  setIsCreateEquipmentPickerOpen(false);
-                                }}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center flex-shrink-0 mr-3">
-                                      <img
-                                        src={((): string => {
-                                          const key = String(
-                                            opt || "",
-                                          ).toLowerCase();
-                                          if (key.includes("barbell"))
-                                            return "/icons/barbell.svg";
-                                          if (key.includes("dumbbell"))
-                                            return "/icons/dumbbell.svg";
-                                          if (key.includes("kettlebell"))
-                                            return "/icons/kettlebell.svg";
-                                          if (key.includes("cable"))
-                                            return "/icons/cable.svg";
-                                          if (key.includes("machine"))
-                                            return "/icons/machine.svg";
-                                          if (key.includes("bodyweight"))
-                                            return "/icons/bodyweight.svg";
-                                          return "/icons/custom.svg";
-                                        })()}
-                                        alt={label + " icon"}
-                                        className="h-4 w-4"
-                                      />
-                                    </div>
-                                    <span className="text-base font-medium truncate">
-                                      {label}
-                                    </span>
-                                  </div>
-                                  {isSelected ? (
-                                    <span className="text-zinc-200">✓</span>
-                                  ) : null}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </DialogContent>
-                    </DialogPortal>
-                  </Dialog>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 mt-4">
-                <Label className="whitespace-nowrap">Muscle group:</Label>
-                <div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsCreateMusclePickerOpen(true);
-                    }}
-                    className={`flex items-center gap-2 max-w-[12rem] truncate px-3 py-1.5 rounded-full text-sm border transition-all duration-150 ease-out active:scale-[0.97] ${
-                      !newExerciseMuscle
-                        ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
-                        : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
-                    }`}
-                  >
-                    <span className="truncate">
-                      {newExerciseMuscle
-                        ? newExerciseMuscle
-                        : "Select muscle group"}
-                    </span>
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 ${!newExerciseMuscle ? "text-zinc-400" : "text-zinc-200"}`}
-                    />
-                  </button>
-
-                  <Dialog
-                    open={isCreateMusclePickerOpen}
-                    onOpenChange={(o) => setIsCreateMusclePickerOpen(o)}
-                  >
-                    <DialogPortal>
-                      <DialogContent
-                        style={{
-                          zIndex: 2147483647,
-                          boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
-                        }}
-                        className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-zinc-900/95 border border-white/6 backdrop-blur-sm rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
-                      >
-                        <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
-                          <div className="w-12 h-1 bg-zinc-800/50 rounded-full mx-auto mb-3" />
-                          <div className="relative">
-                            <button
-                              onClick={() => setIsCreateMusclePickerOpen(false)}
-                              className="absolute right-3 top-0 text-zinc-400 hover:text-zinc-200"
-                              aria-label="Close"
-                            >
-                              ×
-                            </button>
-                            <h3 className="text-center text-xl font-semibold text-zinc-100">
-                              Muscles
-                            </h3>
-                          </div>
-                        </div>
-                        <div className="space-y-2 px-1">
-                          <button
-                            className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewExerciseMuscle("");
-                              setIsCreateMusclePickerOpen(false);
-                            }}
-                          >
-                            <span className="text-lg text-zinc-200">
-                              All Muscles
-                            </span>
-                          </button>
-                          {availableMuscles
-                            .filter((m) => m !== "other")
-                            .map((opt) => (
-                              <button
-                                key={opt}
-                                className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setNewExerciseMuscle(opt);
-                                  setIsCreateMusclePickerOpen(false);
-                                }}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <span
-                                    className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${(muscleGroupColors as any)[opt as any] ?? "bg-zinc-800/30 text-zinc-200"}`}
-                                  >
-                                    {opt[0]?.toUpperCase() + opt.slice(1)}
-                                  </span>
-                                </div>
-                              </button>
-                            ))}
-                        </div>
-                      </DialogContent>
-                    </DialogPortal>
-                  </Dialog>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="create-desc">Description (optional)</Label>
-                <Textarea
-                  id="create-desc"
-                  value={newExerciseDescription}
-                  onChange={(e) => setNewExerciseDescription(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsCreateExerciseOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateExercise}
-                disabled={createExerciseMutation.isLoading}
-              >
-                {createExerciseMutation.isLoading ? "Creating..." : "Create"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Validation dialog shown when required create fields missing */}
-        <Dialog
-          open={isCreateValidationOpen}
-          onOpenChange={(o) => setIsCreateValidationOpen(o)}
-        >
-          <DialogContent className="max-w-[360px] rounded-[16px] bg-neutral-950 border border-neutral-800/40 text-white p-4">
-            <DialogTitle className="text-base font-semibold">
-              Missing information
-            </DialogTitle>
-            <DialogDescription className="mt-2 text-sm text-muted-foreground">
-              {createValidationMessage}
-            </DialogDescription>
-            <div className="mt-4 flex justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsCreateValidationOpen(false)}
-              >
-                OK
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          newExerciseName={newExerciseName}
+          setNewExerciseName={setNewExerciseName}
+          newExerciseEquipment={newExerciseEquipment}
+          setNewExerciseEquipment={setNewExerciseEquipment}
+          availableEquipments={availableEquipments}
+          isEquipmentPickerOpen={isCreateEquipmentPickerOpen}
+          onEquipmentPickerOpenChange={setIsCreateEquipmentPickerOpen}
+          newExerciseMuscle={newExerciseMuscle}
+          setNewExerciseMuscle={setNewExerciseMuscle}
+          availableMuscles={availableMuscles}
+          isMusclePickerOpen={isCreateMusclePickerOpen}
+          onMusclePickerOpenChange={setIsCreateMusclePickerOpen}
+          newExerciseDescription={newExerciseDescription}
+          setNewExerciseDescription={setNewExerciseDescription}
+          onSubmit={handleCreateExercise}
+          isSubmitting={createExerciseMutation.isLoading}
+          isValidationOpen={isCreateValidationOpen}
+          onValidationOpenChange={setIsCreateValidationOpen}
+          validationMessage={createValidationMessage}
+        />
 
         {/* Edit duration dialog */}
         <Dialog

@@ -58,6 +58,7 @@ import { recommendNextRoutine } from "@/lib/onboarding";
 import { triggerHaptic } from "@/lib/haptics";
 import { getUnit } from "@/lib/utils";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
+import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog";
 
 // Grid templates used by headers and set-row layouts
 const GRID_TEMPLATE =
@@ -102,331 +103,29 @@ export default function NewWorkout() {
   };
   const fromRoutine = location.state?.routine;
   const isNewRoutineTemplate = !!location.state?.fromNewRoutine;
-  const isRoutineBuilder = !!fromRoutine && isNewRoutineTemplate;
-  const startedFromRoutine = !!fromRoutine && !isNewRoutineTemplate;
-  const forceNew = !!location.state?.forceNew;
-  const { toast } = useToast();
-  const [workoutName, setWorkoutName] = useState(
-    fromRoutine?.name || "New Workout",
-  );
-  const [notes, setNotes] = useState("");
-  const [exercises, setExercises] = useState<WorkoutExercise[]>(() => {
-    if (!fromRoutine) return [];
-    return fromRoutine.exercises
-      .sort((a, b) => a.order - b.order)
-      .map((re) => ({
-        id: crypto.randomUUID(),
-        exercise: re.exercise,
-        notes: "",
-        sets: Array.from({ length: re.targetSets }).map(() => {
-          const isCardio = re.exercise.muscleGroup === "cardio";
-          return {
-            id: crypto.randomUUID(),
-            reps: 0,
-            halfReps: 0,
-            weight: 0,
-            unit: getUnit(),
-            isPR: false,
-            completed: false,
-            type: "S" as const,
-            rpe: undefined,
-            cardioMode: isCardio
-              ? getCardioModeForExercise(re.exercise)
-              : undefined,
-            cardioDistanceUnit: isCardio ? "km" : undefined,
-            cardioDurationSeconds: isCardio ? 0 : undefined,
-            cardioDistance: isCardio ? 0 : undefined,
-            cardioStat: isCardio ? 0 : undefined,
-          };
-        }),
-      }));
-  });
-  type PrBanner = {
-    exerciseName: string;
-    label: string;
-    value: string;
-  };
-  const [prBanner, setPrBanner] = useState<PrBanner | null>(null);
-  const [prQueue, setPrQueue] = useState<PrBanner[]>([]);
-  const [prVisible, setPrVisible] = useState(false);
-  type UnusualSetState =
-    | {
-        type: "history";
-        exerciseId: string;
-        setId: string;
-        previousBestText: string;
-        newSetText: string;
-      }
-    | {
-        type: "firstTime";
-        exerciseId: string;
-        setId: string;
-        previousBestText: null;
-        newSetText: string;
-        weightKg: number;
-        reps: number;
-      };
-  const [unusualSet, setUnusualSet] = useState<UnusualSetState | null>(null);
-  const recentForced = useRef<Set<string>>(new Set());
-  const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
-  const [exerciseDialogSheet, setExerciseDialogSheet] = useState<
-    null | "equipment" | "muscle"
-  >(null);
-  const [pendingSheet, setPendingSheet] = useState<
-    null | "equipment" | "muscle"
-  >(null);
-  const [isEquipmentPickerOpen, setIsEquipmentPickerOpen] = useState(false);
-  const [isMusclePickerOpen, setIsMusclePickerOpen] = useState(false);
-  const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
-  const [exerciseToReplace, setExerciseToReplace] = useState<string | null>(
-    null,
-  );
-  const [exerciseInfoOpen, setExerciseInfoOpen] = useState(false);
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
-    null,
-  );
-  const [selectedExerciseName, setSelectedExerciseName] = useState<string>();
-  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>();
-  const [exerciseSearch, setExerciseSearch] = useState("");
-  const [startTime, setStartTime] = useState<Date>(() => new Date());
-  const [elapsedSec, setElapsedSec] = useState(0);
-  const [isDurationDialogOpen, setIsDurationDialogOpen] = useState(false);
-  const [adjustHours, setAdjustHours] = useState(0);
-  const [adjustMinutes, setAdjustMinutes] = useState(0);
-  const [startTimeInput, setStartTimeInput] = useState("");
-  const [showDurationPicker, setShowDurationPicker] = useState(false);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [paused, setPaused] = useState<boolean>(() => {
-    try {
-      return !!localStorage.getItem("workout:paused");
-    } catch (e) {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    if (!isExerciseDialogOpen && pendingSheet) {
-      setExerciseDialogSheet(pendingSheet);
-      setPendingSheet(null);
-    }
-  }, [isExerciseDialogOpen, pendingSheet]);
-
-  // Disable background scroll while Create Exercise modal is open
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const prev = document.body.style.overflow;
-    if (isCreateExerciseOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = prev;
-    }
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [isCreateExerciseOpen]);
-
-  // If we navigated here by starting a routine, start the workout paused
-  useEffect(() => {
-    if (!startedFromRoutine) return;
-    try {
-      localStorage.removeItem("workout:paused"); // Start routine sessions unpaused so the timer begins immediately
-    } catch (e) {}
-    setPaused(false);
-  }, [startedFromRoutine]);
-  const [workoutId, setWorkoutId] = useState<string | null>(null);
-  const queryClient = useQueryClient();
-
-  // Create exercise form state (used by create dialog inside the add/replace flow)
-  const [newExerciseName, setNewExerciseName] = useState("");
-  const [newExerciseMuscle, setNewExerciseMuscle] = useState<string | "">("");
-  const [newExerciseEquipment, setNewExerciseEquipment] = useState<
-    "all" | string
-  >("all");
-  const [newExerciseDescription, setNewExerciseDescription] = useState("");
-
-  const createExerciseMutation = useMutation({
-    mutationFn: async () =>
-      createExercise(
-        newExerciseName,
-        (newExerciseMuscle as any) || "other",
-        newExerciseDescription,
-        {
-          custom: true,
-          equipment:
-            newExerciseEquipment !== "all" ? newExerciseEquipment : undefined,
-        },
-      ),
-    onSuccess: (created: any) => {
-      try {
-        queryClient.invalidateQueries({ queryKey: ["exercises"] });
-      } catch (e) {}
-
-      try {
-        if (exerciseToReplace) {
-          replaceExerciseForCard(exerciseToReplace, created);
-        } else {
-          addExercise(created);
-        }
-      } catch (e) {}
-
-      setIsCreateExerciseOpen(false);
-      setIsExerciseDialogOpen(false);
-      setNewExerciseName("");
-      setNewExerciseMuscle("");
-      setNewExerciseEquipment("all");
-      setNewExerciseDescription("");
-      toast({ title: "Exercise created" });
-    },
-    onError: (err: any) => {
-      toast({
-        title: "Create failed",
-        description: String(err),
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Validation modal for create exercise
-  const [isCreateValidationOpen, setIsCreateValidationOpen] = useState(false);
-  const [createValidationMessage, setCreateValidationMessage] =
-    useState<string>("");
-
-  const handleCreateExercise = () => {
-    const missing: string[] = [];
-    if (!newExerciseName.trim()) missing.push("a name");
-    if (!newExerciseMuscle) missing.push("a muscle group");
-    if (newExerciseEquipment === "all") missing.push("equipment");
-    if (missing.length > 0) {
-      const msg = `Please provide ${missing.join(", ")} before creating.`;
-      setCreateValidationMessage(msg);
-      setIsCreateValidationOpen(true);
-      return;
-    }
-    createExerciseMutation.mutate();
-  };
-
-  const hasToken = typeof window !== "undefined" && !!getToken();
-
-  const { data: userExercises = [] } = useQuery({
-    queryKey: ["exercises", hasToken],
-    queryFn: getExercises,
-    enabled: hasToken,
-  });
-
-  useEffect(() => {
-    if (!prVisible && !prBanner && prQueue.length > 0) {
-      const [next, ...rest] = prQueue;
-      setPrBanner(next);
-      setPrQueue(rest);
-      setPrVisible(true);
-    }
-  }, [prVisible, prBanner, prQueue]);
-
-  useEffect(() => {
-    if (!prVisible) return;
-    const timer = setTimeout(() => {
-      setPrVisible(false);
-    }, 3500);
-    return () => clearTimeout(timer);
-  }, [prVisible]);
-
-  useEffect(() => {
-    if (prVisible || !prBanner) return;
-    const timer = setTimeout(() => {
-      setPrBanner(null);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [prVisible, prBanner]);
-
-  const allExercises = useMemo(() => {
-    const map = new Map<string, Exercise>();
-    const isHiitName = (name: string) => {
-      const n = (name || "").toLowerCase();
-      return (
-        n.includes("burpee") ||
-        n.includes("mountain") ||
-        n.includes("climb") ||
-        n.includes("jump squat") ||
-        n.includes("plank jack") ||
-        n.includes("skater")
-      );
-    };
-
-    const normalize = (e: Exercise): Exercise => ({
-      ...e,
-      muscleGroup:
-        // Prefer explicit cardio classification for known HIIT/bodyweight names
-        isHiitName(e.name)
-          ? "cardio"
-          : e.muscleGroup === "other"
-            ? "calves"
-            : e.muscleGroup,
-    });
-    staticLibraryExercises.forEach((e) =>
-      map.set(e.name.toLowerCase(), normalize(e)),
-    );
-    userExercises.forEach((e) => {
-      const key = e.name.toLowerCase();
-      const existing = map.get(key);
-
-      map.set(
-        key,
-        normalize({
-          ...e,
-          // DO NOT override library equipment with undefined / wrong values
-          equipment: e.equipment ?? existing?.equipment,
-        }),
-      );
-    });
-
-    return Array.from(map.values());
-  }, [userExercises]);
-
-  const createWorkoutMutation = useMutation({
-    mutationFn: (name: string) => createWorkout(name),
-    onSuccess: (w) => {
-      setWorkoutId(w.id);
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
-      try {
-        triggerHaptic();
-      } catch (e) {}
-
-      // If the opener requested an immediate start+view (onboarding recommended flow)
-      try {
-        const auto = (location.state as any)?.autostartAndView;
-        if (auto) {
-          navigate(`/workouts/${w.id}/view`);
-        }
-      } catch (e) {}
-    },
-    onError: (err: any) => {
-      toast({
-        title: "Failed to start workout",
-        description: String(err),
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Allow unauthenticated users to start a local workout; only require auth for server actions.
-
-  useEffect(() => {
-    if (!hasToken || isRoutineBuilder) return;
-
-    if (forceNew) {
-      try {
-        const inProg = localStorage.getItem("workout:inProgress");
-        if (inProg) {
-          const obj = JSON.parse(inProg);
-          if (obj && obj.id) {
-            localStorage.removeItem(`workout:state:${obj.id}`);
-          }
-        }
-        localStorage.removeItem("workout:inProgress");
-        localStorage.removeItem("workout:paused");
-      } catch (e) {}
-
-      if (!workoutId) {
+        <CreateExerciseDialog
+          isOpen={isCreateExerciseOpen}
+          onOpenChange={setIsCreateExerciseOpen}
+          newExerciseName={newExerciseName}
+          setNewExerciseName={setNewExerciseName}
+          newExerciseEquipment={newExerciseEquipment}
+          setNewExerciseEquipment={setNewExerciseEquipment}
+          availableEquipments={availableEquipments}
+          isEquipmentPickerOpen={isCreateEquipmentPickerOpen}
+          onEquipmentPickerOpenChange={setIsCreateEquipmentPickerOpen}
+          newExerciseMuscle={newExerciseMuscle}
+          setNewExerciseMuscle={setNewExerciseMuscle}
+          availableMuscles={availableMuscles}
+          isMusclePickerOpen={isCreateMusclePickerOpen}
+          onMusclePickerOpenChange={setIsCreateMusclePickerOpen}
+          newExerciseDescription={newExerciseDescription}
+          setNewExerciseDescription={setNewExerciseDescription}
+          onSubmit={handleCreateExercise}
+          isSubmitting={createExerciseMutation.isLoading}
+          isValidationOpen={isCreateValidationOpen}
+          onValidationOpenChange={setIsCreateValidationOpen}
+          validationMessage={createValidationMessage}
+        />
         createWorkoutMutation.mutate(workoutName);
       }
       return;
@@ -1444,7 +1143,7 @@ export default function NewWorkout() {
           // large rep counts. The treadmill/bike/elliptical PR logic ignores
           // `floors`, so this is safe.
           if (isHiitName) {
-            floors = (set.reps || 0) || undefined;
+            floors = set.reps || 0 || undefined;
             level = undefined;
           } else {
             level = rawStat || undefined;
@@ -1912,9 +1611,7 @@ export default function NewWorkout() {
 
               const isHiitName = (ex?.exercise?.name || "")
                 .toLowerCase()
-                .match(
-                  /burpee|mountain|climb|jump squat|plank jack|skater/,
-                );
+                .match(/burpee|mountain|climb|jump squat|plank jack|skater/);
               const rawStat = isHiitName ? s.reps || 0 : rawStatBase;
 
               let distance: number | undefined;
@@ -1940,7 +1637,7 @@ export default function NewWorkout() {
                 // For HIIT cardio, stash reps in `floors` so we avoid
                 // DecimalField limits on `level`.
                 if (isHiitName) {
-                  floors = (s.reps || 0) || undefined;
+                  floors = s.reps || 0 || undefined;
                   level = undefined;
                 } else {
                   level = rawStat || undefined;
@@ -2870,6 +2567,7 @@ export default function NewWorkout() {
                           ? toggleCardioSetComplete(workoutExercise.id, set.id)
                           : toggleSetComplete(workoutExercise.id, set.id)
                       }
+                      useDialogForSetType
                     />
                   ))}
                 </div>
@@ -3315,7 +3013,7 @@ export default function NewWorkout() {
         >
           <DialogContent
             style={{ animation: "none" }}
-            className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-6 pb-6 pt-4 data-[state=open]:animate-none data-[state=closed]:animate-none"
+            className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none"
           >
             <div className="text-center">
               <DialogTitle className="text-lg font-semibold">

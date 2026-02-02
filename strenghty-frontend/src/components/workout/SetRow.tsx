@@ -41,6 +41,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 
 interface SetRowProps {
@@ -54,6 +55,7 @@ interface SetRowProps {
   onUpdate: (updates: Partial<WorkoutSet>) => void;
   onUnitChange?: (unit: "lbs" | "kg") => void;
   onComplete: () => void;
+  useDialogForSetType?: boolean;
 }
 
 function HeaderCell({ children }: { children: React.ReactNode }) {
@@ -83,6 +85,7 @@ export function SetRow({
   onUpdate,
   onUnitChange,
   onComplete,
+  useDialogForSetType = false,
 }: SetRowProps) {
   const isCardio = !!set.cardioMode;
   const name = (exerciseName || "").toLowerCase();
@@ -118,6 +121,7 @@ export function SetRow({
   const hasRpe = typeof set.rpe === "number" && !isNaN(set.rpe);
   const sliderValue = hasRpe ? (set.rpe as number) : 8.5;
   const rpeInfo = rpeOptions.find((o) => o.value === sliderValue)?.label;
+  const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
 
   const weight =
     typeof set.weight === "number" && !isNaN(set.weight) ? set.weight : 0;
@@ -346,69 +350,182 @@ export function SetRow({
       {/* Column 1: Set type */}
       <Cell>
         {!readOnly ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
-                  typeClasses[currentType],
-                )}
-                aria-label={`Set type ${currentType}`}
+          useDialogForSetType ? (
+            <>
+              {isTypeDialogOpen && (
+                <div
+                  className="fixed inset-0"
+                  style={{
+                    zIndex: 109,
+                    backdropFilter: "blur(10px)",
+                    WebkitBackdropFilter: "blur(10px)",
+                    background: "rgba(0,0,0,0.35)",
+                  }}
+                  onClick={() => setIsTypeDialogOpen(false)}
+                  aria-hidden
+                />
+              )}
+
+              <Dialog
+                open={isTypeDialogOpen}
+                onOpenChange={setIsTypeDialogOpen}
               >
-                {currentType === "W"
-                  ? "W"
-                  : currentType === "S"
-                    ? "1"
-                    : currentType === "F"
-                      ? "F"
-                      : "D"}
-              </button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent className="w-56 p-0">
-              <div className="space-y-2 rounded-md bg-neutral-900 p-3">
-                <DropdownMenuLabel className="px-0 text-white">
-                  Select Set Type
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="-mx-3" />
-
-                <DropdownMenuItem
-                  onClick={() => onUpdate({ type: "W" })}
-                  className="flex items-center gap-3 py-2 text-white"
+                <button
+                  type="button"
+                  className={cn(
+                    "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
+                    typeClasses[currentType],
+                  )}
+                  aria-label={`Set type ${currentType}`}
+                  onClick={() => setIsTypeDialogOpen(true)}
                 >
-                  <span className="w-4 text-xs font-bold text-yellow-400">
-                    W
-                  </span>
-                  <span className="text-sm">Warm Up Set</span>
-                </DropdownMenuItem>
+                  {currentType === "W"
+                    ? "W"
+                    : currentType === "S"
+                      ? "1"
+                      : currentType === "F"
+                        ? "F"
+                        : "D"}
+                </button>
 
-                <DropdownMenuItem
-                  onClick={() => onUpdate({ type: "S" })}
-                  className="flex items-center gap-3 py-2 text-white"
+                <DialogContent
+                  style={{ animation: "none" }}
+                  className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none"
                 >
-                  <span className="w-4 text-xs font-bold text-white">1</span>
-                  <span className="text-sm">Normal Set</span>
-                </DropdownMenuItem>
+                  <DialogHeader className="text-center">
+                    <DialogTitle className="text-lg font-semibold">
+                      Select Set Type
+                    </DialogTitle>
+                    <DialogDescription className="mt-1 text-xs text-muted-foreground">
+                      Choose how this set should be counted
+                    </DialogDescription>
+                  </DialogHeader>
 
-                <DropdownMenuItem
-                  onClick={() => onUpdate({ type: "F" })}
-                  className="flex items-center gap-3 py-2 text-white"
-                >
-                  <span className="w-4 text-xs font-bold text-red-400">F</span>
-                  <span className="text-sm">Failure Set</span>
-                </DropdownMenuItem>
+                  <div className="mt-4 space-y-2">
+                    <DialogClose asChild>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ type: "W" })}
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-white transition-colors hover:bg-white/5"
+                      >
+                        <span className="w-4 text-xs font-bold text-yellow-400">
+                          W
+                        </span>
+                        <span className="text-sm">Warm Up Set</span>
+                      </button>
+                    </DialogClose>
 
-                <DropdownMenuItem
-                  onClick={() => onUpdate({ type: "D" })}
-                  className="flex items-center gap-3 py-2 text-white"
+                    <DialogClose asChild>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ type: "S" })}
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-white transition-colors hover:bg-white/5"
+                      >
+                        <span className="w-4 text-xs font-bold text-white">
+                          1
+                        </span>
+                        <span className="text-sm">Normal Set</span>
+                      </button>
+                    </DialogClose>
+
+                    <DialogClose asChild>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ type: "F" })}
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-white transition-colors hover:bg-white/5"
+                      >
+                        <span className="w-4 text-xs font-bold text-red-400">
+                          F
+                        </span>
+                        <span className="text-sm">Failure Set</span>
+                      </button>
+                    </DialogClose>
+
+                    <DialogClose asChild>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ type: "D" })}
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-white transition-colors hover:bg-white/5"
+                      >
+                        <span className="w-4 text-xs font-bold text-sky-400">
+                          D
+                        </span>
+                        <span className="text-sm">Drop Set</span>
+                      </button>
+                    </DialogClose>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
+                    typeClasses[currentType],
+                  )}
+                  aria-label={`Set type ${currentType}`}
                 >
-                  <span className="w-4 text-xs font-bold text-sky-400">D</span>
-                  <span className="text-sm">Drop Set</span>
-                </DropdownMenuItem>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  {currentType === "W"
+                    ? "W"
+                    : currentType === "S"
+                      ? "1"
+                      : currentType === "F"
+                        ? "F"
+                        : "D"}
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent className="w-56 p-0">
+                <div className="space-y-2 rounded-md bg-neutral-900 p-3">
+                  <DropdownMenuLabel className="px-0 text-white">
+                    Select Set Type
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="-mx-3" />
+
+                  <DropdownMenuItem
+                    onClick={() => onUpdate({ type: "W" })}
+                    className="flex items-center gap-3 py-2 text-white"
+                  >
+                    <span className="w-4 text-xs font-bold text-yellow-400">
+                      W
+                    </span>
+                    <span className="text-sm">Warm Up Set</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() => onUpdate({ type: "S" })}
+                    className="flex items-center gap-3 py-2 text-white"
+                  >
+                    <span className="w-4 text-xs font-bold text-white">1</span>
+                    <span className="text-sm">Normal Set</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() => onUpdate({ type: "F" })}
+                    className="flex items-center gap-3 py-2 text-white"
+                  >
+                    <span className="w-4 text-xs font-bold text-red-400">
+                      F
+                    </span>
+                    <span className="text-sm">Failure Set</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() => onUpdate({ type: "D" })}
+                    className="flex items-center gap-3 py-2 text-white"
+                  >
+                    <span className="w-4 text-xs font-bold text-sky-400">
+                      D
+                    </span>
+                    <span className="text-sm">Drop Set</span>
+                  </DropdownMenuItem>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
         ) : (
           <div
             className={cn(

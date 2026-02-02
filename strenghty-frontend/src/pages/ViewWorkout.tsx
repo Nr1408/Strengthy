@@ -242,7 +242,11 @@ export default function ViewWorkout() {
           // the level-based stat if needed.
           let repsFromCardio = 0;
           if (isHiitName) {
-            if (typeof s.floors === "number" && !isNaN(s.floors) && s.floors > 0) {
+            if (
+              typeof s.floors === "number" &&
+              !isNaN(s.floors) &&
+              s.floors > 0
+            ) {
               repsFromCardio = s.floors;
             } else if (
               typeof cardioStat === "number" &&
