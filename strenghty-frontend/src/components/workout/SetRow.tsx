@@ -122,7 +122,6 @@ export function SetRow({
 
   const hasRpe = typeof set.rpe === "number" && !isNaN(set.rpe);
   const sliderValue = hasRpe ? (set.rpe as number) : 8.5;
-  const rpeInfo = rpeOptions.find((o) => o.value === sliderValue)?.label;
 
   const weight =
     typeof set.weight === "number" && !isNaN(set.weight) ? set.weight : 0;
@@ -792,7 +791,13 @@ export function SetRow({
                         {(rpeDialogOpen ? localRpe : sliderValue).toFixed(1)}
                       </div>
                       <div className="text-sm text-center text-muted-foreground min-h-[2.25rem]">
-                        {rpeInfo}
+                        {
+                          rpeOptions.find(
+                            (o) =>
+                              o.value ===
+                              (rpeDialogOpen ? localRpe : sliderValue),
+                          )?.label
+                        }
                       </div>
                       <div className="px-6 w-full">
                         <div
@@ -1085,7 +1090,13 @@ export function SetRow({
                     {(rpeDialogOpen ? localRpe : sliderValue).toFixed(1)}
                   </div>
                   <div className="text-sm text-center text-muted-foreground min-h-[2.25rem]">
-                    {rpeInfo}
+                    {
+                      rpeOptions.find(
+                        (o) =>
+                          o.value ===
+                          (rpeDialogOpen ? localRpe : sliderValue),
+                      )?.label
+                    }
                   </div>
                   <div className="px-6 w-full">
                     <div
