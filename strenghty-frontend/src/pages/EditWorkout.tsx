@@ -1,6 +1,6 @@
 // In EditWorkout.tsx (or ViewWorkout.tsx)
 const GRID_TEMPLATE =
-  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 
 // Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
 const GRID_TEMPLATE_CARDIO =
@@ -8,7 +8,7 @@ const GRID_TEMPLATE_CARDIO =
 
 // HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
 const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -2027,6 +2027,7 @@ export default function EditWorkout() {
                       exerciseName={workoutExercise.exercise.name}
                       unit={set.unit || getUnit()}
                       setNumber={index + 1}
+                      useDialogForSetType
                       onUpdate={(updates) =>
                         updateSetLocal(workoutExercise.id, set.id, updates)
                       }
@@ -2036,7 +2037,6 @@ export default function EditWorkout() {
                       onComplete={() =>
                         handleSetComplete(workoutExercise.id, set.id)
                       }
-                      useDialogForSetType
                     />
                   ))}
                 </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 // Grid templates for strength vs cardio rows (tightened to reduce left/right gaps)
 const GRID_TEMPLATE_STRENGTH =
-  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 // same as above but without the final check column
 const GRID_TEMPLATE_STRENGTH_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
@@ -14,7 +14,7 @@ const GRID_TEMPLATE_CARDIO_NO_CHECK =
 
 // HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
 const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 const GRID_TEMPLATE_HIIT_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
@@ -41,7 +41,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 
 interface SetRowProps {
@@ -52,10 +51,13 @@ interface SetRowProps {
   readOnly?: boolean;
   unitInteractiveWhenReadOnly?: boolean;
   showComplete?: boolean;
+  // When true, use a full-screen centered modal for set type selection
+  // instead of a small dropdown menu. This is used by NewWorkout/EditWorkout
+  // to match the Create Exercise dialog styling.
+  useDialogForSetType?: boolean;
   onUpdate: (updates: Partial<WorkoutSet>) => void;
   onUnitChange?: (unit: "lbs" | "kg") => void;
   onComplete: () => void;
-  useDialogForSetType?: boolean;
 }
 
 function HeaderCell({ children }: { children: React.ReactNode }) {
@@ -82,10 +84,10 @@ export function SetRow({
   readOnly = false,
   unitInteractiveWhenReadOnly = false,
   showComplete = true,
+  useDialogForSetType = false,
   onUpdate,
   onUnitChange,
   onComplete,
-  useDialogForSetType = false,
 }: SetRowProps) {
   const isCardio = !!set.cardioMode;
   const name = (exerciseName || "").toLowerCase();
@@ -121,7 +123,6 @@ export function SetRow({
   const hasRpe = typeof set.rpe === "number" && !isNaN(set.rpe);
   const sliderValue = hasRpe ? (set.rpe as number) : 8.5;
   const rpeInfo = rpeOptions.find((o) => o.value === sliderValue)?.label;
-  const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
 
   const weight =
     typeof set.weight === "number" && !isNaN(set.weight) ? set.weight : 0;
@@ -302,6 +303,9 @@ export function SetRow({
   const [rpeDialogOpen, setRpeDialogOpen] = useState(false);
   const [localRpe, setLocalRpe] = useState<number>(sliderValue);
 
+  // Centered modal for set type selection when enabled
+  const [setTypeDialogOpen, setSetTypeDialogOpen] = useState(false);
+
   useEffect(() => {
     if (rpeDialogOpen) {
       setLocalRpe(sliderValue);
@@ -351,25 +355,11 @@ export function SetRow({
       <Cell>
         {!readOnly ? (
           useDialogForSetType ? (
-            <>
-              {isTypeDialogOpen && (
-                <div
-                  className="fixed inset-0"
-                  style={{
-                    zIndex: 109,
-                    backdropFilter: "blur(10px)",
-                    WebkitBackdropFilter: "blur(10px)",
-                    background: "rgba(0,0,0,0.35)",
-                  }}
-                  onClick={() => setIsTypeDialogOpen(false)}
-                  aria-hidden
-                />
-              )}
-
-              <Dialog
-                open={isTypeDialogOpen}
-                onOpenChange={setIsTypeDialogOpen}
-              >
+            <Dialog
+              open={setTypeDialogOpen}
+              onOpenChange={setSetTypeDialogOpen}
+            >
+              <DialogTrigger asChild>
                 <button
                   type="button"
                   className={cn(
@@ -377,7 +367,6 @@ export function SetRow({
                     typeClasses[currentType],
                   )}
                   aria-label={`Set type ${currentType}`}
-                  onClick={() => setIsTypeDialogOpen(true)}
                 >
                   {currentType === "W"
                     ? "W"
@@ -387,76 +376,74 @@ export function SetRow({
                         ? "F"
                         : "D"}
                 </button>
+              </DialogTrigger>
+              <DialogContent className="fixed left-1/2 top-1/2 z-[120] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] max-h-[80vh] overflow-y-auto rounded-[32px] bg-zinc-900/95 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none">
+                <DialogHeader className="text-center">
+                  <DialogTitle className="text-base font-semibold">
+                    Select Set Type
+                  </DialogTitle>
+                  <DialogDescription className="mt-1 text-xs text-muted-foreground">
+                    Choose how this set should be logged.
+                  </DialogDescription>
+                </DialogHeader>
 
-                <DialogContent
-                  style={{ animation: "none" }}
-                  className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none"
-                >
-                  <DialogHeader className="text-center">
-                    <DialogTitle className="text-lg font-semibold">
-                      Select Set Type
-                    </DialogTitle>
-                    <DialogDescription className="mt-1 text-xs text-muted-foreground">
-                      Choose how this set should be counted
-                    </DialogDescription>
-                  </DialogHeader>
+                <div className="mt-4 w-full divide-y divide-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdate({ type: "W" });
+                      setSetTypeDialogOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                  >
+                    <span className="w-4 text-xs font-bold text-yellow-400">
+                      W
+                    </span>
+                    <span className="text-sm">Warm Up Set</span>
+                  </button>
 
-                  <div className="mt-4 space-y-2">
-                    <DialogClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => onUpdate({ type: "W" })}
-                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-white transition-colors hover:bg-white/5"
-                      >
-                        <span className="w-4 text-xs font-bold text-yellow-400">
-                          W
-                        </span>
-                        <span className="text-sm">Warm Up Set</span>
-                      </button>
-                    </DialogClose>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdate({ type: "S" });
+                      setSetTypeDialogOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                  >
+                    <span className="w-4 text-xs font-bold text-white">1</span>
+                    <span className="text-sm">Normal Set</span>
+                  </button>
 
-                    <DialogClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => onUpdate({ type: "S" })}
-                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-white transition-colors hover:bg-white/5"
-                      >
-                        <span className="w-4 text-xs font-bold text-white">
-                          1
-                        </span>
-                        <span className="text-sm">Normal Set</span>
-                      </button>
-                    </DialogClose>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdate({ type: "F" });
+                      setSetTypeDialogOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                  >
+                    <span className="w-4 text-xs font-bold text-red-400">
+                      F
+                    </span>
+                    <span className="text-sm">Failure Set</span>
+                  </button>
 
-                    <DialogClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => onUpdate({ type: "F" })}
-                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-white transition-colors hover:bg-white/5"
-                      >
-                        <span className="w-4 text-xs font-bold text-red-400">
-                          F
-                        </span>
-                        <span className="text-sm">Failure Set</span>
-                      </button>
-                    </DialogClose>
-
-                    <DialogClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => onUpdate({ type: "D" })}
-                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-white transition-colors hover:bg-white/5"
-                      >
-                        <span className="w-4 text-xs font-bold text-sky-400">
-                          D
-                        </span>
-                        <span className="text-sm">Drop Set</span>
-                      </button>
-                    </DialogClose>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdate({ type: "D" });
+                      setSetTypeDialogOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                  >
+                    <span className="w-4 text-xs font-bold text-sky-400">
+                      D
+                    </span>
+                    <span className="text-sm">Drop Set</span>
+                  </button>
+                </div>
+              </DialogContent>
+            </Dialog>
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

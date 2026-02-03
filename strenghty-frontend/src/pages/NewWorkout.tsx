@@ -59,17 +59,25 @@ import { triggerHaptic } from "@/lib/haptics";
 import { getUnit } from "@/lib/utils";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog";
+import type {
+  CardioMode,
+  Exercise,
+  MuscleGroup,
+  Routine,
+  WorkoutExercise,
+  WorkoutSet,
+} from "@/types/workout";
 
 // Grid templates used by headers and set-row layouts
 const GRID_TEMPLATE =
-  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 // Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
 const GRID_TEMPLATE_CARDIO =
   "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 
 // HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
 const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 // consistent friendly muscle ordering used across library and create dialogs
 const allMusclesOrder: MuscleGroup[] = [
@@ -103,33 +111,179 @@ export default function NewWorkout() {
   };
   const fromRoutine = location.state?.routine;
   const isNewRoutineTemplate = !!location.state?.fromNewRoutine;
-        <CreateExerciseDialog
-          isOpen={isCreateExerciseOpen}
-          onOpenChange={setIsCreateExerciseOpen}
-          newExerciseName={newExerciseName}
-          setNewExerciseName={setNewExerciseName}
-          newExerciseEquipment={newExerciseEquipment}
-          setNewExerciseEquipment={setNewExerciseEquipment}
-          availableEquipments={availableEquipments}
-          isEquipmentPickerOpen={isCreateEquipmentPickerOpen}
-          onEquipmentPickerOpenChange={setIsCreateEquipmentPickerOpen}
-          newExerciseMuscle={newExerciseMuscle}
-          setNewExerciseMuscle={setNewExerciseMuscle}
-          availableMuscles={availableMuscles}
-          isMusclePickerOpen={isCreateMusclePickerOpen}
-          onMusclePickerOpenChange={setIsCreateMusclePickerOpen}
-          newExerciseDescription={newExerciseDescription}
-          setNewExerciseDescription={setNewExerciseDescription}
-          onSubmit={handleCreateExercise}
-          isSubmitting={createExerciseMutation.isLoading}
-          isValidationOpen={isCreateValidationOpen}
-          onValidationOpenChange={setIsCreateValidationOpen}
-          validationMessage={createValidationMessage}
-        />
-        createWorkoutMutation.mutate(workoutName);
-      }
+  const isRoutineBuilder = !!location.state?.fromNewRoutine;
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [workoutId, setWorkoutId] = useState<string | null>(null);
+  const [workoutName, setWorkoutName] = useState<string>(
+    fromRoutine?.name || "Workout",
+  );
+  const [notes, setNotes] = useState("");
+  const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
+  const [startTime, setStartTime] = useState<Date>(() => new Date());
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [isDurationDialogOpen, setIsDurationDialogOpen] = useState(false);
+  const [adjustHours, setAdjustHours] = useState(0);
+  const [adjustMinutes, setAdjustMinutes] = useState(0);
+  const [startTimeInput, setStartTimeInput] = useState("");
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [paused, setPaused] = useState<boolean>(() => {
+    try {
+      return !!localStorage.getItem("workout:paused");
+    } catch {
+      return false;
+    }
+  });
+
+  const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
+  const [exerciseSearch, setExerciseSearch] = useState("");
+
+  const [isEquipmentPickerOpen, setIsEquipmentPickerOpen] = useState(false);
+  const [isMusclePickerOpen, setIsMusclePickerOpen] = useState(false);
+
+  const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseMuscle, setNewExerciseMuscle] = useState<string | "">("");
+  const [newExerciseEquipment, setNewExerciseEquipment] = useState<
+    "all" | string
+  >("all");
+  const [newExerciseDescription, setNewExerciseDescription] = useState("");
+  const [isCreateValidationOpen, setIsCreateValidationOpen] = useState(false);
+  const [createValidationMessage, setCreateValidationMessage] =
+    useState<string>("");
+
+  const [isCreateEquipmentPickerOpen, setIsCreateEquipmentPickerOpen] =
+    useState(false);
+  const [isCreateMusclePickerOpen, setIsCreateMusclePickerOpen] =
+    useState(false);
+  const [exerciseToReplace, setExerciseToReplace] = useState<string | null>(
+    null,
+  );
+  const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
+  const [replaceFilter, setReplaceFilter] = useState<string | null>(null);
+
+  const [unusualSet, setUnusualSet] = useState<UnusualSetState | null>(null);
+  const recentForced = useRef<Set<string>>(new Set());
+
+  const [exerciseInfoOpen, setExerciseInfoOpen] = useState(false);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
+    null,
+  );
+  const [selectedExerciseName, setSelectedExerciseName] = useState<string>();
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>();
+
+  const [startedFromRoutine] = useState<boolean>(
+    !!fromRoutine || !!location.state?.fromNewRoutine,
+  );
+
+  const hasToken = typeof window !== "undefined" && !!getToken();
+
+  const { data: userExercises = [] } = useQuery({
+    queryKey: ["exercises", hasToken],
+    queryFn: getExercises,
+    enabled: hasToken,
+  });
+
+  const createExerciseMutation = useMutation({
+    mutationFn: async () =>
+      createExercise(
+        newExerciseName,
+        (newExerciseMuscle as any) || "other",
+        newExerciseDescription,
+        { custom: true },
+      ),
+    onSuccess: (created: any) => {
+      try {
+        queryClient.invalidateQueries({ queryKey: ["exercises"] });
+      } catch (e) {}
+      try {
+        if (replaceTarget) replaceExercise(replaceTarget, created);
+        else addExercise(created);
+      } catch (e) {}
+      setIsCreateExerciseOpen(false);
+      setIsExerciseDialogOpen(false);
+      setNewExerciseName("");
+      setNewExerciseMuscle("");
+      setNewExerciseEquipment("all");
+      setNewExerciseDescription("");
+      toast({ title: "Exercise created" });
+    },
+    onError: (err: any) =>
+      toast({
+        title: "Create failed",
+        description: String(err),
+        variant: "destructive",
+      }),
+  });
+
+  const handleCreateExercise = () => {
+    const missing: string[] = [];
+    if (!newExerciseName.trim()) missing.push("a name");
+    if (!newExerciseMuscle) missing.push("a muscle group");
+    if (newExerciseEquipment === "all") missing.push("equipment");
+    if (missing.length > 0) {
+      const msg = `Please provide ${missing.join(", ")} before creating.`;
+      setCreateValidationMessage(msg);
+      setIsCreateValidationOpen(true);
       return;
     }
+    createExerciseMutation.mutate();
+  };
+
+  type PrBanner = {
+    exerciseName: string;
+    label: string;
+    value: string;
+  };
+  const [prBanner, setPrBanner] = useState<PrBanner | null>(null);
+  const [prQueue, setPrQueue] = useState<PrBanner[]>([]);
+  const [prVisible, setPrVisible] = useState(false);
+
+  type UnusualSetState =
+    | {
+        type: "history";
+        exerciseId: string;
+        setId: string;
+        previousBestText: string;
+        newSetText: string;
+      }
+    | {
+        type: "firstTime";
+        exerciseId: string;
+        setId: string;
+        previousBestText: null;
+        newSetText: string;
+        weightKg: number;
+        reps: number;
+      };
+
+  const createWorkoutMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const w = await createWorkout(name);
+      return w;
+    },
+    onSuccess: (w: any) => {
+      setWorkoutId(w.id);
+      try {
+        queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      } catch (e) {}
+    },
+    onError: (err: any) =>
+      toast({
+        title: "Failed to start workout",
+        description: String(err),
+        variant: "destructive",
+      }),
+  });
+
+  // Restore in-progress workout if one exists; otherwise create a new one
+  useEffect(() => {
+    if (isRoutineBuilder) return;
+
+    // If we already have a workout id, do nothing here
+    if (workoutId) return;
 
     try {
       const inProg = localStorage.getItem("workout:inProgress");
@@ -147,6 +301,8 @@ export default function NewWorkout() {
               const dt = new Date(parsed.startTime);
               if (!isNaN(dt.getTime())) setStartTime(dt);
             }
+            if (parsed.workoutName) setWorkoutName(parsed.workoutName);
+            if (parsed.notes) setNotes(parsed.notes);
           }
           try {
             // Keep restored workouts paused when the app is restarted or reopened
@@ -164,7 +320,7 @@ export default function NewWorkout() {
     if (!workoutId) {
       createWorkoutMutation.mutate(workoutName);
     }
-  }, [workoutName, hasToken, isRoutineBuilder]);
+  }, [workoutId, workoutName, isRoutineBuilder]);
 
   useEffect(() => {
     if (!workoutId || isRoutineBuilder) return;
@@ -257,10 +413,48 @@ export default function NewWorkout() {
   const [filterMuscle, setFilterMuscle] = useState<"all" | string>("all");
   const [filterEquipment, setFilterEquipment] = useState<"all" | string>("all");
 
-  const [isCreateEquipmentPickerOpen, setIsCreateEquipmentPickerOpen] =
-    useState(false);
-  const [isCreateMusclePickerOpen, setIsCreateMusclePickerOpen] =
-    useState(false);
+  const allExercises = useMemo(() => {
+    const map = new Map<string, Exercise>();
+
+    const isHiitName = (name: string) => {
+      const n = (name || "").toLowerCase();
+      return (
+        n.includes("burpee") ||
+        n.includes("mountain") ||
+        n.includes("climb") ||
+        n.includes("jump squat") ||
+        n.includes("plank jack") ||
+        n.includes("skater")
+      );
+    };
+
+    const normalize = (e: Exercise): Exercise => ({
+      ...e,
+      muscleGroup: isHiitName(e.name)
+        ? "cardio"
+        : e.muscleGroup === "other"
+          ? "calves"
+          : e.muscleGroup,
+    });
+
+    staticLibraryExercises.forEach((e) =>
+      map.set(e.name.toLowerCase(), normalize(e as Exercise)),
+    );
+
+    (userExercises as Exercise[]).forEach((e) => {
+      const key = e.name.toLowerCase();
+      const existing = map.get(key);
+      map.set(
+        key,
+        normalize({
+          ...e,
+          equipment: (e as any).equipment ?? existing?.equipment,
+        }),
+      );
+    });
+
+    return Array.from(map.values());
+  }, [userExercises]);
 
   const availableMuscles = useMemo(() => {
     const set = new Set<string>();
@@ -348,6 +542,28 @@ export default function NewWorkout() {
       );
     });
   }, [exerciseSearch, allExercises, filterMuscle, filterEquipment]);
+
+  // PR banner queue handling (mirrors EditWorkout/Workouts)
+  useEffect(() => {
+    if (!prVisible && !prBanner && prQueue.length > 0) {
+      const [next, ...rest] = prQueue;
+      setPrBanner(next);
+      setPrQueue(rest);
+      setPrVisible(true);
+    }
+  }, [prVisible, prBanner, prQueue]);
+
+  useEffect(() => {
+    if (!prVisible) return;
+    const timer = setTimeout(() => setPrVisible(false), 3500);
+    return () => clearTimeout(timer);
+  }, [prVisible]);
+
+  useEffect(() => {
+    if (prVisible || !prBanner) return;
+    const timer = setTimeout(() => setPrBanner(null), 300);
+    return () => clearTimeout(timer);
+  }, [prVisible, prBanner]);
 
   const isHiitName = (name: string) => {
     const n = (name || "").toLowerCase();

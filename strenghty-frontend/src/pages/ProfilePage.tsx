@@ -322,8 +322,8 @@ export default function Profile() {
     <AppLayout>
       <main className="w-full max-w-3xl mx-auto px-4 pb-32">
         {/* Compact header with avatar, info and actions */}
-        <header className="pt-6 pb-4 flex items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
+        <header className="pt-6 pb-4 flex flex-col md:flex-row items-start md:items-center gap-4">
+          <div className="flex items-start gap-4 w-full">
             <div className="flex-shrink-0">
               <button
                 type="button"
@@ -351,7 +351,7 @@ export default function Profile() {
                 )}
               </button>
             </div>
-            <div className="min-w-0">
+            <div className="flex flex-col items-start w-full min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-lg font-semibold text-white truncate">
                   {profileInfo.name}
@@ -365,46 +365,84 @@ export default function Profile() {
               <div className="mt-1 text-xs text-muted-foreground">
                 Member since {memberSinceLabel}
               </div>
-              <div className="mt-3 flex flex-col md:flex-row items-start gap-2 md:gap-4">
-                <div className="flex flex-row items-start md:items-center gap-2">
-                  <div className="w-max">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditing(true)}
-                      className="min-w-[120px]"
-                    >
-                      Edit Profile
-                    </Button>
-                  </div>
+              {/* Desktop actions inline with header (hidden on mobile) */}
+              <div className="mt-3 hidden md:flex md:flex-row items-start gap-2 md:gap-4 w-full">
+                <div className="w-full md:w-auto">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditing(true)}
+                    className="w-full md:w-auto min-w-0 md:min-w-[120px]"
+                  >
+                    Edit Profile
+                  </Button>
+                </div>
 
-                  <div className="w-max">
+                <div className="flex gap-2 w-full md:w-auto mt-1 md:mt-0">
+                  <div className="flex-1 md:flex-none md:w-auto">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => navigate("/profile/account")}
+                      className="w-full md:w-auto min-w-0 md:min-w-[120px]"
                     >
                       Account Settings
                     </Button>
                   </div>
-                </div>
 
-                <div className="mt-1 md:mt-0">
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={handleSignOut}
-                    className="min-w-[120px]"
-                  >
-                    Sign Out
-                  </Button>
+                  <div className="flex-1 md:flex-none md:w-auto">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleSignOut}
+                      className="w-full md:w-auto min-w-0 md:min-w-[120px]"
+                    >
+                      Sign Out
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </header>
 
-        {/* actions shown next to Edit Profile (no fixed top-right buttons) */}
+        {/* Mobile actions below header */}
+        <div className="mt-4 pt-4 space-y-2 md:hidden">
+          <div className="w-full">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditing(true)}
+              className="w-full"
+            >
+              Edit Profile
+            </Button>
+          </div>
+
+          <div className="flex gap-2 w-full">
+            <div className="flex-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate("/profile/account")}
+                className="w-full"
+              >
+                Account Settings
+              </Button>
+            </div>
+
+            <div className="flex-1">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleSignOut}
+                className="w-full"
+              >
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {/* Section 2 — Performance Bento Grid (2x2 square cards) */}
         <section className="mt-6">

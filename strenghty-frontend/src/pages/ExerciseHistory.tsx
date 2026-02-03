@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 // Use the same tightened "no-check" templates from SetRow so the
 // header labels line up exactly with the read-only set boxes below.
 const GRID_TEMPLATE =
-  "minmax(20px, 0.2fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 // same as above but without the final check column
 const GRID_TEMPLATE_STRENGTH_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
@@ -29,7 +29,7 @@ const GRID_TEMPLATE_CARDIO_NO_CHECK =
 
 // HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
 const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.2fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 const GRID_TEMPLATE_HIIT_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
