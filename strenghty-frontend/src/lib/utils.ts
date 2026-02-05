@@ -66,3 +66,47 @@ export function formatMinutes(totalMinutes?: number | null): string | undefined 
   }
   return `${rem}m`;
 }
+
+// Count the number of distinct PR types represented by a set.
+// Strength sets expose detailed flags like absWeightPR/e1rmPR/volumePR.
+// Cardio sets expose distancePR/pacePR/ascentPR/intensityPR/splitPR.
+// If a set is marked isPR but no specific flags are present (e.g. legacy or
+// generic PRs), we treat that as a single PR so counts remain intuitive.
+export function countPrTypesFromSet(set: any): number {
+  if (!set) return 0;
+
+  let count = 0;
+  let hasTyped = false;
+
+  const addFlag = (flag: unknown) => {
+    if (flag) {
+      hasTyped = true;
+      count += 1;
+    }
+  };
+
+  const type = (set as any).type;
+  const hasCardioMode = (set as any).cardioMode || (set as any).mode;
+
+  if (hasCardioMode) {
+    // Cardio PR flags
+    addFlag((set as any).distancePR || (set as any).is_distance_pr);
+    addFlag((set as any).pacePR || (set as any).is_pace_pr);
+    addFlag((set as any).ascentPR || (set as any).is_ascent_pr);
+    addFlag((set as any).intensityPR || (set as any).is_intensity_pr);
+    addFlag((set as any).splitPR || (set as any).is_split_pr);
+  } else if (type === "W" || type === "S" || type === "F" || type === "D" || typeof type === "undefined") {
+    // Strength PR flags (repPR intentionally excluded per UX — "Most Reps at this Weight"
+    // is not surfaced as its own visible PR type).
+    addFlag((set as any).absWeightPR || (set as any).is_abs_weight_pr);
+    addFlag((set as any).e1rmPR || (set as any).is_e1rm_pr);
+    addFlag((set as any).volumePR || (set as any).is_volume_pr);
+  }
+
+  // Fallback: generic PR with no typed flags
+  if (!hasTyped && (set as any).isPR) {
+    count += 1;
+  }
+
+  return count;
+}

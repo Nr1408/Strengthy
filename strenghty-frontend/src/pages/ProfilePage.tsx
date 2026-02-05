@@ -41,6 +41,7 @@ import {
   type UiWorkout,
   type UiWorkoutSet,
 } from "@/lib/api";
+import { countPrTypesFromSet } from "@/lib/utils";
 
 type HeightUnit = "cm" | "inch";
 
@@ -169,7 +170,7 @@ export default function Profile() {
 
   const totalPRs = useMemo(() => {
     return Object.values(setsByWorkout).reduce((sum, sets) => {
-      return sum + sets.filter((s) => s.isPR).length;
+      return sum + sets.reduce((inner, s) => inner + countPrTypesFromSet(s), 0);
     }, 0);
   }, [setsByWorkout]);
 

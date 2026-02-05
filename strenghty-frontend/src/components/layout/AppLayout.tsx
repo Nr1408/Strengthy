@@ -57,6 +57,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const { toast } = useToast();
 
+  const isWorkoutBuilderRoute =
+    location.pathname === "/workouts/new" ||
+    (location.pathname.startsWith("/workouts/") &&
+      location.pathname.endsWith("/edit"));
+
   // When navigating away from NewWorkout while a workout is in progress,
   // mark it paused and show a small dialog.
   useEffect(() => {
@@ -131,69 +136,68 @@ export function AppLayout({ children }: AppLayoutProps) {
         className="fixed top-0 left-0 w-full z-[100] h-px"
         style={{ backgroundColor: "#0E1115" }}
       />
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 relative h-16 flex items-center justify-center">
-          <Link
-            to="/dashboard"
-            className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg">
-              <img
-                src="/icons/logo.png"
-                alt="Strengthy logo"
-                className="h-9 w-9 rounded-lg"
-              />
-            </div>
-            <span className="font-heading text-xl font-bold text-white">
-              Strengthy
-            </span>
-          </Link>
+      {/* Header (hidden on NewWorkout/EditWorkout where a custom bar is used) */}
+      {!isWorkoutBuilderRoute && (
+        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 relative h-16 flex items-center justify-center">
+            <Link
+              to="/dashboard"
+              className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg">
+                <img
+                  src="/icons/logo.png"
+                  alt="Strengthy logo"
+                  className="h-9 w-9 rounded-lg"
+                />
+              </div>
+              <span className="font-heading text-xl font-bold text-white">
+                Strengthy
+              </span>
+            </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
+            <nav className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {!location.pathname.startsWith("/routines/") && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <Link
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                  )}
+                  to="/settings"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
+                  <SettingsIcon className="h-5 w-5" />
                 </Link>
-              );
-            })}
-          </nav>
-
-          {!(
-            location.pathname === "/workouts/new" ||
-            location.pathname.startsWith("/routines/")
-          ) && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-              <Link
-                to="/settings"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              >
-                <SettingsIcon className="h-5 w-5" />
-              </Link>
-              <Link
-                to="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              >
-                <User className="h-5 w-5" />
-              </Link>
-              {/* Sign out moved to Profile page */}
-            </div>
-          )}
-        </div>
-      </header>
+                <Link
+                  to="/profile"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <User className="h-5 w-5" />
+                </Link>
+                {/* Sign out moved to Profile page */}
+              </div>
+            )}
+          </div>
+        </header>
+      )}
 
       {/* Mobile Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background rounded-t-2xl md:hidden">
@@ -219,7 +223,12 @@ export function AppLayout({ children }: AppLayoutProps) {
       </nav>
 
       {/* Main Content */}
-      <main className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 pb-24 pt-[50px] md:pb-6">
+      <main
+        className={cn(
+          "w-full px-3 md:max-w-7xl md:mx-auto md:px-6 pb-24 md:pb-6",
+          isWorkoutBuilderRoute ? "pt-0" : "pt-[50px]",
+        )}
+      >
         {/* Notification enable prompt (non-blocking) */}
         {showNotifPrompt && (
           <div className="mb-4 rounded-2xl border border-border bg-neutral-900/90 p-3 shadow-md">

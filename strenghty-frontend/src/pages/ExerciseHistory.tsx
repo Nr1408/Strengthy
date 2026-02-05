@@ -219,8 +219,8 @@ export default function ExerciseHistory() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div>
+      <div className="space-y-3 -mt-4">
+        <div className="mt-0.5">
           <button
             type="button"
             onClick={() => navigate(-1)}
@@ -248,11 +248,11 @@ export default function ExerciseHistory() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {grouped.length === 0 ? (
             <div className="flex items-center justify-center">
-              <Card className="w-full max-w-2xl">
-                <CardContent>
+              <Card className="w-full max-w-2xl rounded-2xl overflow-hidden">
+                <CardContent className="px-2 py-4 sm:p-4 overflow-hidden">
                   <div className="flex flex-col items-center text-center gap-4 py-6">
                     <div className="h-16 w-16 rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center">
                       <PlusCircle className="h-8 w-8 text-muted-foreground" />
@@ -285,8 +285,11 @@ export default function ExerciseHistory() {
             </div>
           ) : (
             grouped.map((g) => (
-              <Card key={`h-${g.workoutId}`}>
-                <CardContent>
+              <Card
+                key={`h-${g.workoutId}`}
+                className="w-full rounded-2xl overflow-hidden"
+              >
+                <CardContent className="px-2 py-4 sm:p-4 overflow-hidden">
                   <div className="flex items-center justify-between">
                     <div>
                       <div>

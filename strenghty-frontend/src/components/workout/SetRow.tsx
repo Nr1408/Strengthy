@@ -1093,8 +1093,7 @@ export function SetRow({
                     {
                       rpeOptions.find(
                         (o) =>
-                          o.value ===
-                          (rpeDialogOpen ? localRpe : sliderValue),
+                          o.value === (rpeDialogOpen ? localRpe : sliderValue),
                       )?.label
                     }
                   </div>

@@ -84,10 +84,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
       )}
 
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent
-          style={{ animation: "none" }}
-          className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none"
-        >
+        <DialogContent className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none">
           <div className="text-center">
             <DialogTitle className="text-lg font-semibold">
               Create Exercise
@@ -143,7 +140,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         zIndex: 2147483647,
                         boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
                       }}
-                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90 backdrop-blur-sm border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90 backdrop-blur-sm border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-6 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
                     >
                       <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
                         <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
@@ -160,27 +157,34 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                           </h3>
                         </div>
                       </div>
-                      <div className="space-y-2 px-1">
+                      <div className="mt-3 flex flex-col divide-y divide-white/10">
                         <button
-                          className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${newExerciseEquipment === "all" ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
+                          className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                            newExerciseEquipment === "all"
+                              ? "bg-white/5 text-white"
+                              : "text-zinc-300 hover:bg-white/3"
+                          }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setNewExerciseEquipment("all");
                             onEquipmentPickerOpenChange(false);
                           }}
                         >
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center mr-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
                               <img
                                 src="/icons/custom.svg"
                                 alt="All Equipment icon"
-                                className="h-4 w-4"
+                                className="h-4 w-4 opacity-70"
                               />
                             </div>
-                            <span className="text-base font-medium">
+                            <span className="text-base font-medium truncate">
                               All Equipment
                             </span>
                           </div>
+                          {newExerciseEquipment === "all" ? (
+                            <span className="ml-3 text-zinc-200">✓</span>
+                          ) : null}
                         </button>
                         {availableEquipments.map((opt) => {
                           const label = opt
@@ -194,47 +198,49 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                           return (
                             <button
                               key={opt}
-                              className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${isSelected ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
+                              className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                                isSelected
+                                  ? "bg-white/5 text-white"
+                                  : "text-zinc-300 hover:bg-white/3"
+                              }`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setNewExerciseEquipment(opt as any);
                                 onEquipmentPickerOpenChange(false);
                               }}
                             >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center flex-shrink-0 mr-3">
-                                    <img
-                                      src={((): string => {
-                                        const key = String(
-                                          opt || "",
-                                        ).toLowerCase();
-                                        if (key.includes("barbell"))
-                                          return "/icons/barbell.svg";
-                                        if (key.includes("dumbbell"))
-                                          return "/icons/dumbbell.svg";
-                                        if (key.includes("kettlebell"))
-                                          return "/icons/kettlebell.svg";
-                                        if (key.includes("cable"))
-                                          return "/icons/cable.svg";
-                                        if (key.includes("machine"))
-                                          return "/icons/machine.svg";
-                                        if (key.includes("bodyweight"))
-                                          return "/icons/bodyweight.svg";
-                                        return "/icons/custom.svg";
-                                      })()}
-                                      alt={label + " icon"}
-                                      className="h-4 w-4"
-                                    />
-                                  </div>
-                                  <span className="text-base font-medium truncate">
-                                    {label}
-                                  </span>
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
+                                  <img
+                                    src={((): string => {
+                                      const key = String(
+                                        opt || "",
+                                      ).toLowerCase();
+                                      if (key.includes("barbell"))
+                                        return "/icons/barbell.svg";
+                                      if (key.includes("dumbbell"))
+                                        return "/icons/dumbbell.svg";
+                                      if (key.includes("kettlebell"))
+                                        return "/icons/kettlebell.svg";
+                                      if (key.includes("cable"))
+                                        return "/icons/cable.svg";
+                                      if (key.includes("machine"))
+                                        return "/icons/machine.svg";
+                                      if (key.includes("bodyweight"))
+                                        return "/icons/bodyweight.svg";
+                                      return "/icons/custom.svg";
+                                    })()}
+                                    alt={label + " icon"}
+                                    className="h-4 w-4 opacity-70"
+                                  />
                                 </div>
-                                {isSelected ? (
-                                  <span className="text-zinc-200">✓</span>
-                                ) : null}
+                                <span className="text-base font-medium truncate">
+                                  {label}
+                                </span>
                               </div>
+                              {isSelected ? (
+                                <span className="ml-3 text-zinc-200">✓</span>
+                              ) : null}
                             </button>
                           );
                         })}
@@ -280,7 +286,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         zIndex: 2147483647,
                         boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
                       }}
-                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-zinc-900/95 border border-white/6 backdrop-blur-sm rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-zinc-900/95 border border-white/6 backdrop-blur-sm rounded-t-3xl max-h-[65vh] overflow-y-auto pb-6 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
                     >
                       <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
                         <div className="w-12 h-1 bg-zinc-800/50 rounded-full mx-auto mb-3" />
@@ -297,38 +303,61 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                           </h3>
                         </div>
                       </div>
-                      <div className="space-y-2 px-1">
+                      <div className="mt-3 flex flex-col divide-y divide-white/10">
                         <button
-                          className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5"
+                          className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                            !newExerciseMuscle
+                              ? "bg-white/5 text-white"
+                              : "text-zinc-300 hover:bg-white/3"
+                          }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setNewExerciseMuscle("");
                             onMusclePickerOpenChange(false);
                           }}
                         >
-                          <span className="text-lg text-zinc-200">
-                            All Muscles
-                          </span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
+                              <img
+                                src="/icons/custom.svg"
+                                alt="All Muscles icon"
+                                className="h-4 w-4 opacity-70"
+                              />
+                            </div>
+                            <span className="text-base font-medium truncate">
+                              All Muscles
+                            </span>
+                          </div>
+                          {!newExerciseMuscle ? (
+                            <span className="ml-3 text-zinc-200">✓</span>
+                          ) : null}
                         </button>
                         {availableMuscles
                           .filter((m) => m !== "other")
                           .map((opt) => (
                             <button
                               key={opt}
-                              className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5"
+                              className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                                newExerciseMuscle === opt
+                                  ? "bg-white/5 text-white"
+                                  : "text-zinc-300 hover:bg-white/3"
+                              }`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setNewExerciseMuscle(opt);
                                 onMusclePickerOpenChange(false);
                               }}
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
                                 <span
                                   className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${(muscleGroupColors as any)[opt as any] ?? "bg-zinc-800/30 text-zinc-200"}`}
                                 >
                                   {opt[0]?.toUpperCase() + opt.slice(1)}
                                 </span>
                               </div>
+                              {newExerciseMuscle === opt ? (
+                                <span className="ml-3 text-zinc-200">✓</span>
+                              ) : null}
                             </button>
                           ))}
                       </div>

@@ -9,6 +9,7 @@ import { StatsCard } from "@/components/workout/StatsCard";
 import { useQuery } from "@tanstack/react-query";
 import { getSets, getWorkouts, getCardioSetsForWorkout } from "@/lib/api";
 import type { UiWorkoutSet, UiWorkout } from "@/lib/api";
+import { countPrTypesFromSet } from "@/lib/utils";
 import { startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 
 export default function Dashboard() {
@@ -182,14 +183,20 @@ export default function Dashboard() {
     if (workoutsThisWeek.length === 0) return 0;
     const strength = Object.values(setsByWorkoutThisWeek).flat();
     const cardio = Object.values(cardioSetsByWorkoutThisWeek).flat();
-    return [...strength, ...cardio].filter((s) => s.isPR).length;
+    return [...strength, ...cardio].reduce(
+      (sum, s) => sum + countPrTypesFromSet(s),
+      0,
+    );
   })();
 
   const prsLastWeek = (() => {
     if (workoutsLastWeek.length === 0) return 0;
     const strength = Object.values(setsByWorkoutLastWeek).flat();
     const cardio = Object.values(cardioSetsByWorkoutLastWeek).flat();
-    return [...strength, ...cardio].filter((s) => s.isPR).length;
+    return [...strength, ...cardio].reduce(
+      (sum, s) => sum + countPrTypesFromSet(s),
+      0,
+    );
   })();
   const prTrendPercent = (() => {
     if (prsLastWeek === 0) return prsThisWeek > 0 ? 100 : 0;

@@ -56,7 +56,7 @@ import {
 } from "@/lib/api";
 import { recommendNextRoutine } from "@/lib/onboarding";
 import { triggerHaptic } from "@/lib/haptics";
-import { getUnit } from "@/lib/utils";
+import { getUnit, countPrTypesFromSet } from "@/lib/utils";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog";
 import type {
@@ -1880,7 +1880,9 @@ export default function NewWorkout() {
               // If the exercise name is a HIIT/bodyweight type and the set has reps,
               // create a strength set so reps/RPE persist and are visible in the UI.
               const created: any = await createCardioSet(payload);
-              if (created.isPR && hadPriorForExercise) createdPrCount += 1;
+              if (hadPriorForExercise) {
+                createdPrCount += countPrTypesFromSet(created);
+              }
             } else {
               const created = await createSet({
                 workoutId: persistedWorkoutId,
@@ -1899,7 +1901,9 @@ export default function NewWorkout() {
                 workout: created.workout,
                 exercise: created.exercise,
               });
-              if (created.isPR && hadPriorForExercise) createdPrCount += 1;
+              if (hadPriorForExercise) {
+                createdPrCount += countPrTypesFromSet(created);
+              }
             }
           } catch (err: any) {
             const text = String(err || "").toLowerCase();
@@ -1998,8 +2002,9 @@ export default function NewWorkout() {
                 payloadRetry.setNumber = nextRetry;
 
                 const createdRetry: any = await createCardioSet(payloadRetry);
-                if (createdRetry.isPR && hadPriorForExercise)
-                  createdPrCount += 1;
+                if (hadPriorForExercise) {
+                  createdPrCount += countPrTypesFromSet(createdRetry);
+                }
               } else {
                 const createdRetry = await createSet({
                   workoutId: persistedWorkoutId,
@@ -2011,8 +2016,9 @@ export default function NewWorkout() {
                   type: s.type,
                   rpe: s.rpe,
                 });
-                if (createdRetry.isPR && hadPriorForExercise)
-                  createdPrCount += 1;
+                if (hadPriorForExercise) {
+                  createdPrCount += countPrTypesFromSet(createdRetry);
+                }
               }
             } else {
               throw err;
@@ -2183,15 +2189,16 @@ export default function NewWorkout() {
 
   return (
     <AppLayout>
-      <div className="pointer-events-none fixed left-1/2 top-24 z-40 -translate-x-1/2 flex justify-center w-full px-4">
+      {/* PR banner (stays below fixed action bar) */}
+      <div className="pointer-events-none fixed left-1/2 top-[72px] z-40 -translate-x-1/2 flex justify-center w-full px-4">
         <div
-          className={`pointer-events-auto flex items-center gap-3 rounded-full bg-muted px-4 py-2 shadow-lg border border-border max-w-xs sm:max-w-md transition-all duration-300 ease-out transform ${
+          className={`pointer-events-auto flex items-center gap-3 rounded-full bg-zinc-800 px-4 py-2 shadow-md shadow-black/30 border border-white/25 ring-1 ring-white/5 max-w-xs sm:max-w-md transition-all duration-300 ease-out transform ${
             prVisible && prBanner
               ? "opacity-100 translate-y-0 scale-100"
               : "opacity-0 -translate-y-2 scale-95"
           }`}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-500/90 text-black">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-400 text-black">
             <Trophy className="h-4 w-4" />
           </div>
           <div className="flex flex-col min-w-0">
@@ -2213,30 +2220,25 @@ export default function NewWorkout() {
         />
       </div>
 
-      {/* PR banner (mirrors EditWorkout) */}
-      <div className="pointer-events-none fixed left-1/2 top-24 z-40 -translate-x-1/2 flex justify-center w-full px-4">
-        <div
-          className={`pointer-events-auto flex items-center gap-3 rounded-full bg-muted px-4 py-2 shadow-lg border border-border max-w-xs sm:max-w-md transition-all duration-300 ease-out transform ${
-            prVisible && prBanner
-              ? "opacity-100 translate-y-0 scale-100"
-              : "opacity-0 -translate-y-2 scale-95"
-          }`}
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-500/90 text-black">
-            <Trophy className="h-4 w-4" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-medium text-muted-foreground truncate">
-              {prBanner?.exerciseName}
-            </span>
-            <span className="text-sm font-semibold text-white truncate">
-              {prBanner ? `${prBanner.label} - ${prBanner.value}` : ""}
-            </span>
-          </div>
+      {/* Fixed top action bar for Cancel / Save (replaces global header) */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              navigate(isRoutineBuilder ? "/routines" : "/workouts")
+            }
+          >
+            Cancel
+          </Button>
+          <Button size="sm" onClick={saveWorkout}>
+            {isRoutineBuilder ? "Save Routine" : "Save Workout"}
+          </Button>
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-6 pt-[56px]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             {/* History-based anomaly dialog */}
@@ -2556,21 +2558,6 @@ export default function NewWorkout() {
               <span>{exercises.length} exercises</span>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() =>
-                navigate(isRoutineBuilder ? "/routines" : "/workouts")
-              }
-              className="text-white"
-            >
-              Cancel
-            </Button>
-            <Button onClick={saveWorkout}>
-              <Save className="h-4 w-4 mr-2" />
-              {isRoutineBuilder ? "Save Routine" : "Save Workout"}
-            </Button>
-          </div>
         </div>
 
         <div className="space-y-6">
@@ -2844,7 +2831,6 @@ export default function NewWorkout() {
         >
           <DialogContent
             hideClose
-            style={{ animation: "none" }}
             className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden data-[state=open]:animate-none data-[state=closed]:animate-none"
           >
             {/* Grab handle */}
@@ -2927,11 +2913,10 @@ export default function NewWorkout() {
                           <DialogContent
                             style={{
                               zIndex: 2147483647,
-                              boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
                             }}
-                            className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90 backdrop-blur-sm border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                            className="picker-drawer mx-auto w-[calc(100%-32px)] max-w-[480px] max-h-[65vh] overflow-y-auto px-4 pt-4 pb-5 rounded-3xl bg-gradient-to-b from-neutral-950/95 via-neutral-950/95 to-neutral-900/95 border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)] backdrop-blur-none"
                           >
-                            <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
+                            <div className="sticky top-0 z-30 bg-neutral-950/95 border-b border-white/10 pt-3 pb-3">
                               <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
                               <div className="relative">
                                 <button
@@ -2948,27 +2933,34 @@ export default function NewWorkout() {
                                 </h3>
                               </div>
                             </div>
-                            <div className="space-y-2 px-1">
+                            <div className="mt-4 flex flex-col space-y-1.5">
                               <button
-                                className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${filterEquipment === "all" ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
+                                className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                                  filterEquipment === "all"
+                                    ? "bg-white/5 text-white"
+                                    : "text-zinc-300 hover:bg-white/3"
+                                }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setFilterEquipment("all");
                                   setIsEquipmentPickerOpen(false);
                                 }}
                               >
-                                <div className="flex items-center">
-                                  <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center mr-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
                                     <img
                                       src="/icons/custom.svg"
                                       alt="All Equipment icon"
-                                      className="h-4 w-4"
+                                      className="h-4 w-4 opacity-70"
                                     />
                                   </div>
-                                  <span className="text-base font-medium">
+                                  <span className="text-base font-medium truncate">
                                     All Equipment
                                   </span>
                                 </div>
+                                {filterEquipment === "all" ? (
+                                  <span className="ml-3 text-zinc-200">✓</span>
+                                ) : null}
                               </button>
                               {availableEquipments.map((opt) => {
                                 const label = opt
@@ -2983,48 +2975,52 @@ export default function NewWorkout() {
                                 return (
                                   <button
                                     key={opt}
-                                    className={`w-full text-left px-4 py-3 rounded-md transition-colors hover:bg-white/5 ${isSelected ? "bg-zinc-800/70 text-white" : "text-zinc-200"}`}
+                                    className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                                      isSelected
+                                        ? "bg-white/5 text-white"
+                                        : "text-zinc-300 hover:bg-white/3"
+                                    }`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setFilterEquipment(opt as any);
                                       setIsEquipmentPickerOpen(false);
                                     }}
                                   >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3 min-w-0">
-                                        {/* equipment icon */}
-                                        <div className="h-8 w-8 rounded-full bg-zinc-800/40 flex items-center justify-center flex-shrink-0 mr-3">
-                                          <img
-                                            src={((): string => {
-                                              const key = String(
-                                                opt || "",
-                                              ).toLowerCase();
-                                              if (key.includes("barbell"))
-                                                return "/icons/barbell.svg";
-                                              if (key.includes("dumbbell"))
-                                                return "/icons/dumbbell.svg";
-                                              if (key.includes("kettlebell"))
-                                                return "/icons/kettlebell.svg";
-                                              if (key.includes("cable"))
-                                                return "/icons/cable.svg";
-                                              if (key.includes("machine"))
-                                                return "/icons/machine.svg";
-                                              if (key.includes("bodyweight"))
-                                                return "/icons/bodyweight.svg";
-                                              return "/icons/custom.svg";
-                                            })()}
-                                            alt={label + " icon"}
-                                            className="h-4 w-4"
-                                          />
-                                        </div>
-                                        <span className="text-base font-medium truncate">
-                                          {label}
-                                        </span>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      {/* equipment icon */}
+                                      <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
+                                        <img
+                                          src={((): string => {
+                                            const key = String(
+                                              opt || "",
+                                            ).toLowerCase();
+                                            if (key.includes("barbell"))
+                                              return "/icons/barbell.svg";
+                                            if (key.includes("dumbbell"))
+                                              return "/icons/dumbbell.svg";
+                                            if (key.includes("kettlebell"))
+                                              return "/icons/kettlebell.svg";
+                                            if (key.includes("cable"))
+                                              return "/icons/cable.svg";
+                                            if (key.includes("machine"))
+                                              return "/icons/machine.svg";
+                                            if (key.includes("bodyweight"))
+                                              return "/icons/bodyweight.svg";
+                                            return "/icons/custom.svg";
+                                          })()}
+                                          alt={label + " icon"}
+                                          className="h-4 w-4 opacity-70"
+                                        />
                                       </div>
-                                      {isSelected ? (
-                                        <span className="text-zinc-200">✓</span>
-                                      ) : null}
+                                      <span className="text-base font-medium truncate">
+                                        {label}
+                                      </span>
                                     </div>
+                                    {isSelected ? (
+                                      <span className="ml-3 text-zinc-200">
+                                        ✓
+                                      </span>
+                                    ) : null}
                                   </button>
                                 );
                               })}
@@ -3064,11 +3060,10 @@ export default function NewWorkout() {
                           <DialogContent
                             style={{
                               zIndex: 2147483647,
-                              boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
                             }}
-                            className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-zinc-900/95 border border-white/6 backdrop-blur-sm rounded-t-3xl max-h-[65vh] overflow-y-auto pb-4 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                            className="picker-drawer mx-auto w-[calc(100%-32px)] max-w-[480px] max-h-[65vh] overflow-y-auto px-4 pt-4 pb-5 rounded-3xl bg-gradient-to-b from-neutral-950/95 via-neutral-950/95 to-neutral-900/95 border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)] backdrop-blur-none"
                           >
-                            <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
+                            <div className="sticky top-0 z-30 bg-neutral-950/95 border-b border-white/10 pt-3 pb-3">
                               <div className="w-12 h-1 bg-zinc-800/50 rounded-full mx-auto mb-3" />
                               <div className="relative">
                                 <button
@@ -3083,18 +3078,34 @@ export default function NewWorkout() {
                                 </h3>
                               </div>
                             </div>
-                            <div className="space-y-2">
+                            <div className="mt-4 flex flex-col space-y-1.5">
                               <button
-                                className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5"
+                                className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                                  filterMuscle === "all"
+                                    ? "bg-white/5 text-white"
+                                    : "text-zinc-300 hover:bg-white/3"
+                                }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setFilterMuscle("all");
                                   setIsMusclePickerOpen(false);
                                 }}
                               >
-                                <span className="text-lg text-zinc-200">
-                                  All Muscles
-                                </span>
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
+                                    <img
+                                      src="/icons/custom.svg"
+                                      alt="All Muscles icon"
+                                      className="h-4 w-4 opacity-70"
+                                    />
+                                  </div>
+                                  <span className="text-base font-medium truncate">
+                                    All Muscles
+                                  </span>
+                                </div>
+                                {filterMuscle === "all" ? (
+                                  <span className="ml-3 text-zinc-200">✓</span>
+                                ) : null}
                               </button>
                               {availableMuscles
                                 .filter((m) => m !== "other")
@@ -3113,20 +3124,30 @@ export default function NewWorkout() {
                                   return (
                                     <button
                                       key={opt}
-                                      className="w-full text-left px-4 py-3 rounded-lg hover:bg-white/5"
+                                      className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                                        filterMuscle === opt
+                                          ? "bg-white/5 text-white"
+                                          : "text-zinc-300 hover:bg-white/3"
+                                      }`}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setFilterMuscle(opt);
                                         setIsMusclePickerOpen(false);
                                       }}
                                     >
-                                      <div className="flex items-center">
+                                      <div className="flex items-center gap-3 min-w-0">
                                         <span
-                                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${color}`}
-                                        >
+                                          className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${color}`}
+                                        />
+                                        <span className="text-base font-medium truncate">
                                           {label}
                                         </span>
                                       </div>
+                                      {filterMuscle === opt ? (
+                                        <span className="ml-3 text-zinc-200">
+                                          ✓
+                                        </span>
+                                      ) : null}
                                     </button>
                                   );
                                 })}
@@ -3227,10 +3248,7 @@ export default function NewWorkout() {
           open={isCreateExerciseOpen}
           onOpenChange={setIsCreateExerciseOpen}
         >
-          <DialogContent
-            style={{ animation: "none" }}
-            className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none"
-          >
+          <DialogContent className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none">
             <div className="text-center">
               <DialogTitle className="text-lg font-semibold">
                 Create Exercise

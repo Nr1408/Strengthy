@@ -46,9 +46,9 @@ const DialogContent = React.forwardRef<
             /\bbottom-/.test(className) &&
             !/\bfloating-card\b/.test(className || "");
           if (isSheet) {
-            return "fixed left-0 right-0 bottom-0 z-50 grid w-full max-w-full max-h-[85vh] gap-3 rounded-t-[32px] border border-white/10 bg-neutral-900/80 backdrop-blur-xl text-white p-3 shadow-2xl duration-300 ease-in-out overflow-y-auto overflow-x-hidden data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-10 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-10 data-[state=closed]:zoom-out-95";
+            return "dialog-content fixed left-0 right-0 bottom-0 z-50 grid w-full max-w-full max-h-[85vh] gap-3 rounded-t-[32px] border border-white/10 bg-neutral-900/80 backdrop-blur-xl text-white p-3 shadow-2xl duration-300 ease-in-out overflow-y-auto overflow-x-hidden";
           }
-          return "fixed left-[50%] top-[50%] z-50 grid w-[96vw] max-w-xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-3 rounded-lg border border-white/10 bg-neutral-900/70 backdrop-blur-xl text-white p-2 shadow-2xl duration-300 ease-in-out overflow-y-auto overflow-x-hidden data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-10 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-10 data-[state=closed]:zoom-out-95";
+          return "dialog-content fixed left-[50%] top-[50%] z-50 grid w-[96vw] max-w-xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-3 rounded-lg border border-white/10 bg-neutral-900/70 backdrop-blur-xl text-white p-2 shadow-2xl duration-300 ease-in-out overflow-y-auto overflow-x-hidden";
         })(),
         className,
       )}

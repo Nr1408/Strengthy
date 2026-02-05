@@ -57,6 +57,21 @@ export default function Exercises() {
     queryKey: ["exercises"],
     queryFn: getExercises,
   });
+
+  // Treat a "user exercise" as one that is marked custom by the
+  // backend AND does not match any of the built-in library exercise
+  // names. This prevents regular library movements that the user has
+  // simply logged in a workout from appearing in the "your library"
+  // section.
+  const libraryNameSet = useMemo(
+    () => new Set(libraryExercises.map((e) => e.name.toLowerCase())),
+    [],
+  );
+
+  const isUserCustomExercise = (exercise: UiExercise): boolean => {
+    if (!exercise.custom) return false;
+    return !libraryNameSet.has(exercise.name.toLowerCase());
+  };
   const createExerciseMutation = useMutation({
     mutationFn: async () =>
       createExercise(
@@ -113,8 +128,8 @@ export default function Exercises() {
   };
 
   const filteredExercises = exercises.filter((exercise) => {
-    // Only show user-created custom exercises in the "your library" view.
-    if (!exercise.custom) return false;
+    // Only show exercises that are truly user-created custom entries.
+    if (!isUserCustomExercise(exercise)) return false;
     const matchesSearch = exercise.name
       .toLowerCase()
       .includes(search.toLowerCase());
@@ -158,7 +173,7 @@ export default function Exercises() {
     // Only consider user-created exercises when computing available muscle
     // groups for the user's library view.
     exercises
-      .filter((e) => e.custom)
+      .filter((e) => isUserCustomExercise(e))
       .forEach((e) =>
         present.add(e.muscleGroup === "other" ? "calves" : e.muscleGroup),
       );
@@ -277,7 +292,7 @@ export default function Exercises() {
                 : showLibrary
                   ? `${libraryExercises.length} exercises in the public library`
                   : `${
-                      exercises.filter((e) => e.custom).length
+                      exercises.filter((e) => isUserCustomExercise(e)).length
                     } exercises in your library`}
             </p>
           </div>
