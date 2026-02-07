@@ -187,6 +187,13 @@ export function getExerciseIconFile(name: string, muscleGroup?: string, isCustom
     "kettlebell gorilla row": "lats.svg",
     "kettlebell halo": "shoulders.svg",
     "kettlebell turkish get-up": "abs.svg",
+
+    // HIIT / bodyweight cardio (specific icons)
+    "burpees": "burpees.svg",
+    "mountain climbers": "mountain climbers.svg",
+    "jump squats": "jump squats.svg",
+    "plank jacks": "plank jacks.svg",
+    "skaters": "skaters.svg",
   };
 
   if (exactMap[n]) return exactMap[n];

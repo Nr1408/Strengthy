@@ -84,7 +84,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
       )}
 
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none">
+        <DialogContent className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-neutral-950 border border-white/10 px-4 py-4 sm:px-6 sm:py-6">
           <div className="text-center">
             <DialogTitle className="text-lg font-semibold">
               Create Exercise
@@ -140,9 +140,9 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         zIndex: 2147483647,
                         boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
                       }}
-                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90 backdrop-blur-sm border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-6 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-neutral-950 border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-6 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
                     >
-                      <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
+                      <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/6 pt-3 pb-3">
                         <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
                         <div className="relative">
                           <button
@@ -286,9 +286,9 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         zIndex: 2147483647,
                         boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
                       }}
-                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-zinc-900/95 border border-white/6 backdrop-blur-sm rounded-t-3xl max-h-[65vh] overflow-y-auto pb-6 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-neutral-950 border border-white/6 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-6 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
                     >
-                      <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur-sm border-b border-white/6 pt-3 pb-3">
+                      <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/6 pt-3 pb-3">
                         <div className="w-12 h-1 bg-zinc-800/50 rounded-full mx-auto mb-3" />
                         <div className="relative">
                           <button

@@ -778,7 +778,7 @@ export function SetRow({
                       {hasRpe ? sliderValue.toFixed(1) : "RPE"}
                     </button>
                   </DialogTrigger>
-                  <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 min-h-[280px] pb-20 overflow-visible">
+                  <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 min-h-[280px] pb-20 overflow-visible rounded-[24px] bg-neutral-950 border border-neutral-800/40 text-white backdrop-blur-none">
                     <DialogHeader>
                       <DialogTitle>Log Set RPE</DialogTitle>
                       <div className="text-xs text-muted-foreground mt-1">
@@ -1077,7 +1077,7 @@ export function SetRow({
                   {hasRpe ? sliderValue.toFixed(1) : "RPE"}
                 </button>
               </DialogTrigger>
-              <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 min-h-[280px] pb-20 overflow-visible">
+              <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 min-h-[280px] pb-20 overflow-visible rounded-[24px] bg-neutral-950 border border-neutral-800/40 text-white backdrop-blur-none">
                 <DialogHeader>
                   <DialogTitle>Log Set RPE</DialogTitle>
                   <div className="text-xs text-muted-foreground mt-1">

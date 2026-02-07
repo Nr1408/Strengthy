@@ -2114,7 +2114,7 @@ export default function EditWorkout() {
         >
           <DialogContent
             hideClose
-            className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden data-[state=open]:animate-none data-[state=closed]:animate-none"
+            className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden"
           >
             {/* Grab handle */}
             <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mt-3 mb-2" />
@@ -2197,9 +2197,9 @@ export default function EditWorkout() {
                             style={{
                               zIndex: 2147483647,
                             }}
-                            className="picker-drawer mx-auto w-[calc(100%-32px)] max-w-[480px] max-h-[65vh] overflow-y-auto px-4 pt-4 pb-5 rounded-3xl bg-gradient-to-b from-neutral-950/95 via-neutral-950/95 to-neutral-900/95 border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)] backdrop-blur-none"
+                            className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto w-[calc(100%-32px)] max-w-[480px] max-h-[65vh] overflow-y-auto px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                           >
-                            <div className="sticky top-0 z-30 bg-neutral-950/95 border-b border-white/10 pt-3 pb-3">
+                            <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
                               <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
                               <div className="relative">
                                 <button
@@ -2344,9 +2344,9 @@ export default function EditWorkout() {
                           style={{
                             zIndex: 2147483647,
                           }}
-                          className="picker-drawer mx-auto w-[calc(100%-32px)] max-w-[480px] max-h-[65vh] overflow-y-auto px-4 pt-4 pb-5 rounded-3xl bg-gradient-to-b from-neutral-950/95 via-neutral-950/95 to-neutral-900/95 border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)] backdrop-blur-none"
+                          className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto w-[calc(100%-32px)] max-w-[480px] max-h-[65vh] overflow-y-auto px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                         >
-                          <div className="sticky top-0 z-30 bg-neutral-950/95 border-b border-white/10 pt-3 pb-3">
+                          <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
                             <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
                             <div className="relative">
                               <button
