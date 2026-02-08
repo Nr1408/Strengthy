@@ -69,7 +69,7 @@ import type {
 } from "@/types/workout";
 
 // Grid templates used by headers and set-row layouts
-const GRID_TEMPLATE =
+const GRID_TEMPLATE_STRENGTH =
   "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 // Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
 const GRID_TEMPLATE_CARDIO =
@@ -2221,8 +2221,14 @@ export default function NewWorkout() {
       </div>
 
       {/* Fixed top action bar for Cancel / Save (replaces global header) */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30">
-        <div className="flex items-center justify-between px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pb-4">
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{
+            position: "relative",
+            top: "calc(env(safe-area-inset-top) + 8px)",
+          }}
+        >
           <Button
             variant="ghost"
             size="sm"
@@ -2664,7 +2670,7 @@ export default function NewWorkout() {
                             : GRID_TEMPLATE_CARDIO,
                         }}
                       >
-                        <span className="flex items-center justify-center text-center">
+                        <span className="flex items-center justify-center text-center translate-x-[2px]">
                           SET
                         </span>
 
@@ -2704,7 +2710,7 @@ export default function NewWorkout() {
                         )}
 
                         <span className="flex items-center justify-center text-center">
-                          <Trophy className="mx-auto h-3.5 w-3.5" />
+                          <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
                         </span>
 
                         <div />
@@ -2714,10 +2720,10 @@ export default function NewWorkout() {
                 ) : (
                   <div
                     className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE }}
+                    style={{ gridTemplateColumns: GRID_TEMPLATE_STRENGTH }}
                   >
                     {/* Column 1: SET */}
-                    <span className="flex items-center justify-center text-center">
+                    <span className="flex items-center justify-center text-center translate-x-[2px]">
                       SET
                     </span>
 
@@ -2741,7 +2747,7 @@ export default function NewWorkout() {
 
                     {/* Column 6: Trophy Icon */}
                     <span className="flex items-center justify-center text-center">
-                      <Trophy className="mx-auto h-3.5 w-3.5" />
+                      <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
                     </span>
 
                     {/* Column 7: Placeholder for Checkmark button column */}

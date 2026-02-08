@@ -380,13 +380,15 @@ export default function ExerciseHistory() {
                         })()
                       ) : (
                         <>
-                          <span className="flex justify-center">SET</span>
+                          <span className="flex justify-center translate-x-[2px]">
+                            SET
+                          </span>
                           <span className="flex justify-center">WEIGHT</span>
                           <span />
                           <span className="flex justify-center">REPS</span>
                           <span className="flex justify-center">RPE</span>
                           <span className="flex justify-center">
-                            <Trophy className="h-3.5 w-3.5" />
+                            <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
                           </span>
                         </>
                       )}

@@ -1813,8 +1813,14 @@ export default function EditWorkout() {
         </div>
       </div>
       {/* Fixed top action bar for Cancel / Save (replaces global header) */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30">
-        <div className="flex items-center justify-between px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pb-4">
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{
+            position: "relative",
+            top: "calc(env(safe-area-inset-top) + 8px)",
+          }}
+        >
           <Button
             variant="ghost"
             size="sm"
@@ -1961,7 +1967,7 @@ export default function EditWorkout() {
                             : GRID_TEMPLATE_CARDIO,
                         }}
                       >
-                        <span className="flex items-center justify-center">
+                        <span className="flex items-center justify-center translate-x-[2px]">
                           SET
                         </span>
                         <span className="flex items-center justify-center">
@@ -1993,7 +1999,7 @@ export default function EditWorkout() {
                         )}
 
                         <span className="flex items-center justify-center">
-                          <Trophy className="h-3.5 w-3.5" />
+                          <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
                         </span>
                         <div />
                       </div>
@@ -2004,7 +2010,7 @@ export default function EditWorkout() {
                     className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                     style={{ gridTemplateColumns: GRID_TEMPLATE }}
                   >
-                    <span className="flex items-center justify-center">
+                    <span className="flex items-center justify-center translate-x-[2px]">
                       SET
                     </span>
                     <span className="flex items-center justify-center">
@@ -2018,7 +2024,7 @@ export default function EditWorkout() {
                       RPE
                     </span>
                     <span className="flex items-center justify-center">
-                      <Trophy className="h-3.5 w-3.5" />
+                      <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
                     </span>
                     <div />
                   </div>

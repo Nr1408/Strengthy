@@ -363,6 +363,7 @@ export function SetRow({
                   type="button"
                   className={cn(
                     "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
+                    "translate-x-[0.5px]",
                     typeClasses[currentType],
                   )}
                   aria-label={`Set type ${currentType}`}
@@ -450,6 +451,7 @@ export function SetRow({
                   type="button"
                   className={cn(
                     "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
+                    
                     typeClasses[currentType],
                   )}
                   aria-label={`Set type ${currentType}`}
