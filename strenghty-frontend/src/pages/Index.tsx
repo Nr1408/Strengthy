@@ -1,72 +1,76 @@
-// DashboardMock available at /pages/DashboardMock.tsx for preview
-import { Link, useNavigate } from "react-router-dom";
-import {
-  Dumbbell,
-  Trophy,
-  Calendar,
-  FolderOpen,
-  ArrowRight,
-  Check,
-  TrendingUp,
-  Flame,
-} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
 import { getToken } from "@/lib/api";
+import Auth from "./Auth";
+import { HeroStep } from "../../HeroSection";
+import { WhySectionContent } from "../../WhySection";
+import { ProofStep } from "../../ProofSection";
 
-const features = [
-  {
-    icon: Dumbbell,
-    title: "Exercise Library",
-    description:
-      "Create and manage your own exercises with muscle groups and descriptions.",
-  },
-  {
-    icon: Calendar,
-    title: "Workout Logging",
-    description:
-      "Track every workout session with detailed sets, reps, and weights.",
-  },
-  {
-    icon: Trophy,
-    title: "PR Tracking",
-    description:
-      "Mark and celebrate your personal records as you get stronger.",
-  },
-  {
-    icon: FolderOpen,
-    title: "Routines",
-    description: "Build reusable workout templates like Push, Pull, and Legs.",
-  },
-];
+type AuthIntent = "login" | "signup";
 
-const benefits = [
-  "Track every set, rep, and weight",
-  "Never forget a personal record",
-  "Create custom workout routines",
-  "View your progress over time",
-  "Clean, distraction-free interface",
-];
+const stepVariants = {
+  enter: { opacity: 0, y: 24 },
+  center: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.28, ease: "easeOut" },
+  },
+  exit: {
+    opacity: 0,
+    y: -24,
+    transition: { duration: 0.28, ease: "easeOut" },
+  },
+} as const;
+
+const stepLabels = ["Hero", "Why", "Differentiators", "Proof", "Auth"] as const;
+const TOTAL_STEPS = stepLabels.length;
 
 export default function Index() {
   const navigate = useNavigate();
+  const [step, setStep] = useState(0);
+  const [authIntent] = useState<AuthIntent>("signup");
 
   useEffect(() => {
     try {
       if (getToken()) {
         navigate("/dashboard", { replace: true });
-        return;
       }
     } catch {
       // ignore invalid storage state
     }
   }, [navigate]);
 
+  const goToStep = (next: number) => {
+    setStep(Math.max(0, Math.min(4, next)));
+  };
+
+  const differentiators = useMemo(
+    () => [
+      "Designed for strength training",
+      "Readable progress, not noisy charts",
+      "Fast logging, zero friction",
+      "Built for lifters, not content",
+    ],
+    [],
+  );
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border">
-        <div className="flex h-16 items-center justify-between px-4">
+    <div className="relative bg-background flex h-[100svh] min-h-[100svh] flex-col overflow-hidden">
+      {/* Header (visible for steps 0–3; fades out on step 4) */}
+      <motion.header
+        className="border-b border-border pointer-events-auto"
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: "easeOut" }}
+        aria-hidden={false}
+      >
+        <div
+          className={`flex items-center justify-between px-4 ${
+            step === 4 ? "h-20" : "h-16"
+          }`}
+        >
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg">
               <img
@@ -79,242 +83,155 @@ export default function Index() {
               Strengthy
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link to="/auth">
-              <Button variant="ghost" className="text-white">
-                Log in
-              </Button>
-            </Link>
-            <Link to="/auth?signup=true">
-              <Button>Get Started</Button>
-            </Link>
-          </div>
         </div>
-      </header>
+      </motion.header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden border-b border-border py-20 md:py-32">
-        <div className="container relative z-10">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="font-heading text-4xl font-bold tracking-tight md:text-6xl text-white">
-              Track your lifts.
-              <br />
-              <span className="text-gradient">Hit new PRs.</span>
-            </h1>
-            <p className="mt-6 text-lg text-muted-foreground md:text-xl">
-              A clean, minimal workout tracker focused on what matters: logging
-              workouts, tracking progress, and breaking personal records.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link to="/auth?signup=true">
-                <Button size="lg" className="w-full sm:w-auto">
-                  Start Tracking Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/auth">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto text-white"
-                >
-                  Log in to Your Account
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
+      {/* Main: fixed-height, no-scroll step stack */}
+      <main className="relative flex-1 overflow-hidden">
+        <AnimatePresence mode="wait" initial={false}>
+          {step === 0 && (
+            <motion.section
+              key="step-0"
+              aria-label="Hero"
+              className="absolute inset-0 flex items-center justify-center"
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+              <HeroStep onNext={() => goToStep(1)} />
+            </motion.section>
+          )}
 
-        {/* Background decoration */}
-        <div className="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
-      </section>
+          {step === 1 && (
+            <motion.section
+              key="step-1"
+              aria-label="Why Strengthy"
+              className="absolute inset-0"
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+              <WhySectionContent
+                mode="step"
+                trustLine="No feeds · No subscriptions · Offline-first"
+                primaryLabel="See what's different"
+                onPrimaryAction={() => goToStep(2)}
+              />
+            </motion.section>
+          )}
 
-      {/* Features Section */}
-      <section className="py-20">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-bold md:text-4xl text-white">
-              Everything you need to get stronger
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Simple tools to track your workouts without the bloat.
-            </p>
-          </div>
+          {step === 2 && (
+            <motion.section
+              key="step-2"
+              aria-label="Differentiators"
+              className="absolute inset-0"
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+              <section className="relative flex h-full flex-col items-center justify-center overflow-hidden px-6">
+                <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-32 -left-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[110px]" />
 
-          <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={feature.title}
-                  className="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/50 hover:shadow-lg"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="mt-4 font-heading text-lg font-semibold text-white">
-                    {feature.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="border-y border-border bg-muted/30 py-20">
-        <div className="container">
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-            <div>
-              <h2 className="font-heading text-3xl font-bold md:text-4xl text-white">
-                Built for lifters who just want to lift
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                No social feeds, no complicated analytics, no subscription
-                tiers. Just a straightforward way to log your workouts and see
-                your progress.
-              </p>
-              <ul className="mt-8 space-y-4">
-                {benefits.map((benefit) => (
-                  <li key={benefit} className="flex items-center gap-3">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Check className="h-4 w-4" />
-                    </div>
-                    <span className="text-white">{benefit}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="relative">
-              {/* Mock App UI */}
-              <div className="aspect-video overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card via-card to-secondary/30 shadow-2xl p-4">
-                {/* Mock Header */}
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-primary" />
-                    <div className="h-2 w-16 rounded bg-muted" />
-                  </div>
-                  <div className="flex gap-1">
-                    <div className="h-2 w-2 rounded-full bg-muted" />
-                    <div className="h-2 w-2 rounded-full bg-muted" />
-                    <div className="h-2 w-2 rounded-full bg-muted" />
-                  </div>
-                </div>
-
-                {/* Mock Stats Row */}
-                <div className="mb-4 grid grid-cols-3 gap-2">
-                  <div className="rounded-lg bg-secondary/50 p-2">
-                    <div className="mb-1 flex items-center gap-1">
-                      <Flame className="h-3 w-3 text-orange-500" />
-                      <span className="text-[10px] text-muted-foreground">
-                        Streak
-                      </span>
-                    </div>
-                    <p className="font-heading text-sm font-bold">12 days</p>
-                  </div>
-                  <div className="rounded-lg bg-secondary/50 p-2">
-                    <div className="mb-1 flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3 text-primary" />
-                      <span className="text-[10px] text-muted-foreground">
-                        This Week
-                      </span>
-                    </div>
-                    <p className="font-heading text-sm font-bold">5 workouts</p>
-                  </div>
-                  <div className="rounded-lg bg-secondary/50 p-2">
-                    <div className="mb-1 flex items-center gap-1">
-                      <Trophy className="h-3 w-3 text-yellow-500" />
-                      <span className="text-[10px] text-muted-foreground">
-                        PRs
-                      </span>
-                    </div>
-                    <p className="font-heading text-sm font-bold">3 new</p>
-                  </div>
-                </div>
-
-                {/* Mock Workout List */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/20">
-                      <Dumbbell className="h-3 w-3 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="mb-1 h-2 w-20 rounded bg-foreground/20" />
-                      <div className="h-1.5 w-12 rounded bg-muted" />
-                    </div>
-                    <div className="h-4 w-4 rounded-full bg-primary/20" />
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/20">
-                      <Dumbbell className="h-3 w-3 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="mb-1 h-2 w-24 rounded bg-foreground/20" />
-                      <div className="h-1.5 w-16 rounded bg-muted" />
-                    </div>
-                    <div className="h-4 w-4 rounded-full bg-primary/20" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating PR Card */}
-              <div className="absolute -bottom-4 -right-4 animate-float rounded-lg border border-border bg-card/95 backdrop-blur-sm p-4 shadow-lg">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 shadow-lg shadow-orange-500/30">
-                    <Trophy className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">New PR!</p>
-                    <p className="font-heading font-semibold">
-                      Bench Press: 225 lbs
+                <div className="relative z-10 w-full max-w-lg">
+                  <div className="text-center">
+                    <h2 className="font-heading text-3xl font-bold md:text-4xl text-white">
+                      Built for lifting.
+                    </h2>
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      The simplest tracker that still feels serious.
                     </p>
                   </div>
+
+                  <div className="mt-8 rounded-2xl border border-border bg-card/70 p-5 shadow-xl shadow-black/40">
+                    <div className="space-y-3">
+                      {differentiators.map((text) => (
+                        <div key={text} className="flex items-center gap-3">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Check className="h-4 w-4" />
+                          </div>
+                          <p className="text-sm text-white/90 leading-snug">
+                            {text}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 flex justify-center">
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="outline"
+                        onClick={() => goToStep(3)}
+                      >
+                        See how it works
+                      </Button>
+                    </div>
+                  </div>
+
+                  <p className="mt-5 text-center text-xs text-muted-foreground">
+                    Your training log stays private and focused.
+                  </p>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              </section>
+            </motion.section>
+          )}
 
-      {/* CTA Section */}
-      <section className="py-20">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-bold md:text-4xl text-white">
-              Ready to get stronger?
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Start tracking your workouts today. It's free, forever.
-            </p>
-            <div className="mt-8">
-              <Link to="/auth?signup=true">
-                <Button size="lg">
-                  Create Your Account
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+          {step === 3 && (
+            <motion.section
+              key="step-3"
+              aria-label="Proof"
+              className="absolute inset-0 flex items-center justify-center"
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+              <ProofStep onNext={() => goToStep(4)} />
+            </motion.section>
+          )}
 
-      {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Dumbbell className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-heading font-bold text-white">Strenghty</span>
-          </div>
-          <p className="text-sm text-white">Built for lifters, by lifters.</p>
+          {step === 4 && (
+            <motion.section
+              key="step-4"
+              aria-label="Auth"
+              className="absolute inset-0"
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+              <section className="relative flex h-full flex-col items-center justify-center overflow-hidden px-4">
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[90px]" />
+                <div className="w-full max-w-md">
+                  <Auth embedded defaultSignup={authIntent === "signup"} />
+                </div>
+              </section>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        <div className="relative z-20 flex items-center justify-center gap-1.5 py-3">
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => goToStep(i)}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === step
+                  ? "w-6 bg-primary"
+                  : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+              }`}
+              aria-label={`Go to step ${i + 1}`}
+              aria-current={i === step}
+            />
+          ))}
         </div>
-      </footer>
+      </main>
     </div>
   );
 }

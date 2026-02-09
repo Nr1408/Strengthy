@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +36,37 @@ declare global {
   }
 }
 
-export default function Auth() {
+type AuthProps = {
+  embedded?: boolean;
+  defaultSignup?: boolean;
+};
+
+const MotionCard = motion(Card);
+
+const authStepVariants = {
+  enter: { opacity: 0, y: 24 },
+  center: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.28,
+      ease: [0.25, 0.1, 0.25, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -24,
+    transition: {
+      duration: 0.25,
+      ease: [0.25, 0.1, 0.25, 1],
+    },
+  },
+} as const;
+
+export default function Auth({
+  embedded = false,
+  defaultSignup,
+}: AuthProps = {}) {
   if (window.opener && window.location.pathname === "/auth/google/redirect") {
     return null;
   }
@@ -50,7 +81,7 @@ export default function Auth() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
-  const [showSignup, setShowSignup] = useState(false);
+  const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
   const [googleClientIdWeb, setGoogleClientIdWeb] = useState<string | null>(
     null,
   );
@@ -65,11 +96,13 @@ export default function Auth() {
 
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Prevent page-level scrolling while on the auth route. This guards against
   // programmatic focus or mobile browser UI adjustments causing the body to
   // scroll up/down while the auth card is visible.
   useEffect(() => {
+    if (embedded) return;
     try {
       const html = document.documentElement;
       const body = document.body;
@@ -93,6 +126,19 @@ export default function Auth() {
       // ignore in non-browser environments
     }
   }, []);
+
+  useEffect(() => {
+    // Support /auth?signup=true deep links while keeping the inline (embedded)
+    // Index flow in control via the `defaultSignup` prop.
+    try {
+      const params = new URLSearchParams(location.search);
+      if (params.get("signup") === "true") {
+        setShowSignup(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const handler = async (e: MessageEvent) => {
@@ -519,105 +565,161 @@ export default function Auth() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const activeStep = showSignup ? "signup" : "login";
+
   return (
-    <div className="flex h-screen flex-col bg-background overflow-hidden">
-      <header className="border-b border-border">
-        <div className="flex h-10 items-center px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg">
-              <img
-                src="/icons/logo.png"
-                alt="Strengthy logo"
-                className="h-9 w-9 rounded-lg"
-              />
-            </div>
-            <span className="font-heading text-xl font-bold text-white">
-              Strengthy
-            </span>
-          </Link>
-        </div>
-      </header>
+    <div
+      className={`flex flex-col bg-background overflow-hidden ${
+        embedded ? "h-full" : "h-screen"
+      }`}
+    >
+      {!embedded && (
+        <header className="border-b border-border">
+          <div className="flex h-16 items-center px-4">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg">
+                <img
+                  src="/icons/logo.png"
+                  alt="Strengthy logo"
+                  className="h-9 w-9 rounded-lg"
+                />
+              </div>
+              <span className="font-heading text-xl font-bold text-white">
+                Strengthy
+              </span>
+            </Link>
+          </div>
+        </header>
+      )}
 
-      <main className="flex flex-1 items-center justify-center p-4">
+      <main
+        className={`flex flex-1 items-center justify-center ${
+          embedded ? "p-4" : "p-4"
+        }`}
+      >
         <div
-          className="w-full max-w-md transition-transform"
-          style={pendingAction ? { transform: "translateY(-6vh)" } : undefined}
+          className={`w-full max-w-md transition-transform ${
+            pendingAction ? "translate-y-[-6vh]" : ""
+          }`}
         >
-          <Card className="w-full rounded-2xl overflow-hidden">
-            <CardHeader className="text-center">
-              <CardTitle className="font-heading text-2xl">
-                {pendingAction
-                  ? pendingAction.kind === "signup"
-                    ? "Just a moment"
-                    : "Just a moment"
-                  : showSignup
-                    ? "Create your account"
-                    : "Welcome back"}
-              </CardTitle>
-              {!pendingAction && (
-                <CardDescription>
-                  {showSignup
-                    ? "Start tracking your workouts and PRs"
-                    : "Log in to continue your fitness journey"}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              {pendingAction ? (
-                <div className="py-8 text-center space-y-3">
-                  <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                  <div>
-                    <p className="text-base font-semibold text-white">
-                      {pendingAction.title}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Google sign-in button */}
-                  <div className="mb-4 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={onClickContinueWithGoogle}
-                      disabled={
-                        (!googleClientIdWeb && !googleClientIdAndroid) ||
-                        isLoading ||
-                        isGoogleSelecting
-                      }
-                      className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
-                    >
-                      <img
-                        src="/google-logo.svg"
-                        alt="Google"
-                        className="mr-2 h-4 w-4"
-                      />
-                      {isGoogleSelecting
-                        ? "Choose an account…"
-                        : "Continue with Google"}
-                    </button>
-                  </div>
-                  <div className="relative mb-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">
-                        or continue with email
-                      </span>
+          <MotionCard
+            className="w-full rounded-2xl overflow-hidden"
+            layout
+            transition={{
+              layout: {
+                duration: 0.28,
+                ease: [0.25, 0.1, 0.25, 1],
+              },
+            }}
+          >
+            {pendingAction ? (
+              <>
+                <CardHeader className="text-center">
+                  <CardTitle className="font-heading text-2xl">
+                    Just a moment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-6 pb-6">
+                  <div className="py-8 text-center space-y-3">
+                    <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                    <div>
+                      <p className="text-base font-semibold text-white">
+                        {pendingAction.title}
+                      </p>
                     </div>
                   </div>
+                </CardContent>
+              </>
+            ) : (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={activeStep}
+                  variants={authStepVariants}
+                  layout
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{
+                    layout: {
+                      duration: 0.28,
+                      ease: [0.25, 0.1, 0.25, 1],
+                    },
+                  }}
+                >
+                  <CardHeader className="text-center">
+                    <CardTitle className="font-heading text-2xl">
+                      {showSignup ? "Create your account" : "Welcome back"}
+                    </CardTitle>
+                    <CardDescription>
+                      {showSignup
+                        ? "Start tracking your workouts and PRs"
+                        : "Log in to continue your fitness journey"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6">
+                    {/* Google sign-in button */}
+                    <div className="mb-4 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={onClickContinueWithGoogle}
+                        disabled={
+                          (!googleClientIdWeb && !googleClientIdAndroid) ||
+                          isLoading ||
+                          isGoogleSelecting
+                        }
+                        className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
+                      >
+                        <img
+                          src="/google-logo.svg"
+                          alt="Google"
+                          className="mr-2 h-4 w-4"
+                        />
+                        {isGoogleSelecting
+                          ? "Choose an account…"
+                          : "Continue with Google"}
+                      </button>
+                    </div>
+                    <div className="relative mb-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-border" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          or continue with email
+                        </span>
+                      </div>
+                    </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    {showSignup && (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      {showSignup && (
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Name</Label>
+                          <div className="relative">
+                            <User className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                            <Input
+                              id="name"
+                              name="name"
+                              placeholder="John Doe"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                              className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
+                        <Label htmlFor="email">Email</Label>
                         <div className="relative">
-                          <User className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                          <Mail className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
                           <Input
-                            id="name"
-                            name="name"
-                            placeholder="John Doe"
-                            value={formData.name}
+                            id="email"
+                            name="email"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={formData.email}
                             onChange={handleInputChange}
                             className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                             required
@@ -625,113 +727,95 @@ export default function Auth() {
                           />
                         </div>
                       </div>
-                    )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          placeholder="you@example.com"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                          required
-                          disabled={isLoading}
-                        />
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <div className="relative">
+                          <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                          <Input
+                            id="password"
+                            name="password"
+                            type="password"
+                            placeholder="••••••••"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                            required
+                            minLength={6}
+                            disabled={isLoading}
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <div className="relative">
-                        <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                        <Input
-                          id="password"
-                          name="password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                          required
-                          minLength={6}
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        "Loading..."
-                      ) : (
-                        <>
-                          <>{showSignup ? "Create Account" : "Log In"}</>
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-                  </form>
-
-                  <div
-                    className={
-                      showSignup
-                        ? "mt-4 text-center text-sm"
-                        : "mt-4 space-y-2 text-center text-sm sm:flex sm:items-center sm:justify-between sm:space-y-0"
-                    }
-                  >
-                    {!showSignup && (
-                      <Link
-                        to="/auth/forgot-password"
-                        className="text-muted-foreground hover:text-primary hover:underline sm:text-left"
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={isLoading}
                       >
-                        Forgot password?
-                      </Link>
-                    )}
+                        {isLoading ? (
+                          "Loading..."
+                        ) : (
+                          <>
+                            <>{showSignup ? "Create Account" : "Log In"}</>
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                    </form>
 
                     <div
                       className={
                         showSignup
-                          ? "text-muted-foreground"
-                          : "text-muted-foreground sm:text-right sm:flex-1"
+                          ? "mt-4 text-center text-sm"
+                          : "mt-4 space-y-2 text-center text-sm sm:flex sm:items-center sm:justify-between sm:space-y-0"
                       }
                     >
-                      {showSignup ? (
-                        <>
-                          Already have an account?{" "}
-                          <button
-                            type="button"
-                            onClick={() => setShowSignup(false)}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            Log in
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          Don't have an account?{" "}
-                          <button
-                            type="button"
-                            onClick={() => setShowSignup(true)}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            Sign up
-                          </button>
-                        </>
+                      {!showSignup && (
+                        <Link
+                          to="/auth/forgot-password"
+                          className="text-muted-foreground hover:text-primary hover:underline sm:text-left"
+                        >
+                          Forgot password?
+                        </Link>
                       )}
+
+                      <div
+                        className={
+                          showSignup
+                            ? "text-muted-foreground"
+                            : "text-muted-foreground sm:text-right sm:flex-1"
+                        }
+                      >
+                        {showSignup ? (
+                          <>
+                            Already have an account?{" "}
+                            <button
+                              type="button"
+                              onClick={() => setShowSignup(false)}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              Log in
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            Don't have an account?{" "}
+                            <button
+                              type="button"
+                              onClick={() => setShowSignup(true)}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              Sign up
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </MotionCard>
         </div>
         <Dialog
           open={errorDialogOpen}

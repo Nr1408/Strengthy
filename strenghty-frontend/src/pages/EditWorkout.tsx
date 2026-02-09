@@ -240,6 +240,8 @@ export default function EditWorkout() {
   const [editDurationHours, setEditDurationHours] = useState<number>(0);
   const [editDurationMinutes, setEditDurationMinutes] = useState<number>(0);
 
+  const headerRef = useRef<HTMLDivElement | null>(null);
+
   const allExercises = useMemo(() => {
     const map = new Map<string, Exercise>();
     const isHiitName = (name: string) => {
@@ -1788,6 +1790,25 @@ export default function EditWorkout() {
       ),
     );
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateHeaderHeight = () => {
+      if (!headerRef.current) return;
+      const height = headerRef.current.offsetHeight || 0;
+      if (typeof document !== "undefined") {
+        document.documentElement.style.setProperty(
+          "--workout-header-h",
+          `${height}px`,
+        );
+      }
+    };
+
+    updateHeaderHeight();
+    window.addEventListener("resize", updateHeaderHeight);
+    return () => window.removeEventListener("resize", updateHeaderHeight);
+  }, []);
+
   return (
     <AppLayout>
       {/* PR banner (stays below fixed action bar) */}
@@ -1813,14 +1834,11 @@ export default function EditWorkout() {
         </div>
       </div>
       {/* Fixed top action bar for Cancel / Save (replaces global header) */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pb-4">
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{
-            position: "relative",
-            top: "calc(env(safe-area-inset-top) + 8px)",
-          }}
-        >
+      <div
+        ref={headerRef}
+        className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2"
+      >
+        <div className="flex items-center justify-between px-4 py-3">
           <Button
             variant="ghost"
             size="sm"
@@ -1834,7 +1852,10 @@ export default function EditWorkout() {
         </div>
       </div>
 
-      <div className="space-y-6 pt-[56px]">
+      <div
+        className="space-y-6"
+        style={{ paddingTop: "var(--workout-header-h, 0px)" }}
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <Input

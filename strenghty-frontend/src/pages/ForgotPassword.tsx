@@ -102,7 +102,7 @@ export default function ForgotPassword() {
       </header>
 
       <main className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md rounded-2xl overflow-hidden">
           <CardHeader className="text-center">
             <CardTitle className="font-heading text-2xl">
               {step === "email" ? "Forgot password" : "Reset your password"}
@@ -113,7 +113,7 @@ export default function ForgotPassword() {
                 : "Enter the code you received and choose a new password."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-6 pb-6">
             {step === "email" ? (
               <form onSubmit={handleRequestOtp} className="space-y-4">
                 <div className="space-y-2">

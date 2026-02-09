@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import ScrollManager from "@/components/layout/ScrollManager";
 import SwipeNavigator from "@/components/layout/SwipeNavigator";
 import BackButtonHandler from "@/components/layout/BackButtonHandler";
@@ -31,6 +32,230 @@ import GoogleRedirect from "./pages/GoogleRedirect";
 
 const queryClient = new QueryClient();
 
+const PageTransition = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    className="h-full"
+    initial={{ opacity: 0, y: 20, scale: 0.98 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, y: -20, scale: 0.96 }}
+    transition={{ duration: 0.25, ease: "easeOut" }}
+  >
+    {children}
+  </motion.div>
+);
+
+const authFlowVariants = {
+  enter: { opacity: 0, y: 24 },
+  center: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.28,
+      ease: [0.25, 0.1, 0.25, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -24,
+    transition: {
+      duration: 0.25,
+      ease: [0.25, 0.1, 0.25, 1],
+    },
+  },
+} as const;
+
+const AuthFlowTransition = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    className="h-full"
+    variants={authFlowVariants}
+    initial="enter"
+    animate="center"
+    exit="exit"
+  >
+    {children}
+  </motion.div>
+);
+
+const AnimatedRoutes = () => {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route
+          path="/"
+          element={
+            <PageTransition>
+              <Index />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/auth"
+          element={
+            <AuthFlowTransition>
+              <Auth />
+            </AuthFlowTransition>
+          }
+        />
+        <Route
+          path="/auth/google/redirect"
+          element={
+            <PageTransition>
+              <GoogleRedirect />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/auth/forgot-password"
+          element={
+            <AuthFlowTransition>
+              <ForgotPassword />
+            </AuthFlowTransition>
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            <PageTransition>
+              <Onboarding />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <PageTransition>
+              <Dashboard />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/exercises"
+          element={
+            <PageTransition>
+              <Exercises />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/workouts"
+          element={
+            <PageTransition>
+              <Workouts />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/workouts/new"
+          element={
+            <PageTransition>
+              <NewWorkout />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/workouts/preview"
+          element={
+            <PageTransition>
+              <WorkoutPreview />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/workouts/complete"
+          element={
+            <PageTransition>
+              <WorkoutComplete />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/workouts/:id/view"
+          element={
+            <PageTransition>
+              <ViewWorkout />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/workouts/:id/edit"
+          element={
+            <PageTransition>
+              <EditWorkout />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/exercises/:id/history"
+          element={
+            <PageTransition>
+              <ExerciseHistory />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/routines"
+          element={
+            <PageTransition>
+              <Routines />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/routines/explore"
+          element={
+            <PageTransition>
+              <ExploreRoutines />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/routines/:id/view"
+          element={
+            <PageTransition>
+              <ViewRoutine />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <PageTransition>
+              <Profile />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/profile/account"
+          element={
+            <PageTransition>
+              <AccountSettings />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <PageTransition>
+              <Settings />
+            </PageTransition>
+          }
+        />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route
+          path="*"
+          element={
+            <PageTransition>
+              <NotFound />
+            </PageTransition>
+          }
+        />
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -42,33 +267,7 @@ const App = () => (
           <SwipeNavigator />
           <BackButtonHandler />
           <WorkoutNotificationHandler />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/google/redirect" element={<GoogleRedirect />} />
-            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/exercises" element={<Exercises />} />
-            <Route path="/workouts" element={<Workouts />} />
-            <Route path="/workouts/new" element={<NewWorkout />} />
-            <Route path="/workouts/preview" element={<WorkoutPreview />} />
-            <Route path="/workouts/complete" element={<WorkoutComplete />} />
-            <Route path="/workouts/:id/view" element={<ViewWorkout />} />
-            <Route path="/workouts/:id/edit" element={<EditWorkout />} />
-            <Route
-              path="/exercises/:id/history"
-              element={<ExerciseHistory />}
-            />
-            <Route path="/routines" element={<Routines />} />
-            <Route path="/routines/explore" element={<ExploreRoutines />} />
-            <Route path="/routines/:id/view" element={<ViewRoutine />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/account" element={<AccountSettings />} />
-            <Route path="/settings" element={<Settings />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AnimatedRoutes />
         </BrowserRouter>
       </div>
     </TooltipProvider>

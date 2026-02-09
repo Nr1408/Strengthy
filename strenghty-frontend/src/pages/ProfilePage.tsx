@@ -408,7 +408,7 @@ export default function Profile() {
         </header>
 
         {/* Mobile actions below header */}
-        <div className="mt-4 pt-4 space-y-2 md:hidden">
+        <div className="mt-2 space-y-2 md:hidden">
           <div className="w-full">
             <Button
               size="sm"
