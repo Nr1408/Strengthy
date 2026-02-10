@@ -27,7 +27,7 @@ type ProofStepProps = {
 
 export function ProofStep({ onNext }: ProofStepProps) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 pt-10 -translate-y-8 scale-125 sm:pt-0 md:translate-y-0 md:scale-100">
+    <div className="flex flex-col items-center justify-center px-6 pt-10 -translate-y-6 scale-110 sm:pt-0 md:translate-y-0 md:scale-100">
       <h2 className="font-heading text-2xl font-bold md:text-3xl text-center text-white">
         See it in action
       </h2>
@@ -80,9 +80,9 @@ export function ProofStep({ onNext }: ProofStepProps) {
         </div>
       </div>
 
-      <Button size="lg" className="mt-12" onClick={onNext}>
+      <Button size="sm" className="mt-10 px-4 text-xs" onClick={onNext}>
         Create your account
-        <ArrowRight className="ml-2 h-4 w-4" />
+        <ArrowRight className="ml-2 h-3.5 w-3.5" />
       </Button>
     </div>
   );

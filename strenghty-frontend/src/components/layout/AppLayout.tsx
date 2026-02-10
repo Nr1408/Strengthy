@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { deleteWorkout } from "@/lib/api";
 import {
+  AlertTriangle,
   Dumbbell,
   Home,
   ListChecks,
@@ -347,18 +348,22 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Discard confirmation dialog */}
       {showDiscardConfirm && (
-        <div className="fixed left-1/2 top-1/3 z-[9999] -translate-x-1/2 w-[min(520px,90%)]">
-          <div className="rounded-2xl border border-border bg-neutral-900 p-6 shadow-lg">
-            <div className="mb-4 text-center text-lg font-semibold text-white">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-[min(520px,90%)] rounded-[18px] border border-white/10 bg-neutral-900/95 p-7 shadow-2xl">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div className="mb-3 text-center text-lg font-semibold text-white">
               Discard Workout?
             </div>
-            <div className="text-sm text-muted-foreground mb-4 text-center">
+            <div className="text-sm text-muted-foreground mb-6 text-center">
               Are you sure you want to discard this in-progress workout? This
               cannot be undone.
             </div>
-            <div className="flex items-center justify-center gap-6">
+            <div className="flex items-center justify-center gap-3">
               <button
-                className="px-4 py-2 rounded bg-red-600 text-white"
+                className="px-5 py-2.5 rounded-lg bg-red-600 text-white shadow-md shadow-red-600/20 hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
                 onClick={async () => {
                   try {
                     const raw = localStorage.getItem("workout:inProgress");
@@ -403,7 +408,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 Discard
               </button>
               <button
-                className="px-4 py-2 rounded border border-border text-white bg-transparent"
+                className="px-5 py-2.5 rounded-lg border border-white/10 text-white/90 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
                 onClick={() => setShowDiscardConfirm(false)}
               >
                 Cancel

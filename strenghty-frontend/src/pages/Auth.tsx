@@ -569,7 +569,7 @@ export default function Auth({
 
   return (
     <div
-      className={`flex flex-col bg-background overflow-hidden ${
+      className={`flex flex-col bg-background overflow-x-hidden ${
         embedded ? "h-full" : "h-screen"
       }`}
     >
@@ -599,7 +599,7 @@ export default function Auth({
       >
         <div
           className={`w-full max-w-md transition-transform ${
-            pendingAction ? "translate-y-[-6vh]" : ""
+            pendingAction ? "translate-y-0 md:translate-y-[-6vh]" : ""
           }`}
         >
           <MotionCard

@@ -108,7 +108,12 @@ export default function Routines() {
       title: "Starting workout...",
       description: `${routine.name} loaded into a new workout`,
     });
-    navigate("/workouts/new", { state: { routine } });
+    navigate("/workouts/new", {
+      state: {
+        routine,
+        originPath: "/routines",
+      },
+    });
   };
 
   const handleDeleteRoutine = (id: string) => {

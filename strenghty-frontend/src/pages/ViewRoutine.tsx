@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { mockRoutines } from "@/data/mockData";
 import { getUnit } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import ExerciseHeader from "@/components/workout/ExerciseHeader";
 
 export default function ViewRoutine() {
   const { id } = useParams();
@@ -112,7 +113,15 @@ export default function ViewRoutine() {
           </div>
           <div className="h-10.5 text-sm flex gap-2">
             <Button
-              onClick={() => navigate(`/workouts/new`, { state: { routine } })}
+              onClick={() =>
+                navigate(`/workouts/new`, {
+                  state: {
+                    routine,
+                    originPath: `/routines/${routine?.id}/view`,
+                    originState: { routine },
+                  },
+                })
+              }
             >
               Start
             </Button>
@@ -133,14 +142,19 @@ export default function ViewRoutine() {
             <Card key={we.id} className="rounded-2xl overflow-hidden">
               <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
                 <div className="mb-3">
-                  <h3 className="font-heading text-lg font-semibold text-white">
-                    {we.exercise.name}
-                  </h3>
-                  <div className="text-sm text-muted-foreground">
-                    {we.exercise.muscleGroup === "other"
-                      ? "calves"
-                      : we.exercise.muscleGroup}
-                  </div>
+                  {(() => {
+                    const normalizedGroup =
+                      we.exercise.muscleGroup === "other" &&
+                      we.exercise.name.toLowerCase().includes("calf")
+                        ? "calves"
+                        : we.exercise.muscleGroup;
+                    return (
+                      <ExerciseHeader
+                        exerciseName={we.exercise.name}
+                        muscleGroup={normalizedGroup}
+                      />
+                    );
+                  })()}
                 </div>
 
                 {/* Sets Header */}

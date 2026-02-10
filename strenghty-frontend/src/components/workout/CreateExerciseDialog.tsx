@@ -114,7 +114,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                     e.stopPropagation();
                     onEquipmentPickerOpenChange(true);
                   }}
-                  className={`flex items-center gap-2 max-w-[12rem] truncate px-3 py-1.5 rounded-full text-sm border transition-all duration-150 ease-out active:scale-[0.97] ${
+                  className={`flex items-center gap-2 min-w-0 max-w-full truncate px-2 sm:px-3 py-1.5 rounded-full text-sm border transition-all duration-300 ease-in-out active:scale-95 active:opacity-80 ${
                     newExerciseEquipment === "all"
                       ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
                       : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
@@ -138,11 +138,10 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                     <DialogContent
                       style={{
                         zIndex: 2147483647,
-                        boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
                       }}
-                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-neutral-950 border border-white/8 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-6 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                      className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto flex max-h-[65vh] w-[calc(100%-32px)] max-w-[480px] flex-col overflow-hidden px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 backdrop-blur-none border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                     >
-                      <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/6 pt-3 pb-3">
+                      <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
                         <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
                         <div className="relative">
                           <button
@@ -157,7 +156,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                           </h3>
                         </div>
                       </div>
-                      <div className="mt-3 flex flex-col divide-y divide-white/10">
+                      <div className="mt-4 flex min-h-0 flex-1 flex-col space-y-1.5 overflow-y-auto bg-neutral-950">
                         <button
                           className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
                             newExerciseEquipment === "all"
@@ -260,16 +259,14 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                     e.stopPropagation();
                     onMusclePickerOpenChange(true);
                   }}
-                  className={`flex items-center gap-2 max-w-[12rem] truncate px-3 py-1.5 rounded-full text-sm border transition-all duration-150 ease-out active:scale-[0.97] ${
+                  className={`flex items-center gap-2 min-w-0 max-w-full truncate px-2 sm:px-3 py-1.5 rounded-full text-sm border transition-all duration-300 ease-in-out active:scale-95 active:opacity-80 ${
                     !newExerciseMuscle
                       ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
                       : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
                   }`}
                 >
                   <span className="truncate">
-                    {newExerciseMuscle
-                      ? newExerciseMuscle
-                      : "Select muscle group"}
+                    {newExerciseMuscle ? newExerciseMuscle : "All Muscles"}
                   </span>
                   <ChevronDown
                     className={`h-3.5 w-3.5 ${!newExerciseMuscle ? "text-zinc-400" : "text-zinc-200"}`}
@@ -284,12 +281,11 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                     <DialogContent
                       style={{
                         zIndex: 2147483647,
-                        boxShadow: "0 -12px 28px rgba(0,0,0,0.65)",
                       }}
-                      className="picker-drawer fixed left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 bottom-auto mx-auto w-[calc(100%-32px)] max-w-[480px] p-3 bg-neutral-950 border border-white/6 rounded-t-3xl max-h-[65vh] overflow-y-auto pb-6 data-[state=open]:opacity-100 data-[state=open]:animate-none data-[state=closed]:animate-none"
+                      className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto flex max-h-[65vh] w-[calc(100%-32px)] max-w-[480px] flex-col overflow-hidden px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 backdrop-blur-none border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                     >
-                      <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/6 pt-3 pb-3">
-                        <div className="w-12 h-1 bg-zinc-800/50 rounded-full mx-auto mb-3" />
+                      <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
+                        <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
                         <div className="relative">
                           <button
                             onClick={() => onMusclePickerOpenChange(false)}
@@ -298,12 +294,12 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                           >
                             ×
                           </button>
-                          <h3 className="text-center text-xl font-semibold text-zinc-100">
+                          <h3 className="text-center text-lg font-medium text-zinc-100">
                             Muscles
                           </h3>
                         </div>
                       </div>
-                      <div className="mt-3 flex flex-col divide-y divide-white/10">
+                      <div className="mt-4 flex min-h-0 flex-1 flex-col space-y-1.5 overflow-y-auto bg-neutral-950">
                         <button
                           className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
                             !newExerciseMuscle
@@ -334,32 +330,47 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         </button>
                         {availableMuscles
                           .filter((m) => m !== "other")
-                          .map((opt) => (
-                            <button
-                              key={opt}
-                              className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
-                                newExerciseMuscle === opt
-                                  ? "bg-white/5 text-white"
-                                  : "text-zinc-300 hover:bg-white/3"
-                              }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setNewExerciseMuscle(opt);
-                                onMusclePickerOpenChange(false);
-                              }}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <span
-                                  className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${(muscleGroupColors as any)[opt as any] ?? "bg-zinc-800/30 text-zinc-200"}`}
-                                >
-                                  {opt[0]?.toUpperCase() + opt.slice(1)}
-                                </span>
-                              </div>
-                              {newExerciseMuscle === opt ? (
-                                <span className="ml-3 text-zinc-200">✓</span>
-                              ) : null}
-                            </button>
-                          ))}
+                          .map((opt) => {
+                            const label = opt
+                              .split(" ")
+                              .map(
+                                (w) =>
+                                  w[0]?.toUpperCase() +
+                                  w.slice(1).toLowerCase(),
+                              )
+                              .join(" ");
+                            const isSelected = newExerciseMuscle === opt;
+                            const color =
+                              (muscleGroupColors as any)[opt as any] ||
+                              "bg-slate-500/20 text-slate-400";
+                            return (
+                              <button
+                                key={opt}
+                                className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                                  isSelected
+                                    ? "bg-white/5 text-white"
+                                    : "text-zinc-300 hover:bg-white/3"
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNewExerciseMuscle(opt);
+                                  onMusclePickerOpenChange(false);
+                                }}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span
+                                    className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${color}`}
+                                  />
+                                  <span className="text-base font-medium truncate">
+                                    {label}
+                                  </span>
+                                </div>
+                                {isSelected ? (
+                                  <span className="ml-3 text-zinc-200">✓</span>
+                                ) : null}
+                              </button>
+                            );
+                          })}
                       </div>
                     </DialogContent>
                   </DialogPortal>

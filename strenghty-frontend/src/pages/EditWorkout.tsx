@@ -40,6 +40,7 @@ import { muscleGroupColors } from "@/data/mockData";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useToast } from "@/hooks/use-toast";
 import {
+  AlertTriangle,
   Trophy,
   Clock,
   Save,
@@ -125,6 +126,31 @@ export default function EditWorkout() {
   const [isCreateValidationOpen, setIsCreateValidationOpen] = useState(false);
   const [createValidationMessage, setCreateValidationMessage] =
     useState<string>("");
+
+  const [emptySetError, setEmptySetError] = useState<string | null>(null);
+  const [emptySetContext, setEmptySetContext] = useState<{
+    exerciseId: string;
+    setId: string;
+    previousCompleted: boolean;
+  } | null>(null);
+
+  const getEmptySetMessage = (err: any) => {
+    const text = String(err?.message || err || "").trim();
+    const body =
+      err && (err as any).body ? JSON.stringify((err as any).body) : "";
+    const combined = `${text} ${body}`.toLowerCase();
+    if (
+      combined.includes("invalid reps") ||
+      combined.includes("reps value") ||
+      combined.includes("invalid weight") ||
+      combined.includes("weight value")
+    ) {
+      if (combined.includes("reps")) return "Reps must be greater than 0.";
+      if (combined.includes("weight")) return "Weight must be greater than 0.";
+      return "Please enter a valid number of reps.";
+    }
+    return null;
+  };
 
   const handleCreateExercise = () => {
     const missing: string[] = [];
@@ -812,6 +838,16 @@ export default function EditWorkout() {
     );
   };
 
+  const acknowledgeEmptySetError = () => {
+    if (emptySetContext) {
+      updateSetLocal(emptySetContext.exerciseId, emptySetContext.setId, {
+        completed: emptySetContext.previousCompleted,
+      });
+    }
+    setEmptySetContext(null);
+    setEmptySetError(null);
+  };
+
   // Persist a single set change immediately (toggle complete or other edits)
   const handleSetComplete = async (exerciseLocalId: string, setId: string) => {
     const ex = exercises.find((e) => e.id === exerciseLocalId);
@@ -1378,6 +1414,16 @@ export default function EditWorkout() {
         }
       }
     } catch (err: any) {
+      const emptyMessage = getEmptySetMessage(err);
+      if (emptyMessage) {
+        setEmptySetError(emptyMessage);
+        setEmptySetContext({
+          exerciseId: exerciseLocalId,
+          setId,
+          previousCompleted: s.completed,
+        });
+        return;
+      }
       toast({
         title: "Failed to update set",
         description: String(err),
@@ -1833,6 +1879,32 @@ export default function EditWorkout() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={!!emptySetError}
+        onOpenChange={(open) => {
+          if (!open) acknowledgeEmptySetError();
+        }}
+      >
+        <DialogContent className="max-w-sm rounded-2xl bg-neutral-900/95 p-6 text-center shadow-2xl">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <DialogHeader className="items-center text-center">
+            <DialogTitle className="text-lg font-semibold text-white">
+              Invalid Set
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-sm text-muted-foreground">
+              {emptySetError || "Reps must be greater than 0."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pt-5">
+            <Button size="sm" onClick={acknowledgeEmptySetError}>
+              OK
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Fixed top action bar for Cancel / Save (replaces global header) */}
       <div
         ref={headerRef}
@@ -1854,7 +1926,7 @@ export default function EditWorkout() {
 
       <div
         className="space-y-6"
-        style={{ paddingTop: "var(--workout-header-h, 0px)" }}
+        style={{ paddingTop: "calc(var(--workout-header-h, 0px) + 12px)" }}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
@@ -2224,7 +2296,7 @@ export default function EditWorkout() {
                             style={{
                               zIndex: 2147483647,
                             }}
-                            className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto w-[calc(100%-32px)] max-w-[480px] max-h-[65vh] overflow-y-auto px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
+                            className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto flex max-h-[65vh] w-[calc(100%-32px)] max-w-[480px] flex-col overflow-hidden px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 backdrop-blur-none border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                           >
                             <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
                               <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
@@ -2243,7 +2315,7 @@ export default function EditWorkout() {
                                 </h3>
                               </div>
                             </div>
-                            <div className="mt-4 flex flex-col space-y-1.5">
+                            <div className="mt-4 flex min-h-0 flex-1 flex-col space-y-1.5 overflow-y-auto bg-neutral-950">
                               <button
                                 className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
                                   filterEquipment === "all"
@@ -2371,7 +2443,7 @@ export default function EditWorkout() {
                           style={{
                             zIndex: 2147483647,
                           }}
-                          className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto w-[calc(100%-32px)] max-w-[480px] max-h-[65vh] overflow-y-auto px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
+                          className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto flex max-h-[65vh] w-[calc(100%-32px)] max-w-[480px] flex-col overflow-hidden px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 backdrop-blur-none border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                         >
                           <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
                             <div className="w-14 h-1.5 bg-zinc-800/40 rounded-full mx-auto mb-3" />
@@ -2388,7 +2460,7 @@ export default function EditWorkout() {
                               </h3>
                             </div>
                           </div>
-                          <div className="mt-4 flex flex-col space-y-1.5">
+                          <div className="mt-4 flex min-h-0 flex-1 flex-col space-y-1.5 overflow-y-auto bg-neutral-950">
                             <button
                               className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
                                 filterMuscle === "all"

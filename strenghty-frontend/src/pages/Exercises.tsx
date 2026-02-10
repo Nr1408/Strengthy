@@ -166,6 +166,7 @@ export default function Exercises() {
     "core",
     "cardio",
   ];
+  const createMuscleOptions = allMusclesOrder;
   const [availableMuscles, setAvailableMuscles] = useState<MuscleGroup[]>([]);
 
   useEffect(() => {
@@ -322,7 +323,7 @@ export default function Exercises() {
               onEquipmentPickerOpenChange={setIsCreateEquipmentPickerOpen}
               newExerciseMuscle={newExerciseMuscle}
               setNewExerciseMuscle={setNewExerciseMuscle}
-              availableMuscles={availableMuscles}
+              availableMuscles={createMuscleOptions}
               isMusclePickerOpen={isCreateMusclePickerOpen}
               onMusclePickerOpenChange={setIsCreateMusclePickerOpen}
               newExerciseDescription={newExerciseDescription}
