@@ -232,7 +232,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       >
         {/* Notification enable prompt (non-blocking) */}
         {showNotifPrompt && (
-          <div className="-mt-2 mb-4 rounded-2xl border border-border bg-neutral-900/90 p-3 shadow-md">
+          <div className="-mt-4 mb-4 rounded-2xl border border-border bg-neutral-900/90 p-3 shadow-md">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="text-sm text-white break-words min-w-0">
                 Enable notifications to receive workout alerts and reminders.

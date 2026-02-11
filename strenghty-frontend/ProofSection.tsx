@@ -27,7 +27,7 @@ type ProofStepProps = {
 
 export function ProofStep({ onNext }: ProofStepProps) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 pt-10 -translate-y-6 scale-110 sm:pt-0 md:translate-y-0 md:scale-100 lg:scale-110 xl:scale-125">
+    <div className="flex flex-col items-center justify-center px-6 pt-10 -translate-y-10 scale-110 sm:pt-0 md:translate-y-0 md:scale-100 lg:scale-110 xl:scale-125">
       <h2 className="font-heading text-2xl font-bold md:text-3xl text-center text-white">
         See it in action
       </h2>
@@ -90,7 +90,7 @@ export function ProofStep({ onNext }: ProofStepProps) {
 
 export default function ProofSection() {
   return (
-    <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6">
+    <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6 -translate-y-6">
       {/* Background glow */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[80px] md:h-96 md:w-96 lg:h-[28rem] lg:w-[28rem]" />
 

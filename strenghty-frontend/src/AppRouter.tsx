@@ -41,9 +41,17 @@ const PageTransition = ({
 }) => (
   <motion.div
     className="h-full"
-    initial={{ opacity: 0, y: noVerticalShift ? 0 : 20, scale: 0.98 }}
+    initial={{
+      opacity: 0,
+      y: noVerticalShift ? 0 : 20,
+      scale: noVerticalShift ? 1 : 0.98,
+    }}
     animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: noVerticalShift ? 0 : -20, scale: 0.96 }}
+    exit={{
+      opacity: 0,
+      y: noVerticalShift ? 0 : -20,
+      scale: noVerticalShift ? 1 : 0.96,
+    }}
     transition={{ duration: 0.25, ease: "easeOut" }}
   >
     {children}

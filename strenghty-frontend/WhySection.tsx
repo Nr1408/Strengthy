@@ -118,7 +118,7 @@ export function WhySectionContent({
       )}
 
       {isStep && (
-        <div className="relative z-10 mt-8 flex justify-center">
+        <div className="relative z-10 mt-3 flex justify-center">
           <Button type="button" size="lg" onClick={onPrimaryAction}>
             {primaryLabel}
           </Button>
