@@ -11,6 +11,7 @@ import { getSets, getWorkouts, getCardioSetsForWorkout } from "@/lib/api";
 import type { UiWorkoutSet, UiWorkout } from "@/lib/api";
 import { countPrTypesFromSet } from "@/lib/utils";
 import { startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
+import WorkoutInProgressDialog from "@/components/layout/WorkoutInProgressDialog";
 
 export default function Dashboard() {
   const { data: workouts = [], isLoading } = useQuery({
@@ -32,6 +33,7 @@ export default function Dashboard() {
   }, [completedWorkouts]);
 
   const navigate = useNavigate();
+  const [showInProgressDialog, setShowInProgressDialog] = useState(false);
 
   const [nextSuggested, setNextSuggested] = useState<null | {
     id: string;
@@ -261,11 +263,7 @@ export default function Dashboard() {
               try {
                 const inProg = localStorage.getItem("workout:inProgress");
                 if (inProg) {
-                  // show toast via browser alert if toast hook not available
-                  alert(
-                    "You already have a workout in progress. Resume or discard it before starting another.",
-                  );
-                  navigate("/workouts/new");
+                  setShowInProgressDialog(true);
                   return;
                 }
               } catch {}
@@ -397,10 +395,7 @@ export default function Dashboard() {
                 try {
                   const inProg = localStorage.getItem("workout:inProgress");
                   if (inProg) {
-                    alert(
-                      "You already have a workout in progress. Resume or discard it before starting another.",
-                    );
-                    navigate("/workouts/new");
+                    setShowInProgressDialog(true);
                     return;
                   }
                 } catch {}
@@ -423,6 +418,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      <WorkoutInProgressDialog
+        open={showInProgressDialog}
+        onOpenChange={setShowInProgressDialog}
+        onResume={() => navigate("/workouts/new")}
+      />
     </AppLayout>
   );
 }

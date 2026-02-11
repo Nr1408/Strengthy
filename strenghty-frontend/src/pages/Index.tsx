@@ -43,6 +43,15 @@ export default function Index() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    const previousOverflowY = document.body.style.overflowY;
+    document.body.style.overflowY = "hidden";
+
+    return () => {
+      document.body.style.overflowY = previousOverflowY;
+    };
+  }, []);
+
   const goToStep = (next: number) => {
     setStep(Math.max(0, Math.min(4, next)));
   };

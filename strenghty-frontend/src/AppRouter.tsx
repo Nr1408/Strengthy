@@ -32,12 +32,18 @@ import GoogleRedirect from "./pages/GoogleRedirect";
 
 const queryClient = new QueryClient();
 
-const PageTransition = ({ children }: { children: React.ReactNode }) => (
+const PageTransition = ({
+  children,
+  noVerticalShift,
+}: {
+  children: React.ReactNode;
+  noVerticalShift?: boolean;
+}) => (
   <motion.div
     className="h-full"
-    initial={{ opacity: 0, y: 20, scale: 0.98 }}
+    initial={{ opacity: 0, y: noVerticalShift ? 0 : 20, scale: 0.98 }}
     animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: -20, scale: 0.96 }}
+    exit={{ opacity: 0, y: noVerticalShift ? 0 : -20, scale: 0.96 }}
     transition={{ duration: 0.25, ease: "easeOut" }}
   >
     {children}
@@ -149,7 +155,7 @@ const AnimatedRoutes = () => {
         <Route
           path="/workouts/new"
           element={
-            <PageTransition>
+            <PageTransition noVerticalShift>
               <NewWorkout />
             </PageTransition>
           }
@@ -181,7 +187,7 @@ const AnimatedRoutes = () => {
         <Route
           path="/workouts/:id/edit"
           element={
-            <PageTransition>
+            <PageTransition noVerticalShift>
               <EditWorkout />
             </PageTransition>
           }

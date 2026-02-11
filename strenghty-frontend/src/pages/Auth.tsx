@@ -619,8 +619,8 @@ export default function Auth({
                     Just a moment
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-6 pb-6">
-                  <div className="py-8 text-center space-y-3">
+                <CardContent className="px-6 pb-5">
+                  <div className="py-5 sm:py-8 text-center space-y-3">
                     <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                     <div>
                       <p className="text-base font-semibold text-white">

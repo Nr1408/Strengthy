@@ -27,13 +27,13 @@ type ProofStepProps = {
 
 export function ProofStep({ onNext }: ProofStepProps) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 pt-10 -translate-y-6 scale-110 sm:pt-0 md:translate-y-0 md:scale-100">
+    <div className="flex flex-col items-center justify-center px-6 pt-10 -translate-y-6 scale-110 sm:pt-0 md:translate-y-0 md:scale-100 lg:scale-110 xl:scale-125">
       <h2 className="font-heading text-2xl font-bold md:text-3xl text-center text-white">
         See it in action
       </h2>
 
       {/* Mock dashboard card */}
-      <div className="relative mt-8 w-full max-w-sm">
+      <div className="relative mt-8 w-full max-w-sm md:max-w-md lg:max-w-lg">
         {/* Background glow */}
         <div className="pointer-events-none absolute inset-0 -m-8 rounded-full bg-primary/5 blur-[60px]" />
 
@@ -92,7 +92,7 @@ export default function ProofSection() {
   return (
     <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6">
       {/* Background glow */}
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[80px]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[80px] md:h-96 md:w-96 lg:h-[28rem] lg:w-[28rem]" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -115,7 +115,7 @@ export default function ProofSection() {
         whileInView={{ opacity: 1, y: 0, scale: 1 }}
         viewport={{ once: true, amount: 0.3 }}
         transition={{ duration: 0.6, delay: 0.15 }}
-        className="relative z-10 mt-10 w-full max-w-md"
+        className="relative z-10 mt-10 w-full max-w-md md:max-w-lg lg:max-w-xl"
       >
         <div className="rounded-2xl border border-border bg-card p-5 shadow-2xl shadow-primary/5">
           <div className="mb-4 flex items-center justify-between">

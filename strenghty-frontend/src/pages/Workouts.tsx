@@ -39,6 +39,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteWorkout, updateWorkout, getSets, updateSet } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery as useRQ } from "@tanstack/react-query";
+import WorkoutInProgressDialog from "@/components/layout/WorkoutInProgressDialog";
 
 export default function Workouts() {
   const {
@@ -82,6 +83,7 @@ export default function Workouts() {
   const [selectedWorkout, setSelectedWorkout] = useState<any | null>(null);
   const [editName, setEditName] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [showInProgressDialog, setShowInProgressDialog] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -834,11 +836,7 @@ export default function Workouts() {
               try {
                 const inProg = localStorage.getItem("workout:inProgress");
                 if (inProg) {
-                  // prefer toast but fall back to alert if toast unavailable
-                  alert(
-                    "You already have a workout in progress. Resume or discard it before starting another.",
-                  );
-                  navigate("/workouts/new");
+                  setShowInProgressDialog(true);
                   return;
                 }
               } catch {}
@@ -902,10 +900,7 @@ export default function Workouts() {
                   try {
                     const inProg = localStorage.getItem("workout:inProgress");
                     if (inProg) {
-                      alert(
-                        "You already have a workout in progress. Resume or discard it before starting another.",
-                      );
-                      navigate("/workouts/new");
+                      setShowInProgressDialog(true);
                       return;
                     }
                   } catch {}
@@ -919,6 +914,12 @@ export default function Workouts() {
           </div>
         )}
       </div>
+
+      <WorkoutInProgressDialog
+        open={showInProgressDialog}
+        onOpenChange={setShowInProgressDialog}
+        onResume={() => navigate("/workouts/new")}
+      />
       {/* Workout Detail Dialog */}
       <Dialog
         open={!!selectedWorkout}

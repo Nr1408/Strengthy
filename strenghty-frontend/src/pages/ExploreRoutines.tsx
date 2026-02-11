@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
+import WorkoutInProgressDialog from "@/components/layout/WorkoutInProgressDialog";
 
 export default function ExploreRoutines() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [showInProgressDialog, setShowInProgressDialog] = useState(false);
   const exploreRoutines: Routine[] = mockRoutines;
 
   const filteredRoutines = useMemo(() => {
@@ -28,14 +30,7 @@ export default function ExploreRoutines() {
     try {
       const inProg = localStorage.getItem("workout:inProgress");
       if (inProg) {
-        // If there's already an in-progress workout, direct the user to resume it
-        // and warn them instead of starting another.
-        // Using a simple alert here because this file doesn't import the toast hook.
-        // The caller will land on /workouts/new where they can resume or discard.
-        alert(
-          "You already have a workout in progress. Resume or discard it before starting another.",
-        );
-        navigate("/workouts/new");
+        setShowInProgressDialog(true);
         return;
       }
     } catch {}
@@ -87,6 +82,12 @@ export default function ExploreRoutines() {
           ))}
         </div>
       </div>
+
+      <WorkoutInProgressDialog
+        open={showInProgressDialog}
+        onOpenChange={setShowInProgressDialog}
+        onResume={() => navigate("/workouts/new")}
+      />
     </AppLayout>
   );
 }
