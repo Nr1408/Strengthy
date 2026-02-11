@@ -58,7 +58,7 @@ export function WhySectionContent({
 
   return (
     <section
-      className={`relative flex flex-col items-center justify-center overflow-hidden px-6 ${
+      className={`relative flex flex-col items-center justify-center overflow-hidden px-6 -translate-y-7 ${
         isStep ? "h-full min-h-0 pt-10 sm:pt-0" : "min-h-[100svh]"
       }`}
     >

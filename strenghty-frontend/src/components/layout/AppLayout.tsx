@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { deleteWorkout } from "@/lib/api";
 import {
@@ -232,7 +233,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       >
         {/* Notification enable prompt (non-blocking) */}
         {showNotifPrompt && (
-          <div className="-mt-4 mb-4 rounded-2xl border border-border bg-neutral-900/90 p-3 shadow-md">
+          <div className="-mt-6 mb-4 rounded-2xl border border-border bg-neutral-900/90 p-3 shadow-md">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="text-sm text-white break-words min-w-0">
                 Enable notifications to receive workout alerts and reminders.
@@ -303,48 +304,51 @@ export function AppLayout({ children }: AppLayoutProps) {
         {children}
       </main>
       {/* Paused workout small dialog (top) */}
-      {showPausedDialog && (
-        <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 w-[min(640px,75%)]">
-          <div className="rounded-2xl border border-border bg-neutral-900/95 p-4 shadow-lg">
-            <div className="mb-1 text-center text-lg font-semibold text-muted-foreground">
-              Workout in Progress
-            </div>
-            <div className="flex items-center justify-center gap-6">
-              <button
-                className="flex items-center gap-2 text-blue-400 hover:underline"
-                onClick={() => {
-                  try {
-                    const raw = localStorage.getItem("workout:inProgress");
-                    if (raw) {
-                      const obj = JSON.parse(raw);
-                      localStorage.removeItem("workout:paused");
-                      setShowPausedDialog(false);
-                      // Navigate to NewWorkout to restore state
-                      if (obj && obj.id) {
-                        navigate(`/workouts/new`);
-                        return;
+      {showPausedDialog &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 w-[min(640px,75%)]">
+            <div className="rounded-2xl border border-white/5 bg-neutral-900/95 p-4 shadow-lg">
+              <div className="mb-1 text-center text-lg font-semibold text-muted-foreground">
+                Workout in Progress
+              </div>
+              <div className="flex items-center justify-center gap-6">
+                <button
+                  className="flex items-center gap-2 text-blue-400 hover:underline"
+                  onClick={() => {
+                    try {
+                      const raw = localStorage.getItem("workout:inProgress");
+                      if (raw) {
+                        const obj = JSON.parse(raw);
+                        localStorage.removeItem("workout:paused");
+                        setShowPausedDialog(false);
+                        // Navigate to NewWorkout to restore state
+                        if (obj && obj.id) {
+                          navigate(`/workouts/new`);
+                          return;
+                        }
                       }
-                    }
-                  } catch (e) {}
-                  setShowPausedDialog(false);
-                  navigate("/workouts/new");
-                }}
-              >
-                <span className="text-2xl">▶</span>
-                <span className="font-medium">Resume</span>
-              </button>
+                    } catch (e) {}
+                    setShowPausedDialog(false);
+                    navigate("/workouts/new");
+                  }}
+                >
+                  <span className="text-2xl">▶</span>
+                  <span className="font-medium">Resume</span>
+                </button>
 
-              <button
-                className="flex items-center gap-2 text-red-400 hover:underline"
-                onClick={() => setShowDiscardConfirm(true)}
-              >
-                <span className="text-2xl">✕</span>
-                <span className="font-medium">Discard</span>
-              </button>
+                <button
+                  className="flex items-center gap-2 text-red-400 hover:underline"
+                  onClick={() => setShowDiscardConfirm(true)}
+                >
+                  <span className="text-2xl">✕</span>
+                  <span className="font-medium">Discard</span>
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* Discard confirmation dialog */}
       {showDiscardConfirm && (

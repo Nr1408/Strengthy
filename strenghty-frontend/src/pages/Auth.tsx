@@ -599,7 +599,9 @@ export default function Auth({
       >
         <div
           className={`w-full max-w-md transition-transform ${
-            pendingAction ? "-translate-y-2 md:translate-y-[-7vh]" : ""
+            pendingAction
+              ? "-translate-y-3 md:translate-y-[-8vh] lg:translate-y-[-5vh]"
+              : ""
           }`}
         >
           <MotionCard

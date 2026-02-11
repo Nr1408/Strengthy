@@ -2368,7 +2368,7 @@ export default function NewWorkout() {
 
       <div
         className="space-y-6"
-        style={{ paddingTop: "calc(var(--workout-header-h, 0px) + 12px)" }}
+        style={{ paddingTop: "calc(var(--workout-header-h, 0px) + 4px)" }}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
