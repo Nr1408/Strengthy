@@ -600,7 +600,7 @@ export default function Auth({
         <div
           className={`w-full max-w-md transition-transform ${
             pendingAction
-              ? "-translate-y-3 md:translate-y-[-8vh] lg:translate-y-[-5vh]"
+              ? "-translate-y-4 md:translate-y-[-9vh] lg:translate-y-[-6vh]"
               : ""
           }`}
         >
