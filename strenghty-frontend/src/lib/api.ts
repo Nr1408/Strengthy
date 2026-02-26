@@ -10,7 +10,7 @@ const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL 
 // dev automatically uses the live API instead of a non-listening local host.
 // Candidates: explicit env, local dev, deployed. Allow manual override via
 // localStorage key `USE_LOCAL_API=1` when you want to force local usage.
-const DEPLOYED_API = "https://strengthy-backend.up.railway.app/api";
+const DEPLOYED_API = "https://strengthy-backend.onrender.com/api";
 const LOCAL_API = "http://localhost:8000/api";
 
 // mutable resolved base (computed below)

@@ -206,7 +206,7 @@ export default function Auth({
     const params = new URLSearchParams({
       client_id: googleClientIdWeb,
       redirect_uri:
-        "https://strengthy-backend.up.railway.app/api/auth/google/redirect/",
+        "https://strengthy-backend.onrender.com/api/auth/google/redirect/",
       response_type: "id_token",
       response_mode: "form_post",
       scope: "openid email profile",
