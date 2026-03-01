@@ -1828,8 +1828,6 @@ export async function createCardioSet(params: {
   }
 
   const payload: any = {
-    workout: workoutNum,
-    exercise: exerciseNum,
     mode: mapUiCardioModeToApi(mode),
   };
   if (typeof setNumber === 'number') payload.set_number = setNumber;
@@ -1872,7 +1870,11 @@ export async function createCardioSet(params: {
   const res = await fetch(`${API_BASE}/cardio-sets/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      workout: workoutNum,
+      exercise: exerciseNum,
+      ...payload,
+    }),
   });
   if (!res.ok) {
     let body: any = "";

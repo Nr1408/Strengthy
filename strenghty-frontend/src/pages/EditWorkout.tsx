@@ -1858,7 +1858,10 @@ export default function EditWorkout() {
   return (
     <AppLayout>
       {/* PR banner (stays below fixed action bar) */}
-      <div className="pointer-events-none fixed left-1/2 top-[72px] z-40 -translate-x-1/2 flex justify-center w-full px-4">
+      <div
+        className="pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 flex justify-center w-full px-4"
+        style={{ top: "calc(var(--workout-header-h, 64px) + 28px)" }}
+      >
         <div
           className={`pointer-events-auto flex items-center gap-3 rounded-full bg-zinc-800 px-4 py-2 shadow-md shadow-black/30 border border-white/25 ring-1 ring-white/5 max-w-xs sm:max-w-md transition-all duration-300 ease-out transform ${
             prVisible && prBanner
