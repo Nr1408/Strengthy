@@ -45,14 +45,17 @@ function isSupabaseJwtUsable(token: string | null): boolean {
 
   const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
   const iss = typeof payload.iss === "string" ? payload.iss : "";
-  if (!iss || !iss.startsWith(supabaseBase)) return false;
-
   const aud = payload.aud;
   const hasSupabaseAudience =
     aud === "authenticated" ||
     (Array.isArray(aud) && aud.includes("authenticated"));
+  const hasSupabaseIssuer = !!(iss && iss.startsWith(supabaseBase));
+  const hasAuthenticatedRole = payload.role === "authenticated";
+  const hasSubject = typeof payload.sub === "string" && payload.sub.length > 0;
 
-  return !!hasSupabaseAudience;
+  // Support both GoTrue-issued JWTs and migration/testing JWTs that carry
+  // `role: authenticated` + `sub` but may not include Supabase `iss`/`aud`.
+  return !!(hasSubject && (hasSupabaseAudience || hasSupabaseIssuer || hasAuthenticatedRole));
 }
 
 function shouldUseSupabaseApi(): boolean {
@@ -526,6 +529,46 @@ interface ApiWorkout {
 
 export function getToken() {
   try {
+    const getRecoveredSupabaseToken = (): string | null => {
+      try {
+        if (typeof window === "undefined") return null;
+        for (let index = 0; index < localStorage.length; index += 1) {
+          const key = localStorage.key(index);
+          if (!key) continue;
+          if (!/^sb-.*-auth-token$/i.test(key)) continue;
+
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+
+          let parsed: any = null;
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            parsed = null;
+          }
+
+          const candidates: Array<any> = [];
+          if (parsed && typeof parsed === "object") {
+            candidates.push(parsed.access_token);
+            candidates.push(parsed.currentSession?.access_token);
+            candidates.push(parsed.session?.access_token);
+          }
+          if (Array.isArray(parsed)) {
+            for (const entry of parsed) {
+              candidates.push(entry?.access_token);
+            }
+          }
+
+          for (const candidate of candidates) {
+            if (typeof candidate === "string" && candidate.split(".").length === 3) {
+              return candidate;
+            }
+          }
+        }
+      } catch (e) {}
+      return null;
+    };
+
     // Primary key
     let token = localStorage.getItem("token");
     // Backward compatibility: some flows previously used "user:token"
@@ -658,6 +701,20 @@ try {
       };
 
       const _origClear = clearToken;
+
+    // In Supabase mode, recover from Supabase auth localStorage session key
+    // when the canonical token is missing or malformed.
+    const malformedJwt = !!(token && token.split(".").length !== 3);
+    if ((!token || malformedJwt) && shouldUseSupabaseApi()) {
+      const recovered = getRecoveredSupabaseToken();
+      if (recovered) {
+        token = recovered;
+        try {
+          localStorage.setItem("token", recovered);
+        } catch (e) {}
+      }
+    }
+
       clearToken = () => {
         try {
           _origClear();
@@ -1067,9 +1124,28 @@ export async function loginWithGoogle(idToken: string) {
   });
     if (!res.ok) throw new Error(`Google login failed: ${res.status} ${await res.text()}`);
     const data = await res.json();
-    if (data.token) {
+    const returnedToken =
+      typeof data?.access_token === "string" && data.access_token.length > 0
+        ? data.access_token
+        : typeof data?.token === "string" && data.token.length > 0
+          ? data.token
+          : null;
+    if (returnedToken) {
       // Use the same storage mechanism as email/password login
-      setToken(data.token);
+      setToken(returnedToken);
+    }
+
+    if (shouldUseSupabaseApi()) {
+      // In Supabase mode we must have a JWT with a usable subject claim.
+      const sub = getJwtUserId();
+      if (!sub) {
+        try {
+          clearToken();
+        } catch (e) {}
+        throw new Error(
+          "Google sign-in succeeded, but no valid Supabase session token was returned. Please sign in again.",
+        );
+      }
     }
     // store profile (so Profile page can read name/email)
     try {
