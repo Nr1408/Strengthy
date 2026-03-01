@@ -63,8 +63,9 @@ const authStepVariants = {
   },
 } as const;
 
-const GOOGLE_CLIENT_ID_WEB_ENV =
-  (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "").toString().trim();
+const GOOGLE_CLIENT_ID_WEB_ENV = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "")
+  .toString()
+  .trim();
 
 export default function Auth({
   embedded = false,
@@ -83,6 +84,9 @@ export default function Auth({
   }>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDialogTitle, setErrorDialogTitle] = useState(
+    "Authentication error",
+  );
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
   const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
   const [googleClientIdWeb, setGoogleClientIdWeb] = useState<string | null>(
@@ -100,6 +104,24 @@ export default function Auth({
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const openConfirmEmailDialog = useCallback((email?: string) => {
+    setErrorDialogTitle("Please confirm your email");
+    setDialogMessage(
+      email
+        ? `Please confirm your email (${email}) before logging in. Check your inbox and spam folder.`
+        : "Please confirm your email before logging in. Check your inbox and spam folder.",
+    );
+    setErrorDialogOpen(true);
+  }, []);
+
+  const isEmailNotConfirmedError = useCallback((msg: string) => {
+    const lower = msg.toLowerCase();
+    return (
+      lower.includes("email_not_confirmed") ||
+      lower.includes("email not confirmed")
+    );
+  }, []);
 
   // Prevent page-level scrolling while on the auth route. This guards against
   // programmatic focus or mobile browser UI adjustments causing the body to
@@ -541,11 +563,12 @@ export default function Auth({
       if (showSignup) {
         // Create the account
         await register(formData.email, formData.password);
-        // After registering, log the user in automatically
-        await login(formData.email, formData.password);
-        toast({ title: "Account created", description: "Signed in." });
-        // New accounts should complete onboarding (collect details)
-        navigate("/onboarding");
+        openConfirmEmailDialog(formData.email);
+        toast({
+          title: "Please confirm your email",
+          description: "Check your inbox, then log in.",
+        });
+        setShowSignup(false);
         return;
       }
 
@@ -556,6 +579,17 @@ export default function Auth({
     } catch (err: any) {
       const msg = String(err?.message || err || "Authentication failed");
       setAuthError(msg);
+
+      if (isEmailNotConfirmedError(msg)) {
+        openConfirmEmailDialog(formData.email);
+        toast({
+          title: "Please confirm your email",
+          description: "Check your inbox, then try logging in again.",
+        });
+        return;
+      }
+
+      setErrorDialogTitle("Authentication error");
       try {
         const deep = JSON.stringify(
           (err as any)?.response?.data || (err as any)?.message || msg,
@@ -836,7 +870,7 @@ export default function Auth({
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Authentication error</DialogTitle>
+              <DialogTitle>{errorDialogTitle}</DialogTitle>
               <DialogDescription>
                 {dialogMessage || "An error occurred during authentication."}
               </DialogDescription>
