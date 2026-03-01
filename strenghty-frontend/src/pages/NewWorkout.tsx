@@ -288,6 +288,7 @@ export default function NewWorkout() {
   const [prBanner, setPrBanner] = useState<PrBanner | null>(null);
   const [prQueue, setPrQueue] = useState<PrBanner[]>([]);
   const [prVisible, setPrVisible] = useState(false);
+  const [isSavingWorkout, setIsSavingWorkout] = useState(false);
 
   type UnusualSetState =
     | {
@@ -1790,6 +1791,8 @@ export default function NewWorkout() {
   };
 
   const saveWorkout = async () => {
+    if (isSavingWorkout) return;
+
     if (exercises.length === 0) {
       toast({
         title: isRoutineBuilder ? "No exercises added" : "No exercises added",
@@ -1801,71 +1804,73 @@ export default function NewWorkout() {
       return;
     }
 
-    // Pure routine builder mode: save template locally and return.
-    if (isRoutineBuilder && fromRoutine) {
-      try {
-        const templateExercises = exercises.map((ex, index) => ({
-          id: ex.id,
-          exercise: ex.exercise,
-          targetSets: ex.sets.length,
-          targetReps: ex.sets[0]?.reps || 0,
-          order: index + 1,
-        }));
-
-        const newTemplate: Routine = {
-          id: fromRoutine.id,
-          name: workoutName || fromRoutine.name,
-          description: fromRoutine.description,
-          createdAt: new Date(),
-          exercises: templateExercises,
-        };
-
-        let stored: Routine[] = [];
-        try {
-          const raw = localStorage.getItem("user:routines");
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) stored = parsed as Routine[];
-          }
-        } catch {
-          stored = [];
-        }
-
-        const withoutOld = stored.filter((r) => r.id !== newTemplate.id);
-        const updated = [...withoutOld, newTemplate];
-        localStorage.setItem("user:routines", JSON.stringify(updated));
-
-        toast({
-          title: "Routine saved!",
-          description: `${templateExercises.length} exercises added to routine.`,
-        });
-        navigate("/routines");
-      } catch (e) {
-        toast({
-          title: "Failed to save routine",
-          description: String(e),
-          variant: "destructive",
-        });
-      }
-      return;
-    }
-
-    // Ensure we have a workout on the backend before persisting sets
-    if (!workoutId) {
-      try {
-        const w = await createWorkout(workoutName);
-        setWorkoutId(w.id);
-      } catch (e) {
-        toast({
-          title: "Failed to start workout",
-          description: String(e),
-          variant: "destructive",
-        });
-        return;
-      }
-    }
+    setIsSavingWorkout(true);
 
     try {
+      // Pure routine builder mode: save template locally and return.
+      if (isRoutineBuilder && fromRoutine) {
+        try {
+          const templateExercises = exercises.map((ex, index) => ({
+            id: ex.id,
+            exercise: ex.exercise,
+            targetSets: ex.sets.length,
+            targetReps: ex.sets[0]?.reps || 0,
+            order: index + 1,
+          }));
+
+          const newTemplate: Routine = {
+            id: fromRoutine.id,
+            name: workoutName || fromRoutine.name,
+            description: fromRoutine.description,
+            createdAt: new Date(),
+            exercises: templateExercises,
+          };
+
+          let stored: Routine[] = [];
+          try {
+            const raw = localStorage.getItem("user:routines");
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) stored = parsed as Routine[];
+            }
+          } catch {
+            stored = [];
+          }
+
+          const withoutOld = stored.filter((r) => r.id !== newTemplate.id);
+          const updated = [...withoutOld, newTemplate];
+          localStorage.setItem("user:routines", JSON.stringify(updated));
+
+          toast({
+            title: "Routine saved!",
+            description: `${templateExercises.length} exercises added to routine.`,
+          });
+          navigate("/routines");
+        } catch (e) {
+          toast({
+            title: "Failed to save routine",
+            description: String(e),
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      // Ensure we have a workout on the backend before persisting sets
+      if (!workoutId) {
+        try {
+          const w = await createWorkout(workoutName);
+          setWorkoutId(w.id);
+        } catch (e) {
+          toast({
+            title: "Failed to start workout",
+            description: String(e),
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const normalize = (s: string) =>
         s
           .toLowerCase()
@@ -2345,6 +2350,8 @@ export default function NewWorkout() {
         description: String(e),
         variant: "destructive",
       });
+    } finally {
+      setIsSavingWorkout(false);
     }
   };
 
@@ -2423,8 +2430,12 @@ export default function NewWorkout() {
           >
             Cancel
           </Button>
-          <Button size="sm" onClick={saveWorkout}>
-            {isRoutineBuilder ? "Save Routine" : "Save Workout"}
+          <Button size="sm" onClick={saveWorkout} disabled={isSavingWorkout}>
+            {isSavingWorkout
+              ? "Saving..."
+              : isRoutineBuilder
+                ? "Save Routine"
+                : "Save Workout"}
           </Button>
         </div>
       </div>

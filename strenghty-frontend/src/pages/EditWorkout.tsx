@@ -182,6 +182,7 @@ export default function EditWorkout() {
   const [prBanner, setPrBanner] = useState<PrBanner | null>(null);
   const [prQueue, setPrQueue] = useState<PrBanner[]>([]);
   const [prVisible, setPrVisible] = useState(false);
+  const [isSavingWorkout, setIsSavingWorkout] = useState(false);
 
   type UnusualSetState =
     | {
@@ -1089,13 +1090,6 @@ export default function EditWorkout() {
               value: `${volumeKg.toFixed(1)} kg`,
             });
           }
-          if (banners.length === 0) {
-            banners.push({
-              exerciseName,
-              label: "Personal Record",
-              value: "New best set",
-            });
-          }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
         }
         if (allowPrForWorkout && isCardioSet && saved.isPR) {
@@ -1558,13 +1552,6 @@ export default function EditWorkout() {
               value: `${volumeKg.toFixed(1)} kg`,
             });
           }
-          if (banners.length === 0) {
-            banners.push({
-              exerciseName,
-              label: "Personal Record",
-              value: "New best set",
-            });
-          }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
         }
         if (allowPrForWorkout && isCardioSet && created.isPR) {
@@ -1719,7 +1706,9 @@ export default function EditWorkout() {
   };
 
   const saveEditedWorkout = async () => {
+    if (isSavingWorkout) return;
     if (!workoutId) return;
+    setIsSavingWorkout(true);
     // Use a mutable local workout id so we can recreate the backend workout
     // and retry set creation if the server reports the workout record is missing.
     let curWorkoutId: string | null = workoutId;
@@ -2106,6 +2095,8 @@ export default function EditWorkout() {
         description: String(err),
         variant: "destructive",
       });
+    } finally {
+      setIsSavingWorkout(false);
     }
   };
 
@@ -2205,8 +2196,13 @@ export default function EditWorkout() {
           >
             Cancel
           </Button>
-          <Button size="sm" onClick={saveEditedWorkout}>
-            <Save className="h-4 w-4 mr-2" /> Save Changes
+          <Button
+            size="sm"
+            onClick={saveEditedWorkout}
+            disabled={isSavingWorkout}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isSavingWorkout ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
