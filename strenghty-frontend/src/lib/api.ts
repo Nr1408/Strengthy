@@ -23,7 +23,12 @@ const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toStrin
 const SUPABASE_REST_BASE = SUPABASE_URL_ENV
   ? `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/rest/v1`
   : "";
-const USE_SUPABASE_API = !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV);
+const HAS_SUPABASE_CONFIG = !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV);
+
+function shouldUseSupabaseApi(): boolean {
+  if (!HAS_SUPABASE_CONFIG) return false;
+  return !!getJwtUserId();
+}
 
 function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: string) {
   try {
@@ -188,7 +193,7 @@ export async function upsertProfile(payload: {
   experience?: string | null;
   monthly_workouts?: number | null;
 }) {
-  if (!USE_SUPABASE_API) return;
+  if (!shouldUseSupabaseApi()) return;
   const userId = getJwtUserId();
   if (!userId || !SUPABASE_REST_BASE) return;
   const body = { user_id: userId, ...payload };
@@ -1060,7 +1065,7 @@ export async function loginWithGoogle(idToken: string) {
     try {
       const t = getToken();
       if (t) {
-        const p = USE_SUPABASE_API
+        const p = shouldUseSupabaseApi()
           ? await getSupabaseProfile()
           : await (async () => {
               const r = await fetch(`${API_BASE}/profile/`, { headers: { ...authHeaders() } });
@@ -1175,7 +1180,7 @@ export async function getExercises(): Promise<UiExercise[]> {
       console.debug("getExercises auth token present:", !!t, "tokenLen:", t ? String(t).length : 0);
     } catch (e) {}
   } catch (e) {}
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at&order=created_at.desc`,
       { headers: supabaseHeaders() },
@@ -1212,7 +1217,7 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
   const payload: any = { name, muscle_group: mg, description };
   if (options && typeof options.custom !== 'undefined') payload.custom = !!options.custom;
 
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const userId = getJwtUserId();
     if (!userId) throw new Error("Not authenticated");
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/exercises`, {
@@ -1268,7 +1273,7 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
 }
 
 export async function deleteExercise(id: string) {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/exercises?id=eq.${encodeURIComponent(id)}`,
       { method: "DELETE", headers: supabaseHeaders() },
@@ -1281,7 +1286,7 @@ export async function deleteExercise(id: string) {
 }
 
 export async function getWorkouts(): Promise<UiWorkout[]> {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workouts?select=id,date,name,notes,created_at,updated_at,ended_at&order=created_at.desc`,
       { headers: supabaseHeaders() },
@@ -1316,7 +1321,7 @@ export async function createWorkout(name: string, notes = "", date?: Date): Prom
       console.debug("createWorkout auth token present:", !!t, "tokenLen:", t ? String(t).length : 0);
     } catch (e) {}
   } catch (e) {}
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const userId = getJwtUserId();
     if (!userId) throw new Error("Not authenticated");
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workouts`, {
@@ -1340,7 +1345,7 @@ export async function createWorkout(name: string, notes = "", date?: Date): Prom
 }
 
 export async function finishWorkout(id: string): Promise<UiWorkout> {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
       {
@@ -1364,7 +1369,7 @@ export async function finishWorkout(id: string): Promise<UiWorkout> {
 }
 
 export async function deleteWorkout(id: string) {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
       { method: "DELETE", headers: supabaseHeaders() },
@@ -1388,7 +1393,7 @@ export async function deleteWorkout(id: string) {
 }
 
 export async function updateWorkout(id: string, data: Partial<{ name: string; notes: string; date: string }>): Promise<UiWorkout> {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
       {
@@ -1412,7 +1417,7 @@ export async function updateWorkout(id: string, data: Partial<{ name: string; no
 }
 
 export async function getSets(workoutId: string): Promise<UiWorkoutSet[]> {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const workoutNum = Number(workoutId);
     if (!Number.isFinite(workoutNum) || workoutNum <= 0) {
       throw new Error(`getSets: invalid workoutId: ${String(workoutId)}`);
@@ -1432,7 +1437,7 @@ export async function getSets(workoutId: string): Promise<UiWorkoutSet[]> {
 }
 
 export async function getSetsForExercise(exerciseId: string): Promise<UiWorkoutSet[]> {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const exerciseNum = Number(exerciseId);
     if (!Number.isFinite(exerciseNum) || exerciseNum <= 0) {
       throw new Error(`getSetsForExercise: invalid exerciseId: ${String(exerciseId)}`);
@@ -1509,7 +1514,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     return mapWorkoutSet(normalizeWorkoutSetRow(rows[0]));
   };
 
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const hasCustomCreateSetEndpoint = !!runtimeEndpoint(CREATE_SET_ENDPOINT_ENV, 'CREATE_SET_ENDPOINT', '');
 
     if (!hasCustomCreateSetEndpoint) {
@@ -1620,7 +1625,7 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
   if (typeof data.type !== 'undefined') payload.set_type = data.type;
   if (typeof data.rpe === 'number') payload.rpe = data.rpe;
 
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workout_sets?id=eq.${encodeURIComponent(id)}`,
       {
@@ -1645,7 +1650,7 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
 }
 
 export async function deleteSet(id: string) {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workout_sets?id=eq.${encodeURIComponent(id)}`,
       { method: "DELETE", headers: supabaseHeaders() },
@@ -1663,7 +1668,7 @@ export async function deleteSet(id: string) {
 }
 
 export async function deleteCardioSet(id: string) {
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/cardio_sets?id=eq.${encodeURIComponent(id)}`,
       { method: "DELETE", headers: supabaseHeaders() },
@@ -1689,7 +1694,7 @@ export async function getCardioSetsForWorkout(workoutId: string): Promise<UiCard
     throw new Error(`getCardioSetsForWorkout: invalid workoutId: ${String(workoutId)}`);
   }
 
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/cardio_sets?select=${encodeURIComponent(supabaseSelectCardioSet())}&workout_id=eq.${workoutNum}&order=set_number.asc`,
       { headers: supabaseHeaders() },
@@ -1713,7 +1718,7 @@ export async function getCardioSetsForExercise(exerciseId: string): Promise<UiCa
     throw new Error(`getCardioSetsForExercise: invalid exerciseId: ${String(exerciseId)}`);
   }
 
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/cardio_sets?select=${encodeURIComponent(supabaseSelectCardioSet())}&exercise_id=eq.${exerciseNum}&order=created_at.desc`,
       { headers: supabaseHeaders() },
@@ -1767,7 +1772,7 @@ export async function createCardioSet(params: {
   if (typeof splitSeconds === "number") payload.split_seconds = splitSeconds;
   if (typeof spm === "number") payload.spm = spm;
 
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     if (typeof payload.set_number !== 'number') {
       const lastRes = await fetchWithTimeout(
         `${SUPABASE_REST_BASE}/cardio_sets?select=set_number&workout_id=eq.${workoutNum}&exercise_id=eq.${exerciseNum}&order=set_number.desc&limit=1`,
@@ -1848,7 +1853,7 @@ export async function updateCardioSet(
   if (typeof data.splitSeconds === "number") payload.split_seconds = data.splitSeconds;
   if (typeof data.spm === "number") payload.spm = data.spm;
 
-  if (USE_SUPABASE_API) {
+  if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/cardio_sets?id=eq.${encodeURIComponent(id)}`,
       {
