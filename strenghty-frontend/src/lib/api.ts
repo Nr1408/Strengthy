@@ -30,6 +30,25 @@ function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: stri
   return fallback;
 }
 
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 20000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: init.signal ?? controller.signal });
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      throw new Error("Request timed out. Backend may be unavailable.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // mutable resolved base (computed below)
 let resolvedBase: string;
 
@@ -1088,7 +1107,7 @@ export async function createWorkout(name: string, notes = "", date?: Date): Prom
       console.debug("createWorkout auth token present:", !!t, "tokenLen:", t ? String(t).length : 0);
     } catch (e) {}
   } catch (e) {}
-  const res = await fetch(`${API_BASE}/workouts/`, {
+  const res = await fetchWithTimeout(`${API_BASE}/workouts/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(payload),
@@ -1099,7 +1118,7 @@ export async function createWorkout(name: string, notes = "", date?: Date): Prom
 }
 
 export async function finishWorkout(id: string): Promise<UiWorkout> {
-  const res = await fetch(`${API_BASE}/workouts/${id}/`, {
+  const res = await fetchWithTimeout(`${API_BASE}/workouts/${id}/`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ ended_at: new Date().toISOString() }),
@@ -1186,7 +1205,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   const createSetEndpoint = /supabase\.co/.test(API_BASE)
     ? runtimeEndpoint(CREATE_SET_ENDPOINT_ENV, 'CREATE_SET_ENDPOINT', `${API_BASE}/sets/`)
     : `${API_BASE}/sets/`;
-  const res = await fetch(`${createSetEndpoint}`, {
+  const res = await fetchWithTimeout(`${createSetEndpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(payload),
