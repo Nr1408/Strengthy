@@ -35,7 +35,7 @@ import {
   deleteWorkout,
   getCardioSetsForWorkout,
 } from "@/lib/api";
-import { getUnit, formatMinutes, countPrTypesFromSet } from "@/lib/utils";
+import { getUnit, formatMinutes, countPrEventsFromSet } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 function HeaderCell({ children }: { children: React.ReactNode }) {
@@ -394,8 +394,8 @@ export default function ViewWorkout() {
   }
 
   const prCount =
-    sets.reduce((acc: number, s: any) => acc + countPrTypesFromSet(s), 0) +
-    cardioSets.reduce((acc: number, s: any) => acc + countPrTypesFromSet(s), 0);
+    sets.reduce((acc: number, s: any) => acc + countPrEventsFromSet(s), 0) +
+    cardioSets.reduce((acc: number, s: any) => acc + countPrEventsFromSet(s), 0);
 
   // handle Android hardware back button in Capacitor builds
   useEffect(() => {
