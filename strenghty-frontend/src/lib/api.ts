@@ -1549,8 +1549,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
       throw new Error("Session expired. Please log in again.");
     }
 
-    let resolvedSetNumber = typeof setNumber === "number" ? setNumber : undefined;
-    if (typeof resolvedSetNumber !== "number") {
+    const resolveNextSetNumber = async () => {
       const lastRes = await fetchWithTimeout(
         `${SUPABASE_REST_BASE}/workout_sets?select=set_number&workout_id=eq.${workoutNum}&exercise_id=eq.${exerciseNum}&order=set_number.desc&limit=1`,
         { headers: supabaseHeaders() },
@@ -1560,7 +1559,12 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
       }
       if (!lastRes.ok) throw new Error(`Create set failed: ${lastRes.status}`);
       const last = (await lastRes.json()) as Array<{ set_number?: number }>;
-      resolvedSetNumber = (last[0]?.set_number ?? 0) + 1;
+      return (last[0]?.set_number ?? 0) + 1;
+    };
+
+    let resolvedSetNumber = typeof setNumber === "number" ? setNumber : undefined;
+    if (typeof resolvedSetNumber !== "number") {
+      resolvedSetNumber = await resolveNextSetNumber();
     }
 
     const histRes = await fetchWithTimeout(
@@ -1628,37 +1632,52 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     const isRepPr = hasHistory && currentRepsTotal > maxReps;
     const isPr = !!(isAbsWeightPr || isE1rmPr || isVolumePr || isRepPr);
 
-    const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workout_sets`, {
-      method: "POST",
-      headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
-      body: JSON.stringify({
-        workout_id: workoutNum,
-        exercise_id: exerciseNum,
-        set_number: resolvedSetNumber,
-        reps,
-        half_reps: typeof halfReps === "number" ? halfReps : 0,
-        weight: typeof weight === "number" ? weight : null,
-        unit: typeof unit !== "undefined" ? unit : null,
-        is_pr: isPr,
-        is_abs_weight_pr: isAbsWeightPr,
-        is_e1rm_pr: isE1rmPr,
-        is_volume_pr: isVolumePr,
-        is_rep_pr: isRepPr,
-        set_type: typeof type !== "undefined" ? type : null,
-        rpe: typeof rpe === "number" ? rpe : null,
-      }),
-    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workout_sets`, {
+        method: "POST",
+        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        body: JSON.stringify({
+          workout_id: workoutNum,
+          exercise_id: exerciseNum,
+          set_number: resolvedSetNumber,
+          reps,
+          half_reps: typeof halfReps === "number" ? halfReps : 0,
+          weight: typeof weight === "number" ? weight : null,
+          unit: typeof unit !== "undefined" ? unit : null,
+          is_pr: isPr,
+          is_abs_weight_pr: isAbsWeightPr,
+          is_e1rm_pr: isE1rmPr,
+          is_volume_pr: isVolumePr,
+          is_rep_pr: isRepPr,
+          set_type: typeof type !== "undefined" ? type : null,
+          rpe: typeof rpe === "number" ? rpe : null,
+        }),
+      });
 
-    if (!res.ok) {
+      if (res.ok) {
+        const rows = (await res.json()) as any[];
+        return mapWorkoutSet(normalizeWorkoutSetRow(rows[0]));
+      }
+
       if (res.status === 401) {
         throw new Error("Session expired. Please log in again.");
       }
+
       const body = await res.text().catch(() => "");
+      const isUniqueSetNumberConflict =
+        res.status === 409 &&
+        (/23505/.test(body) ||
+          /workout_sets_workout_id_exercise_id_set_number_key/.test(body));
+
+      if (isUniqueSetNumberConflict && attempt < 2) {
+        resolvedSetNumber = await resolveNextSetNumber();
+        continue;
+      }
+
       throw new Error(`Create set failed: ${res.status}${body ? ` ${body}` : ""}`);
     }
 
-    const rows = (await res.json()) as any[];
-    return mapWorkoutSet(normalizeWorkoutSetRow(rows[0]));
+    throw new Error("Create set failed: unable to resolve set number conflict");
   };
 
   if (shouldUseSupabaseApi()) {
