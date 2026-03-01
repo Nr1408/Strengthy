@@ -25,9 +25,40 @@ const SUPABASE_REST_BASE = SUPABASE_URL_ENV
   : "";
 const HAS_SUPABASE_CONFIG = !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV);
 
+function decodeJwtPayload(token: string): any | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    return JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
+function isSupabaseJwtUsable(token: string | null): boolean {
+  if (!token) return false;
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+
+  const exp = typeof payload.exp === "number" ? payload.exp : null;
+  const now = Math.floor(Date.now() / 1000);
+  if (!exp || exp <= now + 15) return false;
+
+  const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+  const iss = typeof payload.iss === "string" ? payload.iss : "";
+  if (!iss || !iss.startsWith(supabaseBase)) return false;
+
+  const aud = payload.aud;
+  const hasSupabaseAudience =
+    aud === "authenticated" ||
+    (Array.isArray(aud) && aud.includes("authenticated"));
+
+  return !!hasSupabaseAudience;
+}
+
 function shouldUseSupabaseApi(): boolean {
   if (!HAS_SUPABASE_CONFIG) return false;
-  return !!getJwtUserId();
+  return isSupabaseJwtUsable(getToken());
 }
 
 function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: string) {
