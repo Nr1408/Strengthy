@@ -1140,16 +1140,15 @@ export default function EditWorkout() {
                   typeof saved.splitSeconds === "number" &&
                   saved.splitSeconds > 0
                 ) {
-                  paceValue = `${formatMmSs(saved.splitSeconds)} /500m`;
+                  paceValue = `${formatMmSs(saved.splitSeconds * 2)} /km`;
                 } else if (
                   typeof saved.durationSeconds === "number" &&
                   saved.durationSeconds > 0 &&
                   typeof saved.distance === "number" &&
                   saved.distance > 0
                 ) {
-                  const pacePer500m =
-                    saved.durationSeconds / (saved.distance / 500);
-                  paceValue = `${formatMmSs(pacePer500m)} /500m`;
+                  const pacePerKm = saved.durationSeconds / saved.distance;
+                  paceValue = `${formatMmSs(pacePerKm)} /km`;
                 }
               }
               banners.push({
@@ -1577,16 +1576,15 @@ export default function EditWorkout() {
                   typeof created.splitSeconds === "number" &&
                   created.splitSeconds > 0
                 ) {
-                  paceValue = `${formatMmSs(created.splitSeconds)} /500m`;
+                  paceValue = `${formatMmSs(created.splitSeconds * 2)} /km`;
                 } else if (
                   typeof created.durationSeconds === "number" &&
                   created.durationSeconds > 0 &&
                   typeof created.distance === "number" &&
                   created.distance > 0
                 ) {
-                  const pacePer500m =
-                    created.durationSeconds / (created.distance / 500);
-                  paceValue = `${formatMmSs(pacePer500m)} /500m`;
+                  const pacePerKm = created.durationSeconds / created.distance;
+                  paceValue = `${formatMmSs(pacePerKm)} /km`;
                 }
               }
               banners.push({

@@ -262,6 +262,23 @@ export function SetRow({
         });
       }
 
+      if (set.cardioPacePR) {
+        let paceSecondsPerKm = 0;
+        if (cardioDurationSeconds > 0 && cardioDistance > 0) {
+          paceSecondsPerKm = cardioDurationSeconds / cardioDistance;
+        } else if (cardioStat > 0) {
+          // split is seconds / 500m, convert to seconds / km
+          paceSecondsPerKm = cardioStat * 2;
+        }
+
+        if (paceSecondsPerKm > 0) {
+          prLines.push({
+            label: "Best Pace",
+            value: `${formatSecondsToMMSS(paceSecondsPerKm)} / km`,
+          });
+        }
+      }
+
       if (set.cardioSplitPR && cardioStat > 0) {
         prLines.push({
           label: "Best Split",
@@ -463,7 +480,7 @@ export function SetRow({
                   type="button"
                   className={cn(
                     "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
-                    
+
                     typeClasses[currentType],
                   )}
                   aria-label={`Set type ${currentType}`}

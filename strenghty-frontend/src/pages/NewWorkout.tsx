@@ -1691,15 +1691,15 @@ export default function NewWorkout() {
           let paceValue = "";
           if (mode === "row") {
             if (typeof saved.splitSeconds === "number" && saved.splitSeconds > 0) {
-              paceValue = `${formatMmSs(saved.splitSeconds)} /500m`;
+              paceValue = `${formatMmSs(saved.splitSeconds * 2)} /km`;
             } else if (
               typeof saved.durationSeconds === "number" &&
               saved.durationSeconds > 0 &&
               typeof saved.distance === "number" &&
               saved.distance > 0
             ) {
-              const pacePer500m = saved.durationSeconds / (saved.distance / 500);
-              paceValue = `${formatMmSs(pacePer500m)} /500m`;
+              const pacePerKm = saved.durationSeconds / saved.distance;
+              paceValue = `${formatMmSs(pacePerKm)} /km`;
             }
           }
           banners.push({
