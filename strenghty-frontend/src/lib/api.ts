@@ -2,8 +2,10 @@ import type { CardioMode } from "@/types/workout";
 // Capacitor Preferences is imported dynamically where needed to avoid
 // bundling/runtime issues on some platforms.
 
-// Prefer explicit env vars; fall back to local dev URL
 // Prefer explicit env vars; fall back to the local backend IP used in this dev setup.
+// If `VITE_SUPABASE_URL` is provided, prefer it as the API base so the
+// frontend can target Supabase endpoints without setting `VITE_API_BASE`.
+const _envSupabase = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
 const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL ?? "").toString().trim();
 // Normalize common bad values (some build systems may inject the string 'undefined')
 // Default to the deployed backend when no VITE_API_BASE is provided so local
@@ -67,7 +69,9 @@ function pickFromCandidates(list: string[]): string {
   return trimmed[0];
 }
 
-if (_envBase && _envBase !== "undefined" && /[,;|]/.test(_envBase)) {
+if (_envSupabase && _envSupabase !== "undefined") {
+  resolvedBase = _envSupabase;
+} else if (_envBase && _envBase !== "undefined" && /[,;|]/.test(_envBase)) {
   const parts = _envBase.split(/[,;|]/);
   resolvedBase = pickFromCandidates(parts);
 } else {
