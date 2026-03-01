@@ -13,6 +13,23 @@ const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL 
 const DEPLOYED_API = "https://strengthy-backend.onrender.com/api";
 const LOCAL_API = "http://localhost:8000/api";
 
+// Optional runtime or build-time overrides for Supabase Edge Functions
+// Use env: VITE_CREATE_SET_ENDPOINT or VITE_GOOGLE_AUTH_ENDPOINT
+// Or set localStorage keys `CREATE_SET_ENDPOINT` / `GOOGLE_AUTH_ENDPOINT`
+const CREATE_SET_ENDPOINT_ENV = (import.meta.env.VITE_CREATE_SET_ENDPOINT ?? "").toString().trim();
+const GOOGLE_AUTH_ENDPOINT_ENV = (import.meta.env.VITE_GOOGLE_AUTH_ENDPOINT ?? "").toString().trim();
+
+function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: string) {
+  try {
+    if (envVal && envVal !== "undefined") return envVal.replace(/\/+$/g, "");
+    if (typeof window !== 'undefined') {
+      const ls = localStorage.getItem(localStorageKey);
+      if (ls && ls.trim().length > 0) return ls.trim().replace(/\/+$/g, "");
+    }
+  } catch (e) {}
+  return fallback;
+}
+
 // mutable resolved base (computed below)
 let resolvedBase: string;
 
@@ -445,7 +462,17 @@ try {
 
 export function authHeaders() {
   const t = getToken();
-  return t ? { Authorization: `Token ${t}` } : {};
+  if (!t) return {};
+  // If token looks like a JWT (three dot-separated parts) use Bearer.
+  try {
+    const parts = String(t).split('.');
+    if (parts.length === 3 && parts[0].length > 0) {
+      return { Authorization: `Bearer ${t}` };
+    }
+  } catch (e) {
+    // fall back to legacy header
+  }
+  return { Authorization: `Token ${t}` };
 }
 
 // Forgot password / reset helpers
@@ -686,7 +713,31 @@ function mapCardioSet(api: ApiCardioSet): UiCardioSet {
   };
 }
 
+// Optional Supabase Auth integration. If both VITE_SUPABASE_URL and
+// VITE_SUPABASE_ANON_KEY are provided at build/runtime, prefer using
+// Supabase GoTrue endpoints for signup/login. Otherwise fall back to the
+// legacy Django auth endpoints at `API_BASE`.
+const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
+const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
+
 export async function login(username: string, password: string) {
+  if (SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
+    const body = `grant_type=password&email=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+    const res = await fetch(`${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", apikey: SUPABASE_ANON_ENV },
+      body,
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Login failed: ${res.status} ${txt}`);
+    }
+    const data = await res.json();
+    if (data.access_token) setToken(data.access_token);
+    return data;
+  }
+
+  // Fallback: legacy Django endpoint
   const res = await fetch(`${API_BASE}/auth/login/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -702,6 +753,23 @@ export async function login(username: string, password: string) {
 }
 
 export async function register(username: string, password: string) {
+  if (SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
+    const res = await fetch(`${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_ENV },
+      body: JSON.stringify({ email: username, password }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Register failed: ${res.status} ${txt}`);
+    }
+    const data = await res.json();
+    // Supabase may return an access_token on signup
+    if (data.access_token) setToken(data.access_token);
+    return { id: data.user?.id || null, username: data.user?.email || username };
+  }
+
+  // Fallback: legacy Django endpoint
   const res = await fetch(`${API_BASE}/auth/register/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -770,7 +838,8 @@ export async function deleteAccount() {
 }
 
 export async function loginWithGoogle(idToken: string) {
-  const res = await fetch(`${API_BASE}/auth/google/`, {
+  const googleEndpoint = runtimeEndpoint(GOOGLE_AUTH_ENDPOINT_ENV, 'GOOGLE_AUTH_ENDPOINT', `${API_BASE}/auth/google/`);
+  const res = await fetch(`${googleEndpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ credential: idToken }),
@@ -1108,7 +1177,8 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   if (typeof unit !== 'undefined') payload.unit = unit;
   if (typeof type !== 'undefined') payload.set_type = type;
   if (typeof rpe === 'number') payload.rpe = rpe;
-  const res = await fetch(`${API_BASE}/sets/`, {
+  const createSetEndpoint = runtimeEndpoint(CREATE_SET_ENDPOINT_ENV, 'CREATE_SET_ENDPOINT', `${API_BASE}/sets/`);
+  const res = await fetch(`${createSetEndpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(payload),
