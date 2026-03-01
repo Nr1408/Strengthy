@@ -726,11 +726,14 @@ const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toStrin
 
 export async function login(username: string, password: string) {
   if (SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
-    const body = `grant_type=password&email=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-    const res = await fetch(`${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/token`, {
+    const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+    const res = await fetch(`${supabaseBase}/auth/v1/token?grant_type=password`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", apikey: SUPABASE_ANON_ENV },
-      body,
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_ENV,
+      },
+      body: JSON.stringify({ email: username, password }),
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
