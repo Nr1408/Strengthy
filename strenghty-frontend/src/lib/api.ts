@@ -1743,6 +1743,111 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
   if (typeof data.rpe === 'number') payload.rpe = data.rpe;
 
   if (shouldUseSupabaseApi()) {
+    const currentRes = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workout_sets?select=id,exercise_id,reps,half_reps,weight,unit&id=eq.${encodeURIComponent(id)}&limit=1`,
+      { headers: supabaseHeaders() },
+    );
+    if (!currentRes.ok) throw new Error(`Update set failed: ${currentRes.status}`);
+    const currentRows = (await currentRes.json()) as Array<{
+      exercise_id?: number | string | null;
+      reps?: number | string | null;
+      half_reps?: number | string | null;
+      weight?: number | string | null;
+      unit?: string | null;
+    }>;
+    const current = currentRows[0];
+
+    if (current?.exercise_id != null) {
+      const toNum = (v: unknown): number | null => {
+        if (v === null || typeof v === "undefined") return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
+
+      const weightToKg = (w: number | null, u?: string | null): number | null => {
+        if (w == null) return null;
+        if ((u || "").toLowerCase() === "lbs") return w * 0.45359237;
+        return w;
+      };
+
+      const calcE1rm = (wKg: number, repsTotal: number) => wKg * (1 + repsTotal / 30);
+
+      const nextReps =
+        typeof data.reps === "number"
+          ? data.reps
+          : toNum(current.reps) ?? 0;
+      const nextHalfReps =
+        typeof data.halfReps === "number"
+          ? data.halfReps
+          : toNum(current.half_reps) ?? 0;
+      const nextWeight =
+        typeof data.weight !== "undefined"
+          ? data.weight === null
+            ? null
+            : Number(data.weight)
+          : toNum(current.weight);
+      const nextUnit =
+        typeof data.unit !== "undefined"
+          ? data.unit
+          : ((current.unit as "lbs" | "kg" | null | undefined) ?? null);
+
+      const histRes = await fetchWithTimeout(
+        `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${Number(current.exercise_id)}&id=neq.${encodeURIComponent(id)}`,
+        { headers: supabaseHeaders() },
+      );
+      if (!histRes.ok) throw new Error(`Update set failed: ${histRes.status}`);
+      const hist = (await histRes.json()) as Array<{
+        reps?: number | string | null;
+        half_reps?: number | string | null;
+        weight?: number | string | null;
+        unit?: string | null;
+      }>;
+
+      let maxAbsWeight = -Infinity;
+      let maxE1rm = -Infinity;
+      let maxVolume = -Infinity;
+      let maxReps = -Infinity;
+
+      for (const row of hist) {
+        const repsVal = toNum(row.reps) ?? 0;
+        const halfRepsVal = toNum(row.half_reps) ?? 0;
+        const repsTotal = repsVal + halfRepsVal * 0.5;
+        if (repsTotal > maxReps) maxReps = repsTotal;
+
+        const weightVal = toNum(row.weight);
+        const weightKg = weightToKg(weightVal, row.unit);
+        if (weightKg == null) continue;
+
+        if (weightKg > maxAbsWeight) maxAbsWeight = weightKg;
+        const e1 = calcE1rm(weightKg, repsTotal);
+        if (e1 > maxE1rm) maxE1rm = e1;
+        const vol = weightKg * repsTotal;
+        if (vol > maxVolume) maxVolume = vol;
+      }
+
+      const hasHistory = hist.length > 0;
+      const currentRepsTotal = nextReps + nextHalfReps * 0.5;
+      const currentWeightKg = weightToKg(nextWeight, nextUnit || null);
+
+      const isAbsWeightPr = hasHistory && currentWeightKg != null && currentWeightKg > maxAbsWeight;
+      const isE1rmPr =
+        hasHistory &&
+        currentWeightKg != null &&
+        calcE1rm(currentWeightKg, currentRepsTotal) > maxE1rm;
+      const isVolumePr =
+        hasHistory &&
+        currentWeightKg != null &&
+        currentWeightKg * currentRepsTotal > maxVolume;
+      const isRepPr = hasHistory && currentRepsTotal > maxReps;
+      const isPr = !!(isAbsWeightPr || isE1rmPr || isVolumePr || isRepPr);
+
+      payload.is_pr = isPr;
+      payload.is_abs_weight_pr = isAbsWeightPr;
+      payload.is_e1rm_pr = isE1rmPr;
+      payload.is_volume_pr = isVolumePr;
+      payload.is_rep_pr = isRepPr;
+    }
+
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workout_sets?id=eq.${encodeURIComponent(id)}`,
       {
