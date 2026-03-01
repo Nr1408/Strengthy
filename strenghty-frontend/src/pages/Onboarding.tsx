@@ -24,8 +24,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { API_BASE, authHeaders } from "@/lib/api";
-import { recommendFirstWorkout, UserOnboardingData } from "@/lib/onboarding";
+import { upsertProfile } from "@/lib/api";
+import { recommendFirstWorkout } from "@/lib/onboarding";
+import type { UserOnboardingData } from "@/lib/onboarding";
 
 const fitnessGoals = [
   {
@@ -271,21 +272,14 @@ export default function Onboarding() {
 
     // best-effort server save similar to previous implementation
     try {
-      const payload = {
-        goal: userData.goal,
+      await upsertProfile({
+        goals: userData.goal ? [userData.goal] : [],
         age: userData.age ? Number(userData.age) : null,
         height: userData.height ? Number(userData.height) : null,
         height_unit: userData.heightUnit,
-        weight: userData.weight ? Number(userData.weight) : null,
-        weight_unit: userData.weightUnit,
-        equipment: userData.equipment,
-        experience: userData.experience,
+        current_weight: userData.weight ? Number(userData.weight) : null,
+        experience: userData.experience || null,
         monthly_workouts: userData.monthlyWorkouts,
-      } as any;
-      await fetch(`${API_BASE}/profile/`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify(payload),
       });
     } catch (e) {
       // ignore

@@ -18,6 +18,12 @@ const LOCAL_API = "http://localhost:8000/api";
 // Or set localStorage keys `CREATE_SET_ENDPOINT` / `GOOGLE_AUTH_ENDPOINT`
 const CREATE_SET_ENDPOINT_ENV = (import.meta.env.VITE_CREATE_SET_ENDPOINT ?? "").toString().trim();
 const GOOGLE_AUTH_ENDPOINT_ENV = (import.meta.env.VITE_GOOGLE_AUTH_ENDPOINT ?? "").toString().trim();
+const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
+const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
+const SUPABASE_REST_BASE = SUPABASE_URL_ENV
+  ? `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/rest/v1`
+  : "";
+const USE_SUPABASE_API = !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV);
 
 function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: string) {
   try {
@@ -46,6 +52,156 @@ async function fetchWithTimeout(
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+function getJwtUserId(): string | null {
+  try {
+    const token = getToken();
+    if (!token) return null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload?.sub ? String(payload.sub) : null;
+  } catch {
+    return null;
+  }
+}
+
+function supabaseHeaders(contentTypeJson = false): HeadersInit {
+  const headers: Record<string, string> = {
+    apikey: SUPABASE_ANON_ENV,
+  };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (contentTypeJson) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
+function supabaseSelectWorkoutSet() {
+  return [
+    "id",
+    "workout:workout_id",
+    "exercise:exercise_id",
+    "set_number",
+    "reps",
+    "half_reps",
+    "weight",
+    "unit",
+    "is_pr",
+    "is_abs_weight_pr",
+    "is_e1rm_pr",
+    "is_volume_pr",
+    "is_rep_pr",
+    "set_type",
+    "rpe",
+    "created_at",
+  ].join(",");
+}
+
+function supabaseSelectCardioSet() {
+  return [
+    "id",
+    "workout:workout_id",
+    "exercise:exercise_id",
+    "set_number",
+    "mode",
+    "duration_seconds",
+    "distance_meters",
+    "floors",
+    "level",
+    "split_seconds",
+    "spm",
+    "is_pr",
+    "is_distance_pr",
+    "is_pace_pr",
+    "is_ascent_pr",
+    "is_intensity_pr",
+    "is_split_pr",
+    "created_at",
+  ].join(",");
+}
+
+function normalizeWorkoutSetRow(row: any): ApiWorkoutSet {
+  return {
+    id: Number(row?.id),
+    workout: Number(row?.workout ?? row?.workout_id),
+    exercise: Number(row?.exercise ?? row?.exercise_id),
+    set_number: Number(row?.set_number ?? 0),
+    reps: Number(row?.reps ?? 0),
+    half_reps: row?.half_reps == null ? 0 : Number(row.half_reps),
+    weight: row?.weight == null ? null : String(row.weight),
+    unit: row?.unit ?? null,
+    is_pr: !!row?.is_pr,
+    is_abs_weight_pr: !!row?.is_abs_weight_pr,
+    is_e1rm_pr: !!row?.is_e1rm_pr,
+    is_volume_pr: !!row?.is_volume_pr,
+    is_rep_pr: !!row?.is_rep_pr,
+    set_type: row?.set_type ?? null,
+    rpe: row?.rpe == null ? null : String(row.rpe),
+    created_at: row?.created_at ?? new Date().toISOString(),
+  };
+}
+
+function normalizeCardioSetRow(row: any): ApiCardioSet {
+  return {
+    id: Number(row?.id),
+    workout: Number(row?.workout ?? row?.workout_id),
+    exercise: Number(row?.exercise ?? row?.exercise_id),
+    set_number: Number(row?.set_number ?? 0),
+    mode: (row?.mode ?? "TREADMILL") as ApiCardioMode,
+    duration_seconds: row?.duration_seconds == null ? null : Number(row.duration_seconds),
+    distance_meters: row?.distance_meters == null ? null : row.distance_meters,
+    floors: row?.floors == null ? null : Number(row.floors),
+    level: row?.level == null ? null : row.level,
+    split_seconds: row?.split_seconds == null ? null : row.split_seconds,
+    spm: row?.spm == null ? null : row.spm,
+    is_pr: !!row?.is_pr,
+    is_distance_pr: !!row?.is_distance_pr,
+    is_pace_pr: !!row?.is_pace_pr,
+    is_ascent_pr: !!row?.is_ascent_pr,
+    is_intensity_pr: !!row?.is_intensity_pr,
+    is_split_pr: !!row?.is_split_pr,
+    created_at: row?.created_at ?? new Date().toISOString(),
+  };
+}
+
+async function getSupabaseProfile() {
+  const userId = getJwtUserId();
+  if (!userId || !SUPABASE_REST_BASE) return null;
+  const res = await fetchWithTimeout(
+    `${SUPABASE_REST_BASE}/profiles?select=*&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+    { headers: supabaseHeaders() },
+  );
+  if (!res.ok) return null;
+  const rows = (await res.json()) as any[];
+  return rows?.[0] ?? null;
+}
+
+export async function upsertProfile(payload: {
+  goals?: string[];
+  age?: number | null;
+  height?: number | null;
+  height_unit?: string | null;
+  current_weight?: number | null;
+  goal_weight?: number | null;
+  experience?: string | null;
+  monthly_workouts?: number | null;
+}) {
+  if (!USE_SUPABASE_API) return;
+  const userId = getJwtUserId();
+  if (!userId || !SUPABASE_REST_BASE) return;
+  const body = { user_id: userId, ...payload };
+  const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/profiles`, {
+    method: "POST",
+    headers: {
+      ...supabaseHeaders(true),
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Upsert profile failed: ${res.status}`);
   }
 }
 
@@ -642,7 +798,7 @@ function mapWorkoutSet(api: ApiWorkoutSet): UiWorkoutSet {
         ? Math.max(0, Math.min(5, Math.round(api.half_reps)))
         : 0,
     weight: api.weight ? Number(api.weight) : undefined,
-    unit: api.unit || undefined,
+    unit: api.unit === "kg" || api.unit === "lbs" ? api.unit : undefined,
     isPR,
     absWeightPR,
     e1rmPR,
@@ -737,10 +893,8 @@ function mapCardioSet(api: ApiCardioSet): UiCardioSet {
 // VITE_SUPABASE_ANON_KEY are provided at build/runtime, prefer using
 // Supabase GoTrue endpoints for signup/login. Otherwise fall back to the
 // legacy Django auth endpoints at `API_BASE`.
-const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
-const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
 const USE_SUPABASE_AUTH =
-  !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV) && /supabase\.co/.test(API_BASE);
+  !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV);
 
 export async function login(username: string, password: string) {
   if (USE_SUPABASE_AUTH) {
@@ -906,9 +1060,14 @@ export async function loginWithGoogle(idToken: string) {
     try {
       const t = getToken();
       if (t) {
-        const r = await fetch(`${API_BASE}/profile/`, { headers: { ...authHeaders() } });
-        if (r.ok) {
-          const p = await r.json();
+        const p = USE_SUPABASE_API
+          ? await getSupabaseProfile()
+          : await (async () => {
+              const r = await fetch(`${API_BASE}/profile/`, { headers: { ...authHeaders() } });
+              if (!r.ok) return null;
+              return await r.json();
+            })();
+        if (p) {
           try {
             // Persist onboarding-like shape used by the SPA
             const onboarding = {
@@ -1016,6 +1175,16 @@ export async function getExercises(): Promise<UiExercise[]> {
       console.debug("getExercises auth token present:", !!t, "tokenLen:", t ? String(t).length : 0);
     } catch (e) {}
   } catch (e) {}
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at&order=created_at.desc`,
+      { headers: supabaseHeaders() },
+    );
+    if (!res.ok) throw new Error(`Load exercises failed: ${res.status}`);
+    const data = (await res.json()) as ApiExercise[];
+    return data.map(mapExercise);
+  }
+
   const res = await fetch(`${API_BASE}/exercises/`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load exercises failed: ${res.status}`);
   const data = (await res.json()) as ApiExercise[];
@@ -1036,11 +1205,34 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
     forearms: "ARMS",
     core: "CORE",
     cardio: "OTHER",
+    other: "OTHER",
   };
   const mg = backendMap[muscleGroup] || "OTHER";
 
   const payload: any = { name, muscle_group: mg, description };
   if (options && typeof options.custom !== 'undefined') payload.custom = !!options.custom;
+
+  if (USE_SUPABASE_API) {
+    const userId = getJwtUserId();
+    if (!userId) throw new Error("Not authenticated");
+    const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/exercises`, {
+      method: "POST",
+      headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+      body: JSON.stringify({
+        owner_id: userId,
+        name,
+        muscle_group: mg,
+        description,
+        custom: !!options?.custom,
+      }),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Create exercise failed: ${res.status}${detail ? ` ${detail}` : ""}`);
+    }
+    const rows = (await res.json()) as ApiExercise[];
+    return mapExercise(rows[0]);
+  }
 
   const res = await fetch(`${API_BASE}/exercises/`, {
     method: "POST",
@@ -1076,11 +1268,28 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
 }
 
 export async function deleteExercise(id: string) {
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/exercises?id=eq.${encodeURIComponent(id)}`,
+      { method: "DELETE", headers: supabaseHeaders() },
+    );
+    if (!res.ok) throw new Error(`Delete exercise failed: ${res.status}`);
+    return;
+  }
   const res = await fetch(`${API_BASE}/exercises/${id}/`, { method: "DELETE", headers: { ...authHeaders() } });
   if (!res.ok && res.status !== 204) throw new Error(`Delete exercise failed: ${res.status}`);
 }
 
 export async function getWorkouts(): Promise<UiWorkout[]> {
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workouts?select=id,date,name,notes,created_at,updated_at,ended_at&order=created_at.desc`,
+      { headers: supabaseHeaders() },
+    );
+    if (!res.ok) throw new Error(`Load workouts failed: ${res.status}`);
+    const data = (await res.json()) as ApiWorkout[];
+    return data.map(mapWorkout);
+  }
   const res = await fetch(`${API_BASE}/workouts/`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load workouts failed: ${res.status}`);
   const data = (await res.json()) as ApiWorkout[];
@@ -1107,6 +1316,19 @@ export async function createWorkout(name: string, notes = "", date?: Date): Prom
       console.debug("createWorkout auth token present:", !!t, "tokenLen:", t ? String(t).length : 0);
     } catch (e) {}
   } catch (e) {}
+  if (USE_SUPABASE_API) {
+    const userId = getJwtUserId();
+    if (!userId) throw new Error("Not authenticated");
+    const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workouts`, {
+      method: "POST",
+      headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+      body: JSON.stringify({ owner_id: userId, ...payload }),
+    });
+    if (!res.ok) throw new Error(`Create workout failed: ${res.status}`);
+    const rows = (await res.json()) as ApiWorkout[];
+    return mapWorkout(rows[0]);
+  }
+
   const res = await fetchWithTimeout(`${API_BASE}/workouts/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1118,6 +1340,19 @@ export async function createWorkout(name: string, notes = "", date?: Date): Prom
 }
 
 export async function finishWorkout(id: string): Promise<UiWorkout> {
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        body: JSON.stringify({ ended_at: new Date().toISOString() }),
+      },
+    );
+    if (!res.ok) throw new Error(`Finish workout failed: ${res.status}`);
+    const rows = (await res.json()) as ApiWorkout[];
+    return mapWorkout(rows[0]);
+  }
   const res = await fetchWithTimeout(`${API_BASE}/workouts/${id}/`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1129,6 +1364,14 @@ export async function finishWorkout(id: string): Promise<UiWorkout> {
 }
 
 export async function deleteWorkout(id: string) {
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
+      { method: "DELETE", headers: supabaseHeaders() },
+    );
+    if (!res.ok) throw new Error(`Delete workout failed: ${res.status}`);
+    return;
+  }
   const res = await fetch(`${API_BASE}/workouts/${id}/`, { method: "DELETE", headers: { ...authHeaders() } });
   // Treat 404 as a successful no-op delete so the UI stays stable when the
   // workout was already deleted (double tap, stale list, multi-device, etc.).
@@ -1145,6 +1388,19 @@ export async function deleteWorkout(id: string) {
 }
 
 export async function updateWorkout(id: string, data: Partial<{ name: string; notes: string; date: string }>): Promise<UiWorkout> {
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        body: JSON.stringify(data),
+      },
+    );
+    if (!res.ok) throw new Error(`Update workout failed: ${res.status}`);
+    const rows = (await res.json()) as ApiWorkout[];
+    return mapWorkout(rows[0]);
+  }
   const res = await fetch(`${API_BASE}/workouts/${id}/`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1156,6 +1412,19 @@ export async function updateWorkout(id: string, data: Partial<{ name: string; no
 }
 
 export async function getSets(workoutId: string): Promise<UiWorkoutSet[]> {
+  if (USE_SUPABASE_API) {
+    const workoutNum = Number(workoutId);
+    if (!Number.isFinite(workoutNum) || workoutNum <= 0) {
+      throw new Error(`getSets: invalid workoutId: ${String(workoutId)}`);
+    }
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workout_sets?select=${encodeURIComponent(supabaseSelectWorkoutSet())}&workout_id=eq.${workoutNum}&order=set_number.asc`,
+      { headers: supabaseHeaders() },
+    );
+    if (!res.ok) throw new Error(`Load sets failed: ${res.status}`);
+    const data = (await res.json()) as any[];
+    return data.map((row) => mapWorkoutSet(normalizeWorkoutSetRow(row)));
+  }
   const res = await fetch(`${API_BASE}/sets/?workout=${workoutId}`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load sets failed: ${res.status}`);
   const data = (await res.json()) as ApiWorkoutSet[];
@@ -1163,6 +1432,19 @@ export async function getSets(workoutId: string): Promise<UiWorkoutSet[]> {
 }
 
 export async function getSetsForExercise(exerciseId: string): Promise<UiWorkoutSet[]> {
+  if (USE_SUPABASE_API) {
+    const exerciseNum = Number(exerciseId);
+    if (!Number.isFinite(exerciseNum) || exerciseNum <= 0) {
+      throw new Error(`getSetsForExercise: invalid exerciseId: ${String(exerciseId)}`);
+    }
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workout_sets?select=${encodeURIComponent(supabaseSelectWorkoutSet())}&exercise_id=eq.${exerciseNum}&order=created_at.desc`,
+      { headers: supabaseHeaders() },
+    );
+    if (!res.ok) throw new Error(`Load sets for exercise failed: ${res.status}`);
+    const data = (await res.json()) as any[];
+    return data.map((row) => mapWorkoutSet(normalizeWorkoutSetRow(row)));
+  }
   const res = await fetch(`${API_BASE}/sets/?exercise=${exerciseId}`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load sets for exercise failed: ${res.status}`);
   const data = (await res.json()) as ApiWorkoutSet[];
@@ -1170,7 +1452,7 @@ export async function getSetsForExercise(exerciseId: string): Promise<UiWorkoutS
 }
 
 export async function createSet(params: { workoutId: string; exerciseId: string; setNumber?: number; reps: number; halfReps?: number; weight?: number; isPR?: boolean; unit?: 'lbs' | 'kg'; type?: 'W' | 'S' | 'F' | 'D'; rpe?: number }): Promise<UiWorkoutSet> {
-  const { workoutId, exerciseId, setNumber, reps, halfReps, weight, isPR, unit, type, rpe } = params;
+  const { workoutId, exerciseId, setNumber, reps, halfReps, weight, unit, type, rpe } = params;
   // Validate reps is a positive integer
   if (typeof reps !== "number" || !Number.isFinite(reps) || !Number.isInteger(reps) || reps <= 0) {
     throw new Error(`createSet: invalid reps value: ${String(reps)}`);
@@ -1188,6 +1470,42 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   }
   if (!Number.isFinite(exerciseNum) || exerciseNum <= 0) {
     throw new Error(`createSet: invalid exerciseId: ${String(exerciseId)}`);
+  }
+
+  if (USE_SUPABASE_API) {
+    const createSetEndpoint = runtimeEndpoint(
+      CREATE_SET_ENDPOINT_ENV,
+      'CREATE_SET_ENDPOINT',
+      `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/functions/v1/create_set`
+    );
+
+    const edgePayload: any = {
+      workout: workoutNum,
+      exercise: exerciseNum,
+      reps,
+      half_reps: typeof halfReps === "number" ? halfReps : 0,
+      weight: typeof weight === "number" ? weight : null,
+      unit: typeof unit !== 'undefined' ? unit : 'kg',
+    };
+    if (typeof setNumber === "number") edgePayload.set_number = setNumber;
+    if (typeof type !== 'undefined') edgePayload.set_type = type;
+    if (typeof rpe === 'number') edgePayload.rpe = rpe;
+
+    const edgeRes = await fetchWithTimeout(createSetEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...supabaseHeaders() },
+      body: JSON.stringify(edgePayload),
+    });
+
+    if (!edgeRes.ok) {
+      let body = "";
+      try { body = await edgeRes.text(); } catch {}
+      throw new Error(`Create set failed: ${edgeRes.status}${body ? ` ${body}` : ""}`);
+    }
+
+    const created = await edgeRes.json();
+    const normalized = normalizeWorkoutSetRow(Array.isArray(created) ? created[0] : created);
+    return mapWorkoutSet(normalized);
   }
 
   const payload: any = {
@@ -1251,6 +1569,20 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
   if (typeof data.type !== 'undefined') payload.set_type = data.type;
   if (typeof data.rpe === 'number') payload.rpe = data.rpe;
 
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workout_sets?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!res.ok) throw new Error(`Update set failed: ${res.status}`);
+    const rows = (await res.json()) as any[];
+    return mapWorkoutSet(normalizeWorkoutSetRow(rows[0]));
+  }
+
   const res = await fetch(`${API_BASE}/sets/${id}/`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -1262,6 +1594,16 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
 }
 
 export async function deleteSet(id: string) {
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workout_sets?id=eq.${encodeURIComponent(id)}`,
+      { method: "DELETE", headers: supabaseHeaders() },
+    );
+    if (!res.ok && res.status !== 204 && res.status !== 404) {
+      throw new Error(`Delete set failed: ${res.status}`);
+    }
+    return;
+  }
   const res = await fetch(`${API_BASE}/sets/${id}/`, {
     method: 'DELETE',
     headers: { ...authHeaders() },
@@ -1270,6 +1612,16 @@ export async function deleteSet(id: string) {
 }
 
 export async function deleteCardioSet(id: string) {
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/cardio_sets?id=eq.${encodeURIComponent(id)}`,
+      { method: "DELETE", headers: supabaseHeaders() },
+    );
+    if (!res.ok && res.status !== 204 && res.status !== 404) {
+      throw new Error(`Delete cardio set failed: ${res.status}`);
+    }
+    return;
+  }
   const res = await fetch(`${API_BASE}/cardio-sets/${id}/`, {
     method: 'DELETE',
     headers: { ...authHeaders() },
@@ -1285,6 +1637,17 @@ export async function getCardioSetsForWorkout(workoutId: string): Promise<UiCard
   if (!Number.isFinite(workoutNum) || workoutNum <= 0) {
     throw new Error(`getCardioSetsForWorkout: invalid workoutId: ${String(workoutId)}`);
   }
+
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/cardio_sets?select=${encodeURIComponent(supabaseSelectCardioSet())}&workout_id=eq.${workoutNum}&order=set_number.asc`,
+      { headers: supabaseHeaders() },
+    );
+    if (!res.ok) throw new Error(`Load cardio sets failed: ${res.status}`);
+    const data = (await res.json()) as any[];
+    return data.map((row) => mapCardioSet(normalizeCardioSetRow(row)));
+  }
+
   const res = await fetch(`${API_BASE}/cardio-sets/?workout=${workoutNum}`, {
     headers: { ...authHeaders() },
   });
@@ -1298,6 +1661,17 @@ export async function getCardioSetsForExercise(exerciseId: string): Promise<UiCa
   if (!Number.isFinite(exerciseNum) || exerciseNum <= 0) {
     throw new Error(`getCardioSetsForExercise: invalid exerciseId: ${String(exerciseId)}`);
   }
+
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/cardio_sets?select=${encodeURIComponent(supabaseSelectCardioSet())}&exercise_id=eq.${exerciseNum}&order=created_at.desc`,
+      { headers: supabaseHeaders() },
+    );
+    if (!res.ok) throw new Error(`Load cardio sets for exercise failed: ${res.status}`);
+    const data = (await res.json()) as any[];
+    return data.map((row) => mapCardioSet(normalizeCardioSetRow(row)));
+  }
+
   const res = await fetch(`${API_BASE}/cardio-sets/?exercise=${exerciseNum}`, {
     headers: { ...authHeaders() },
   });
@@ -1341,6 +1715,35 @@ export async function createCardioSet(params: {
   if (typeof level === "number") payload.level = level;
   if (typeof splitSeconds === "number") payload.split_seconds = splitSeconds;
   if (typeof spm === "number") payload.spm = spm;
+
+  if (USE_SUPABASE_API) {
+    if (typeof payload.set_number !== 'number') {
+      const lastRes = await fetchWithTimeout(
+        `${SUPABASE_REST_BASE}/cardio_sets?select=set_number&workout_id=eq.${workoutNum}&exercise_id=eq.${exerciseNum}&order=set_number.desc&limit=1`,
+        { headers: supabaseHeaders() },
+      );
+      if (!lastRes.ok) throw new Error(`Create cardio set failed: ${lastRes.status}`);
+      const last = (await lastRes.json()) as Array<{ set_number?: number }>;
+      const next = (last[0]?.set_number ?? 0) + 1;
+      payload.set_number = next;
+    }
+
+    const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/cardio_sets`, {
+      method: "POST",
+      headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+      body: JSON.stringify({
+        workout_id: workoutNum,
+        exercise_id: exerciseNum,
+        ...payload,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Create cardio set failed: ${res.status}${body ? ` ${body}` : ""}`);
+    }
+    const rows = (await res.json()) as any[];
+    return mapCardioSet(normalizeCardioSetRow(rows[0]));
+  }
 
   const res = await fetch(`${API_BASE}/cardio-sets/`, {
     method: "POST",
@@ -1393,6 +1796,20 @@ export async function updateCardioSet(
   if (typeof data.level === "number") payload.level = data.level;
   if (typeof data.splitSeconds === "number") payload.split_seconds = data.splitSeconds;
   if (typeof data.spm === "number") payload.spm = data.spm;
+
+  if (USE_SUPABASE_API) {
+    const res = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/cardio_sets?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!res.ok) throw new Error(`Update cardio set failed: ${res.status}`);
+    const rows = (await res.json()) as any[];
+    return mapCardioSet(normalizeCardioSetRow(rows[0]));
+  }
 
   const res = await fetch(`${API_BASE}/cardio-sets/${id}/`, {
     method: "PATCH",
