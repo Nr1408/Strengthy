@@ -1533,6 +1533,71 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
       resolvedSetNumber = (last[0]?.set_number ?? 0) + 1;
     }
 
+    const histRes = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${exerciseNum}`,
+      { headers: supabaseHeaders() },
+    );
+    if (histRes.status === 401) {
+      throw new Error("Session expired. Please log in again.");
+    }
+    if (!histRes.ok) {
+      throw new Error(`Create set failed: ${histRes.status}`);
+    }
+
+    const hist = (await histRes.json()) as Array<{
+      reps?: number | string | null;
+      half_reps?: number | string | null;
+      weight?: number | string | null;
+      unit?: string | null;
+    }>;
+
+    const toNum = (v: unknown): number | null => {
+      if (v === null || typeof v === "undefined") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const weightToKg = (w: number | null, u?: string | null): number | null => {
+      if (w == null) return null;
+      if ((u || "").toLowerCase() === "lbs") return w * 0.45359237;
+      return w;
+    };
+
+    const calcE1rm = (wKg: number, repsTotal: number) => wKg * (1 + repsTotal / 30);
+
+    let maxAbsWeight = -Infinity;
+    let maxE1rm = -Infinity;
+    let maxVolume = -Infinity;
+    let maxReps = -Infinity;
+
+    for (const row of hist) {
+      const repsVal = toNum(row.reps) ?? 0;
+      const halfRepsVal = toNum(row.half_reps) ?? 0;
+      const repsTotal = repsVal + halfRepsVal * 0.5;
+      if (repsTotal > maxReps) maxReps = repsTotal;
+
+      const weightVal = toNum(row.weight);
+      const weightKg = weightToKg(weightVal, row.unit);
+      if (weightKg == null) continue;
+
+      if (weightKg > maxAbsWeight) maxAbsWeight = weightKg;
+      const e1 = calcE1rm(weightKg, repsTotal);
+      if (e1 > maxE1rm) maxE1rm = e1;
+      const vol = weightKg * repsTotal;
+      if (vol > maxVolume) maxVolume = vol;
+    }
+
+    const currentRepsTotal = reps + (typeof halfReps === "number" ? halfReps : 0) * 0.5;
+    const currentWeightKg = weightToKg(typeof weight === "number" ? weight : null, unit || null);
+    const hasHistory = hist.length > 0;
+
+    const isAbsWeightPr = hasHistory && currentWeightKg != null && currentWeightKg > maxAbsWeight;
+    const isE1rmPr =
+      hasHistory && currentWeightKg != null && calcE1rm(currentWeightKg, currentRepsTotal) > maxE1rm;
+    const isVolumePr = hasHistory && currentWeightKg != null && currentWeightKg * currentRepsTotal > maxVolume;
+    const isRepPr = hasHistory && currentRepsTotal > maxReps;
+    const isPr = !!(isAbsWeightPr || isE1rmPr || isVolumePr || isRepPr);
+
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workout_sets`, {
       method: "POST",
       headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
@@ -1544,6 +1609,11 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
         half_reps: typeof halfReps === "number" ? halfReps : 0,
         weight: typeof weight === "number" ? weight : null,
         unit: typeof unit !== "undefined" ? unit : null,
+        is_pr: isPr,
+        is_abs_weight_pr: isAbsWeightPr,
+        is_e1rm_pr: isE1rmPr,
+        is_volume_pr: isVolumePr,
+        is_rep_pr: isRepPr,
         set_type: typeof type !== "undefined" ? type : null,
         rpe: typeof rpe === "number" ? rpe : null,
       }),
