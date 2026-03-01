@@ -152,6 +152,25 @@ export default function EditWorkout() {
     return null;
   };
 
+  const hasPriorExerciseHistoryOutsideWorkout = async (
+    exerciseId: string,
+    currentWorkoutId: string,
+    excludeSetId?: string,
+  ) => {
+    try {
+      const priorSets = await getSetsForExercise(String(exerciseId));
+      return priorSets.some((ps) => {
+        const isDifferentWorkout =
+          String(ps.workout) !== String(currentWorkoutId);
+        if (!isDifferentWorkout) return false;
+        if (!excludeSetId) return true;
+        return String(ps.id) !== String(excludeSetId);
+      });
+    } catch (e) {
+      return false;
+    }
+  };
+
   const handleCreateExercise = () => {
     const missing: string[] = [];
     if (!newExerciseName.trim()) missing.push("a name");
@@ -930,6 +949,16 @@ export default function EditWorkout() {
       const workoutDay = new Date(startTime);
       workoutDay.setHours(0, 0, 0, 0);
       const allowPrForWorkout = workoutDay.getTime() >= today.getTime();
+      let hasPriorOutsideWorkout = true;
+      if (allowPrForWorkout && !isCardioSet) {
+        hasPriorOutsideWorkout = await hasPriorExerciseHistoryOutsideWorkout(
+          String(exId),
+          String(workoutId),
+          String(s.id),
+        );
+      }
+      const allowPrForExercise =
+        allowPrForWorkout && (isCardioSet || hasPriorOutsideWorkout);
 
       if (/^[0-9]+$/.test(String(s.id))) {
         let saved: any;
@@ -1006,11 +1035,11 @@ export default function EditWorkout() {
         }
         try {
           if (
-            !allowPrForWorkout &&
+            !allowPrForExercise &&
             (saved.isPR || saved.absWeightPR || saved.e1rmPR || saved.volumePR)
           ) {
             localStorage.setItem(`set:prOverride:${saved.id}`, "0");
-          } else if (allowPrForWorkout) {
+          } else if (allowPrForExercise) {
             localStorage.removeItem(`set:prOverride:${saved.id}`);
           }
         } catch (e) {}
@@ -1027,22 +1056,22 @@ export default function EditWorkout() {
                           ...ss,
                           // For historical workouts, only keep existing PR
                           // flags or clear them; never introduce new ones.
-                          isPR: allowPrForWorkout
+                          isPR: allowPrForExercise
                             ? saved.isPR
                             : saved.isPR
                               ? ss.isPR
                               : false,
-                          absWeightPR: allowPrForWorkout
+                          absWeightPR: allowPrForExercise
                             ? saved.absWeightPR
                             : saved.absWeightPR
                               ? ss.absWeightPR
                               : false,
-                          e1rmPR: allowPrForWorkout
+                          e1rmPR: allowPrForExercise
                             ? saved.e1rmPR
                             : saved.e1rmPR
                               ? ss.e1rmPR
                               : false,
-                          volumePR: allowPrForWorkout
+                          volumePR: allowPrForExercise
                             ? saved.volumePR
                             : saved.volumePR
                               ? ss.volumePR
@@ -1057,7 +1086,7 @@ export default function EditWorkout() {
         // Show PR banners only for current-day workouts; historical
         // workouts skip celebrations to avoid noisy retro PRs.
         if (
-          allowPrForWorkout &&
+          allowPrForExercise &&
           !isCardioSet &&
           (saved.isPR || saved.absWeightPR || saved.e1rmPR || saved.volumePR)
         ) {
@@ -1092,7 +1121,7 @@ export default function EditWorkout() {
           }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
         }
-        if (allowPrForWorkout && isCardioSet && saved.isPR) {
+        if (allowPrForExercise && isCardioSet && saved.isPR) {
           const exerciseName = (ex.exercise as any).name;
           const isHiitCardio = isHiitCardioExercise(exerciseName);
           const banners: any[] = [];
@@ -1471,14 +1500,14 @@ export default function EditWorkout() {
 
         try {
           if (
-            !allowPrForWorkout &&
+            !allowPrForExercise &&
             (created.isPR ||
               created.absWeightPR ||
               created.e1rmPR ||
               created.volumePR)
           ) {
             localStorage.setItem(`set:prOverride:${created.id}`, "0");
-          } else if (allowPrForWorkout) {
+          } else if (allowPrForExercise) {
             localStorage.removeItem(`set:prOverride:${created.id}`);
           }
         } catch (e) {}
@@ -1497,12 +1526,14 @@ export default function EditWorkout() {
                           id: created.id,
                           // New sets added via EditWorkout on historical
                           // workouts should not introduce new PR flags.
-                          isPR: allowPrForWorkout ? created.isPR : false,
-                          absWeightPR: allowPrForWorkout
+                          isPR: allowPrForExercise ? created.isPR : false,
+                          absWeightPR: allowPrForExercise
                             ? created.absWeightPR
                             : false,
-                          e1rmPR: allowPrForWorkout ? created.e1rmPR : false,
-                          volumePR: allowPrForWorkout
+                          e1rmPR: allowPrForExercise
+                            ? created.e1rmPR
+                            : false,
+                          volumePR: allowPrForExercise
                             ? created.volumePR
                             : false,
                           // repPR removed per UX request
@@ -1515,7 +1546,7 @@ export default function EditWorkout() {
         // For newly created sets we follow the same rule: show
         // banners only for current-day workouts.
         if (
-          allowPrForWorkout &&
+          allowPrForExercise &&
           !isCardioSet &&
           (created.isPR ||
             created.absWeightPR ||
@@ -1554,7 +1585,7 @@ export default function EditWorkout() {
           }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
         }
-        if (allowPrForWorkout && isCardioSet && created.isPR) {
+        if (allowPrForExercise && isCardioSet && created.isPR) {
           const exerciseName = (ex.exercise as any).name;
           const isHiitCardio = isHiitCardioExercise(exerciseName);
           const banners: any[] = [];
@@ -1776,6 +1807,19 @@ export default function EditWorkout() {
           }
         }
 
+        let hasPriorOutsideWorkoutForExercise = true;
+        if (allowPrForWorkout && ex.exercise.muscleGroup !== "cardio") {
+          hasPriorOutsideWorkoutForExercise =
+            await hasPriorExerciseHistoryOutsideWorkout(
+              String(exId),
+              String(curWorkoutId),
+            );
+        }
+        const allowPrForExercise =
+          allowPrForWorkout &&
+          (ex.exercise.muscleGroup === "cardio" ||
+            hasPriorOutsideWorkoutForExercise);
+
         for (let i = 0; i < ex.sets.length; i++) {
           const s = ex.sets[i];
           try {
@@ -1909,14 +1953,14 @@ export default function EditWorkout() {
             }
             try {
               if (
-                !allowPrForWorkout &&
+                !allowPrForExercise &&
                 (created.isPR ||
                   created.absWeightPR ||
                   created.e1rmPR ||
                   created.volumePR)
               ) {
                 localStorage.setItem(`set:prOverride:${created.id}`, "0");
-              } else if (allowPrForWorkout) {
+              } else if (allowPrForExercise) {
                 localStorage.removeItem(`set:prOverride:${created.id}`);
               }
             } catch (e) {}
@@ -2043,7 +2087,7 @@ export default function EditWorkout() {
               }
               try {
                 if (
-                  !allowPrForWorkout &&
+                  !allowPrForExercise &&
                   (createdRetry.isPR ||
                     createdRetry.absWeightPR ||
                     createdRetry.e1rmPR ||
@@ -2053,7 +2097,7 @@ export default function EditWorkout() {
                     `set:prOverride:${createdRetry.id}`,
                     "0",
                   );
-                } else if (allowPrForWorkout) {
+                } else if (allowPrForExercise) {
                   localStorage.removeItem(`set:prOverride:${createdRetry.id}`);
                 }
               } catch (e) {}
