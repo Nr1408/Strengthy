@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSets, getExercises, getCardioSetsForWorkout } from "@/lib/api";
 import type { UiWorkoutSet, UiExercise } from "@/lib/api";
 import { getUnit, formatMinutes } from "@/lib/utils";
-import { countPrEventsFromSet } from "@/lib/utils";
+import { countPrTypesFromSet } from "@/lib/utils";
 
 interface WorkoutCardProps {
   workout: Workout;
@@ -50,7 +50,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
     totalSets = workout.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
     totalPRs = workout.exercises.reduce((acc, ex) => {
       const setPrs = (ex.sets || []).reduce(
-        (inner, s: any) => inner + countPrEventsFromSet(s),
+        (inner, s: any) => inner + countPrTypesFromSet(s),
         0,
       );
       return acc + setPrs;
@@ -83,11 +83,11 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
     totalSets = strengthSets.length + cardioSets.length;
     totalPRs =
       strengthSets.reduce(
-        (acc: number, s: UiWorkoutSet) => acc + countPrEventsFromSet(s),
+        (acc: number, s: UiWorkoutSet) => acc + countPrTypesFromSet(s),
         0,
       ) +
       cardioSets.reduce(
-        (acc: number, s: any) => acc + countPrEventsFromSet(s),
+        (acc: number, s: any) => acc + countPrTypesFromSet(s),
         0,
       );
 

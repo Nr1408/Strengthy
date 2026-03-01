@@ -110,34 +110,3 @@ export function countPrTypesFromSet(set: any): number {
 
   return count;
 }
-
-// Count PR events by set (max 1 per set).
-// Useful for summary cards where users expect "how many sets hit PR" instead
-// of "how many PR sub-types were triggered on a set".
-export function countPrEventsFromSet(set: any): number {
-  if (!set) return 0;
-
-  const hasAnyPr =
-    !!(set as any).isPR ||
-    !!(set as any).is_pr ||
-    !!(set as any).absWeightPR ||
-    !!(set as any).is_abs_weight_pr ||
-    !!(set as any).e1rmPR ||
-    !!(set as any).is_e1rm_pr ||
-    !!(set as any).volumePR ||
-    !!(set as any).is_volume_pr ||
-    !!(set as any).repPR ||
-    !!(set as any).is_rep_pr ||
-    !!(set as any).distancePR ||
-    !!(set as any).is_distance_pr ||
-    !!(set as any).pacePR ||
-    !!(set as any).is_pace_pr ||
-    !!(set as any).ascentPR ||
-    !!(set as any).is_ascent_pr ||
-    !!(set as any).intensityPR ||
-    !!(set as any).is_intensity_pr ||
-    !!(set as any).splitPR ||
-    !!(set as any).is_split_pr;
-
-  return hasAnyPr ? 1 : 0;
-}
