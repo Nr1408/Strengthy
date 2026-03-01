@@ -1633,7 +1633,22 @@ export default function NewWorkout() {
 
       if (saved.isPR) {
         const banners: PrBanner[] = [];
-        if (saved.distancePR) {
+        const isRepOnlyCardioPr =
+          !!saved.intensityPR &&
+          typeof saved.floors === "number" &&
+          saved.floors > 0 &&
+          !saved.distancePR &&
+          !saved.pacePR &&
+          !saved.ascentPR &&
+          !saved.splitPR;
+
+        if (isRepOnlyCardioPr) {
+          banners.push({
+            exerciseName: ex.exercise.name,
+            label: "Most no of reps",
+            value: String(Math.round(saved.floors)),
+          });
+        } else if (saved.distancePR) {
           // Backend returns distance in meters; convert to user-facing unit
           let disp = "";
           try {
@@ -1655,21 +1670,21 @@ export default function NewWorkout() {
             value: disp,
           });
         }
-        if (saved.pacePR) {
+        if (!isRepOnlyCardioPr && saved.pacePR) {
           banners.push({
             exerciseName: ex.exercise.name,
             label: mode === "stairs" ? "Intensity PR" : "Pace PR",
             value: "",
           });
         }
-        if (saved.ascentPR) {
+        if (!isRepOnlyCardioPr && saved.ascentPR) {
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Ascent PR",
             value: saved.floors != null ? `${saved.floors} floors` : "",
           });
         }
-        if (saved.intensityPR) {
+        if (!isRepOnlyCardioPr && saved.intensityPR) {
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Intensity PR",
@@ -1683,7 +1698,7 @@ export default function NewWorkout() {
                     : "",
           });
         }
-        if (saved.splitPR) {
+        if (!isRepOnlyCardioPr && saved.splitPR) {
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Best Split",
