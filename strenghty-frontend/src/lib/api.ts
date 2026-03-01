@@ -1850,12 +1850,91 @@ export async function createCardioSet(params: {
       payload.set_number = next;
     }
 
+    const histRes = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/cardio_sets?select=duration_seconds,distance_meters,floors,level,split_seconds,spm&exercise_id=eq.${exerciseNum}&mode=eq.${encodeURIComponent(payload.mode)}`,
+      { headers: supabaseHeaders() },
+    );
+    if (!histRes.ok) throw new Error(`Create cardio set failed: ${histRes.status}`);
+    const hist = (await histRes.json()) as Array<{
+      duration_seconds?: number | string | null;
+      distance_meters?: number | string | null;
+      floors?: number | string | null;
+      level?: number | string | null;
+      split_seconds?: number | string | null;
+      spm?: number | string | null;
+    }>;
+
+    const toNum = (v: unknown): number | null => {
+      if (v === null || typeof v === "undefined") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    let maxDistance = -Infinity;
+    let maxFloors = -Infinity;
+    let maxIntensity = -Infinity;
+    let maxPace = -Infinity;
+    let minSplit = Infinity;
+
+    for (const row of hist) {
+      const d = toNum(row.distance_meters);
+      if (d != null && d > maxDistance) maxDistance = d;
+
+      const f = toNum(row.floors);
+      if (f != null && f > maxFloors) maxFloors = f;
+
+      const intensityCandidates = [toNum(row.level), toNum(row.spm)].filter(
+        (n): n is number => n != null,
+      );
+      if (intensityCandidates.length > 0) {
+        const rowIntensity = Math.max(...intensityCandidates);
+        if (rowIntensity > maxIntensity) maxIntensity = rowIntensity;
+      }
+
+      const duration = toNum(row.duration_seconds);
+      const distanceMeters = toNum(row.distance_meters);
+      if (duration != null && duration > 0 && distanceMeters != null && distanceMeters > 0) {
+        const pace = distanceMeters / duration; // meters per second; higher is better
+        if (pace > maxPace) maxPace = pace;
+      }
+
+      const split = toNum(row.split_seconds);
+      if (split != null && split > 0 && split < minSplit) minSplit = split;
+    }
+
+    const hasHistory = hist.length > 0;
+    const curDistance = toNum(payload.distance_meters);
+    const curFloors = toNum(payload.floors);
+    const curIntensityCandidates = [toNum(payload.level), toNum(payload.spm)].filter(
+      (n): n is number => n != null,
+    );
+    const curIntensity = curIntensityCandidates.length > 0 ? Math.max(...curIntensityCandidates) : null;
+    const curDuration = toNum(payload.duration_seconds);
+    const curSplit = toNum(payload.split_seconds);
+    const curPace =
+      curDistance != null && curDuration != null && curDuration > 0
+        ? curDistance / curDuration
+        : null;
+
+    const isDistancePr = hasHistory && curDistance != null && curDistance > maxDistance;
+    const isAscentPr = hasHistory && curFloors != null && curFloors > maxFloors;
+    const isIntensityPr = hasHistory && curIntensity != null && curIntensity > maxIntensity;
+    const isPacePr = hasHistory && curPace != null && curPace > maxPace;
+    const isSplitPr = hasHistory && curSplit != null && curSplit > 0 && curSplit < minSplit;
+    const isPr = !!(isDistancePr || isAscentPr || isIntensityPr || isPacePr || isSplitPr);
+
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/cardio_sets`, {
       method: "POST",
       headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
       body: JSON.stringify({
         workout_id: workoutNum,
         exercise_id: exerciseNum,
+        is_pr: isPr,
+        is_distance_pr: isDistancePr,
+        is_pace_pr: isPacePr,
+        is_ascent_pr: isAscentPr,
+        is_intensity_pr: isIntensityPr,
+        is_split_pr: isSplitPr,
         ...payload,
       }),
     });
