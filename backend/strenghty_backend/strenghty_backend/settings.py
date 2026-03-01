@@ -184,6 +184,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://10.0.2.2:5173",
     "http://localhost:8080",
     "https://strengthy-strengthy-frontend.vercel.app",
+    "https://strengthy-strenghty-frontend.vercel.app",
     "https://strengthy-backend.onrender.com",
     # add your PC LAN IP and port when using a physical device, e.g.:
     # "http://192.168.1.23:8080",
@@ -214,7 +215,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8080",
     "https://strengthy-backend.onrender.com",
     "http://10.0.2.2",
-    "https://strengthy-strengthy-frontend.vercel.app", # 👈 ADD THIS LINE
+    "https://strengthy-strengthy-frontend.vercel.app", # legacy/misspelled host
+    "https://strengthy-strenghty-frontend.vercel.app",
     "https://strengthy-backend.onrender.com",
 ]
 
