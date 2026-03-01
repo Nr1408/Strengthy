@@ -1883,7 +1883,7 @@ export async function createCardioSet(params: {
       const f = toNum(row.floors);
       if (f != null && f > maxFloors) maxFloors = f;
 
-      const intensityCandidates = [toNum(row.level), toNum(row.spm)].filter(
+      const intensityCandidates = [toNum(row.level), toNum(row.spm), toNum(row.floors)].filter(
         (n): n is number => n != null,
       );
       if (intensityCandidates.length > 0) {
@@ -1905,7 +1905,7 @@ export async function createCardioSet(params: {
     const hasHistory = hist.length > 0;
     const curDistance = toNum(payload.distance_meters);
     const curFloors = toNum(payload.floors);
-    const curIntensityCandidates = [toNum(payload.level), toNum(payload.spm)].filter(
+    const curIntensityCandidates = [toNum(payload.level), toNum(payload.spm), toNum(payload.floors)].filter(
       (n): n is number => n != null,
     );
     const curIntensity = curIntensityCandidates.length > 0 ? Math.max(...curIntensityCandidates) : null;

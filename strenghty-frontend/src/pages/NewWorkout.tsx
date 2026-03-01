@@ -1669,6 +1669,20 @@ export default function NewWorkout() {
             value: saved.floors != null ? `${saved.floors} floors` : "",
           });
         }
+        if (saved.intensityPR) {
+          banners.push({
+            exerciseName: ex.exercise.name,
+            label: "Intensity PR",
+            value:
+              saved.level != null
+                ? String(saved.level)
+                : saved.spm != null
+                  ? `${saved.spm} spm`
+                  : saved.floors != null
+                    ? `${saved.floors} reps`
+                    : "",
+          });
+        }
         if (saved.splitPR) {
           banners.push({
             exerciseName: ex.exercise.name,
