@@ -75,7 +75,7 @@ function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: stri
 async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit = {},
-  timeoutMs = 20000,
+  timeoutMs = 10000,
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -1221,7 +1221,7 @@ export async function getExercises(): Promise<UiExercise[]> {
     return data.map(mapExercise);
   }
 
-  const res = await fetch(`${API_BASE}/exercises/`, { headers: { ...authHeaders() } });
+  const res = await fetchWithTimeout(`${API_BASE}/exercises/`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load exercises failed: ${res.status}`);
   const data = (await res.json()) as ApiExercise[];
   return data.map(mapExercise);
@@ -1326,7 +1326,7 @@ export async function getWorkouts(): Promise<UiWorkout[]> {
     const data = (await res.json()) as ApiWorkout[];
     return data.map(mapWorkout);
   }
-  const res = await fetch(`${API_BASE}/workouts/`, { headers: { ...authHeaders() } });
+  const res = await fetchWithTimeout(`${API_BASE}/workouts/`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load workouts failed: ${res.status}`);
   const data = (await res.json()) as ApiWorkout[];
   return data.map(mapWorkout);
@@ -1461,7 +1461,7 @@ export async function getSets(workoutId: string): Promise<UiWorkoutSet[]> {
     const data = (await res.json()) as any[];
     return data.map((row) => mapWorkoutSet(normalizeWorkoutSetRow(row)));
   }
-  const res = await fetch(`${API_BASE}/sets/?workout=${workoutId}`, { headers: { ...authHeaders() } });
+  const res = await fetchWithTimeout(`${API_BASE}/sets/?workout=${workoutId}`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load sets failed: ${res.status}`);
   const data = (await res.json()) as ApiWorkoutSet[];
   return data.map(mapWorkoutSet);
@@ -1481,7 +1481,7 @@ export async function getSetsForExercise(exerciseId: string): Promise<UiWorkoutS
     const data = (await res.json()) as any[];
     return data.map((row) => mapWorkoutSet(normalizeWorkoutSetRow(row)));
   }
-  const res = await fetch(`${API_BASE}/sets/?exercise=${exerciseId}`, { headers: { ...authHeaders() } });
+  const res = await fetchWithTimeout(`${API_BASE}/sets/?exercise=${exerciseId}`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load sets for exercise failed: ${res.status}`);
   const data = (await res.json()) as ApiWorkoutSet[];
   return data.map(mapWorkoutSet);
@@ -1735,7 +1735,7 @@ export async function getCardioSetsForWorkout(workoutId: string): Promise<UiCard
     return data.map((row) => mapCardioSet(normalizeCardioSetRow(row)));
   }
 
-  const res = await fetch(`${API_BASE}/cardio-sets/?workout=${workoutNum}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/cardio-sets/?workout=${workoutNum}`, {
     headers: { ...authHeaders() },
   });
   if (!res.ok) throw new Error(`Load cardio sets failed: ${res.status}`);
@@ -1759,7 +1759,7 @@ export async function getCardioSetsForExercise(exerciseId: string): Promise<UiCa
     return data.map((row) => mapCardioSet(normalizeCardioSetRow(row)));
   }
 
-  const res = await fetch(`${API_BASE}/cardio-sets/?exercise=${exerciseNum}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/cardio-sets/?exercise=${exerciseNum}`, {
     headers: { ...authHeaders() },
   });
   if (!res.ok) throw new Error(`Load cardio sets for exercise failed: ${res.status}`);
