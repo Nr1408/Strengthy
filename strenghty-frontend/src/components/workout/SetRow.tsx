@@ -293,6 +293,15 @@ export function SetRow({
     }
   }
 
+  if (isHiitBodyweight && set.isPR) {
+    prLines.splice(0, prLines.length);
+    const repsValue = reps > 0 ? reps : 0;
+    prLines.push({
+      label: "Most no of reps",
+      value: String(repsValue),
+    });
+  }
+
   const [open, setOpen] = useState(false);
   const [halfDialogOpen, setHalfDialogOpen] = useState(false);
   const [halfSliderValue, setHalfSliderValue] = useState<number>(
