@@ -1089,6 +1089,13 @@ export default function EditWorkout() {
               value: `${volumeKg.toFixed(1)} kg`,
             });
           }
+          if (banners.length === 0) {
+            banners.push({
+              exerciseName,
+              label: "Personal Record",
+              value: "New best set",
+            });
+          }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
         }
         if (allowPrForWorkout && isCardioSet && saved.isPR) {
@@ -1549,6 +1556,13 @@ export default function EditWorkout() {
               exerciseName,
               label: "Best Set Volume",
               value: `${volumeKg.toFixed(1)} kg`,
+            });
+          }
+          if (banners.length === 0) {
+            banners.push({
+              exerciseName,
+              label: "Personal Record",
+              value: "New best set",
             });
           }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);

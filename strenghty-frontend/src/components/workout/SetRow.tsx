@@ -268,7 +268,8 @@ export function SetRow({
           // split is seconds / 500m, convert to seconds / km
           paceSecondsPerKm = cardioStat * 2;
         } else if (cardioDurationSeconds > 0 && cardioDistance > 0) {
-          const distanceKm = cardioDistance > 50 ? cardioDistance / 1000 : cardioDistance;
+          const distanceKm =
+            cardioDistance > 50 ? cardioDistance / 1000 : cardioDistance;
           if (distanceKm > 0) {
             paceSecondsPerKm = cardioDurationSeconds / distanceKm;
           }
@@ -322,6 +323,13 @@ export function SetRow({
     prLines.push({
       label: "Most no of reps",
       value: String(repsValue),
+    });
+  }
+
+  if (set.isPR && prLines.length === 0) {
+    prLines.push({
+      label: "Personal Record",
+      value: "New best set",
     });
   }
 

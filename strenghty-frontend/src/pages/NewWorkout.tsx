@@ -1304,6 +1304,14 @@ export default function NewWorkout() {
           });
         }
 
+        if (banners.length === 0) {
+          banners.push({
+            exerciseName: ex.exercise.name,
+            label: "Personal Record",
+            value: "New best set",
+          });
+        }
+
         if (banners.length > 0) {
           setPrQueue((prev) => [...prev, ...banners]);
         }
@@ -1706,7 +1714,8 @@ export default function NewWorkout() {
               return null;
             }
 
-            const distanceKm = distanceRaw > 50 ? distanceRaw / 1000 : distanceRaw;
+            const distanceKm =
+              distanceRaw > 50 ? distanceRaw / 1000 : distanceRaw;
             if (distanceKm <= 0) return null;
 
             const pacePerKm = durationSeconds / distanceKm;
