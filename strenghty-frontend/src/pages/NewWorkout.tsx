@@ -1688,17 +1688,46 @@ export default function NewWorkout() {
             const secs = total % 60;
             return `${mins}:${String(secs).padStart(2, "0")}`;
           };
+
+          const computeRowPacePerKm = (
+            splitSeconds: number | null | undefined,
+            durationSeconds: number | null | undefined,
+            distanceRaw: number | null | undefined,
+          ): number | null => {
+            if (typeof splitSeconds === "number" && splitSeconds > 0) {
+              return splitSeconds * 2;
+            }
+            if (
+              typeof durationSeconds !== "number" ||
+              durationSeconds <= 0 ||
+              typeof distanceRaw !== "number" ||
+              distanceRaw <= 0
+            ) {
+              return null;
+            }
+
+            const distanceKm = distanceRaw > 50 ? distanceRaw / 1000 : distanceRaw;
+            if (distanceKm <= 0) return null;
+
+            const pacePerKm = durationSeconds / distanceKm;
+            // Guard against clearly invalid values (e.g. 0:00 from unit mismatch)
+            return pacePerKm >= 20 ? pacePerKm : null;
+          };
+
           let paceValue = "";
           if (mode === "row") {
-            if (typeof saved.splitSeconds === "number" && saved.splitSeconds > 0) {
-              paceValue = `${formatMmSs(saved.splitSeconds * 2)} /km`;
-            } else if (
-              typeof saved.durationSeconds === "number" &&
-              saved.durationSeconds > 0 &&
-              typeof saved.distance === "number" &&
-              saved.distance > 0
-            ) {
-              const pacePerKm = saved.durationSeconds / saved.distance;
+            const pacePerKm =
+              computeRowPacePerKm(
+                saved.splitSeconds,
+                saved.durationSeconds,
+                saved.distance,
+              ) ??
+              computeRowPacePerKm(
+                s.cardioStat,
+                s.cardioDurationSeconds,
+                s.cardioDistance,
+              );
+            if (typeof pacePerKm === "number" && pacePerKm > 0) {
               paceValue = `${formatMmSs(pacePerKm)} /km`;
             }
           }

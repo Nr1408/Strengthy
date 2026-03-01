@@ -264,14 +264,17 @@ export function SetRow({
 
       if (set.cardioPacePR) {
         let paceSecondsPerKm = 0;
-        if (cardioDurationSeconds > 0 && cardioDistance > 0) {
-          paceSecondsPerKm = cardioDurationSeconds / cardioDistance;
-        } else if (cardioStat > 0) {
+        if (cardioStat > 0) {
           // split is seconds / 500m, convert to seconds / km
           paceSecondsPerKm = cardioStat * 2;
+        } else if (cardioDurationSeconds > 0 && cardioDistance > 0) {
+          const distanceKm = cardioDistance > 50 ? cardioDistance / 1000 : cardioDistance;
+          if (distanceKm > 0) {
+            paceSecondsPerKm = cardioDurationSeconds / distanceKm;
+          }
         }
 
-        if (paceSecondsPerKm > 0) {
+        if (paceSecondsPerKm >= 20) {
           prLines.push({
             label: "Best Pace",
             value: `${formatSecondsToMMSS(paceSecondsPerKm)} / km`,
