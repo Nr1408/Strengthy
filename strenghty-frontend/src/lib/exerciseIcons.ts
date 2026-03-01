@@ -83,8 +83,6 @@ export function getExerciseIconFile(name: string, muscleGroup?: string, isCustom
     "landmine row": "upper back.svg",
 
     // Traps
-    "dumbbell farmer's walk": "traps.svg",
-    "dead hang": "traps.svg",
     "barbell shrugs": "traps.svg",
     "dumbbell shrugs": "traps.svg",
     "trap bar shrugs": "traps.svg",
