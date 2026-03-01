@@ -63,6 +63,9 @@ const authStepVariants = {
   },
 } as const;
 
+const GOOGLE_CLIENT_ID_WEB_ENV =
+  (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "").toString().trim();
+
 export default function Auth({
   embedded = false,
   defaultSignup,
@@ -179,6 +182,14 @@ export default function Auth({
   useEffect(() => {
     // fetch public config (google client id)
     (async () => {
+      if (GOOGLE_CLIENT_ID_WEB_ENV) {
+        setGoogleClientIdWeb(GOOGLE_CLIENT_ID_WEB_ENV);
+      }
+
+      if (API_BASE.includes("supabase.co")) {
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/public-config/`);
         if (res.ok) {
