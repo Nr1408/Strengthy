@@ -992,7 +992,7 @@ export default function NewWorkout() {
         rpe: set.rpe,
       } as const;
 
-      // Check whether user has prior completed workouts for this exercise
+      // Check whether user has prior logged sets for this exercise
       // and compute their strongest historical sets for "unusual" detection.
       let hadPrior = false;
       let best1rmKg = 0;
@@ -1001,20 +1001,7 @@ export default function NewWorkout() {
       const priorRepsAtWeight: Record<number, number> = {};
       try {
         const priorSets = await getSetsForExercise(backendExerciseId);
-        let completedSets = priorSets;
-        try {
-          const allWorkouts = await getWorkouts();
-          const finished = new Set(
-            allWorkouts.filter((w) => !!w.endedAt).map((w) => String(w.id)),
-          );
-          completedSets = priorSets.filter((ps) =>
-            finished.has(String(ps.workout)),
-          );
-        } catch (e) {
-          // If we can't fetch workouts, fall back to any prior set existing
-          completedSets = priorSets;
-        }
-
+        const completedSets = priorSets;
         hadPrior = completedSets.length > 0;
 
         const LBS_PER_KG = 2.20462;
@@ -1301,14 +1288,6 @@ export default function NewWorkout() {
             exerciseName: ex.exercise.name,
             label: "Best Set Volume",
             value: `${volumeKg.toFixed(1)} kg`,
-          });
-        }
-
-        if (banners.length === 0) {
-          banners.push({
-            exerciseName: ex.exercise.name,
-            label: "Personal Record",
-            value: "New best set",
           });
         }
 
@@ -1942,17 +1921,6 @@ export default function NewWorkout() {
       let createdPrCount = 0;
       let persistedWorkoutId = workoutId!;
 
-      // Pre-fetch finished workout ids to determine prior history for PR eligibility
-      let finishedWorkoutIds = new Set<string>();
-      try {
-        const allWorkouts = await getWorkouts();
-        finishedWorkoutIds = new Set(
-          allWorkouts.filter((w) => !!w.endedAt).map((w) => String(w.id)),
-        );
-      } catch (e) {
-        // ignore, fallback per-exercise
-      }
-
       // Prefetch existing cardio sets for this workout so we can allocate
       // monotonically increasing set numbers per exercise locally. This
       // prevents races/duplicates when creating multiple cardio sets
@@ -1975,17 +1943,11 @@ export default function NewWorkout() {
       }
 
       for (const ex of exercisesToPersist) {
-        // determine if this exercise has appeared in any previously finished workout
+        // determine if this exercise has appeared in any previously logged workout
         let hadPriorForExercise = false;
         try {
           const priorSets = await getSetsForExercise(String(ex.exercise.id));
-          if (finishedWorkoutIds.size > 0) {
-            hadPriorForExercise = priorSets.some((ps) =>
-              finishedWorkoutIds.has(ps.workout),
-            );
-          } else {
-            hadPriorForExercise = priorSets.length > 0;
-          }
+          hadPriorForExercise = priorSets.length > 0;
         } catch (e) {
           hadPriorForExercise = false;
         }
