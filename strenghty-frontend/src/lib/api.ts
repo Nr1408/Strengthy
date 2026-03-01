@@ -28,7 +28,9 @@ function decodeJwtPayload(token: string): any | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    return JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+    return JSON.parse(atob(padded));
   } catch {
     return null;
   }
@@ -93,10 +95,33 @@ function getJwtUserId(): string | null {
   try {
     const token = getToken();
     if (!token) return null;
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return payload?.sub ? String(payload.sub) : null;
+    const payload = decodeJwtPayload(token);
+    if (!payload) return null;
+    const id = payload?.sub ?? payload?.user_id ?? payload?.id ?? null;
+    return id != null ? String(id) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveSupabaseUserId(): Promise<string | null> {
+  const local = getJwtUserId();
+  if (local) return local;
+
+  const token = getToken();
+  if (!token || !SUPABASE_URL_ENV || !SUPABASE_ANON_ENV) return null;
+
+  try {
+    const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+    const res = await fetchWithTimeout(`${supabaseBase}/auth/v1/user`, {
+      headers: {
+        apikey: SUPABASE_ANON_ENV,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { id?: string | number | null };
+    return data?.id != null ? String(data.id) : null;
   } catch {
     return null;
   }
@@ -209,7 +234,7 @@ function normalizeCardioSetRow(row: any): ApiCardioSet {
 }
 
 async function getSupabaseProfile() {
-  const userId = getJwtUserId();
+  const userId = await resolveSupabaseUserId();
   if (!userId || !SUPABASE_REST_BASE) return null;
   const res = await fetchWithTimeout(
     `${SUPABASE_REST_BASE}/profiles?select=*&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
@@ -231,7 +256,7 @@ export async function upsertProfile(payload: {
   monthly_workouts?: number | null;
 }) {
   if (!shouldUseSupabaseApi()) return;
-  const userId = getJwtUserId();
+  const userId = await resolveSupabaseUserId();
   if (!userId || !SUPABASE_REST_BASE) return;
   const body = { user_id: userId, ...payload };
   const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/profiles`, {
@@ -1067,9 +1092,14 @@ export async function loginWithGoogle(idToken: string) {
   });
     if (!res.ok) throw new Error(`Google login failed: ${res.status} ${await res.text()}`);
     const data = await res.json();
-    if (data.token) {
+    const token =
+      data?.access_token ||
+      data?.session?.access_token ||
+      data?.token ||
+      null;
+    if (token) {
       // Use the same storage mechanism as email/password login
-      setToken(data.token);
+      setToken(token);
     }
     // store profile (so Profile page can read name/email)
     try {
@@ -1255,8 +1285,8 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
   if (options && typeof options.custom !== 'undefined') payload.custom = !!options.custom;
 
   if (shouldUseSupabaseApi()) {
-    const userId = getJwtUserId();
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await resolveSupabaseUserId();
+    if (!userId) throw new Error("Session expired. Please log in again.");
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/exercises`, {
       method: "POST",
       headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
@@ -1359,8 +1389,8 @@ export async function createWorkout(name: string, notes = "", date?: Date): Prom
     } catch (e) {}
   } catch (e) {}
   if (shouldUseSupabaseApi()) {
-    const userId = getJwtUserId();
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await resolveSupabaseUserId();
+    if (!userId) throw new Error("Session expired. Please log in again.");
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workouts`, {
       method: "POST",
       headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
