@@ -1078,6 +1078,27 @@ export default function EditWorkout() {
           }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
         }
+        if (
+          allowPrForWorkout &&
+          isCardioSet &&
+          saved.isPR &&
+          saved.intensityPR &&
+          typeof saved.floors === "number" &&
+          saved.floors > 0 &&
+          !saved.distancePR &&
+          !saved.pacePR &&
+          !saved.ascentPR &&
+          !saved.splitPR
+        ) {
+          setPrQueue((prev) => [
+            ...prev,
+            {
+              exerciseName: (ex.exercise as any).name,
+              label: "Most no of reps",
+              value: String(Math.round(saved.floors)),
+            },
+          ]);
+        }
       } else {
         let created: any;
         try {
@@ -1411,6 +1432,27 @@ export default function EditWorkout() {
             });
           }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
+        }
+        if (
+          allowPrForWorkout &&
+          isCardioSet &&
+          created.isPR &&
+          created.intensityPR &&
+          typeof created.floors === "number" &&
+          created.floors > 0 &&
+          !created.distancePR &&
+          !created.pacePR &&
+          !created.ascentPR &&
+          !created.splitPR
+        ) {
+          setPrQueue((prev) => [
+            ...prev,
+            {
+              exerciseName: (ex.exercise as any).name,
+              label: "Most no of reps",
+              value: String(Math.round(created.floors)),
+            },
+          ]);
         }
       }
     } catch (err: any) {
