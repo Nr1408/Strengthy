@@ -57,8 +57,7 @@ function isSupabaseJwtUsable(token: string | null): boolean {
 }
 
 function shouldUseSupabaseApi(): boolean {
-  if (!HAS_SUPABASE_CONFIG) return false;
-  return isSupabaseJwtUsable(getToken());
+  return HAS_SUPABASE_CONFIG;
 }
 
 function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: string) {
@@ -1515,6 +1514,9 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
         `${SUPABASE_REST_BASE}/workout_sets?select=set_number&workout_id=eq.${workoutNum}&exercise_id=eq.${exerciseNum}&order=set_number.desc&limit=1`,
         { headers: supabaseHeaders() },
       );
+      if (lastRes.status === 401) {
+        throw new Error("Session expired. Please log in again.");
+      }
       if (!lastRes.ok) throw new Error(`Create set failed: ${lastRes.status}`);
       const last = (await lastRes.json()) as Array<{ set_number?: number }>;
       resolvedSetNumber = (last[0]?.set_number ?? 0) + 1;
@@ -1537,6 +1539,9 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     });
 
     if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error("Session expired. Please log in again.");
+      }
       const body = await res.text().catch(() => "");
       throw new Error(`Create set failed: ${res.status}${body ? ` ${body}` : ""}`);
     }
