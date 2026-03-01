@@ -14,9 +14,8 @@ const DEPLOYED_API = "https://strengthy-backend.onrender.com/api";
 const LOCAL_API = "http://localhost:8000/api";
 
 // Optional runtime or build-time overrides for Supabase Edge Functions
-// Use env: VITE_CREATE_SET_ENDPOINT or VITE_GOOGLE_AUTH_ENDPOINT
-// Or set localStorage keys `CREATE_SET_ENDPOINT` / `GOOGLE_AUTH_ENDPOINT`
-const CREATE_SET_ENDPOINT_ENV = (import.meta.env.VITE_CREATE_SET_ENDPOINT ?? "").toString().trim();
+// Use env: VITE_GOOGLE_AUTH_ENDPOINT
+// Or set localStorage key `GOOGLE_AUTH_ENDPOINT`
 const GOOGLE_AUTH_ENDPOINT_ENV = (import.meta.env.VITE_GOOGLE_AUTH_ENDPOINT ?? "").toString().trim();
 const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
 const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
@@ -108,7 +107,13 @@ function supabaseHeaders(contentTypeJson = false): HeadersInit {
     apikey: SUPABASE_ANON_ENV,
   };
   const token = getToken();
-  if (isSupabaseJwtUsable(token)) {
+  if (!isSupabaseJwtUsable(token)) {
+    try {
+      clearToken();
+    } catch (e) {}
+    throw new Error("Session expired. Please log in again.");
+  }
+  if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
   if (contentTypeJson) headers["Content-Type"] = "application/json";
@@ -1572,10 +1577,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   if (typeof unit !== 'undefined') payload.unit = unit;
   if (typeof type !== 'undefined') payload.set_type = type;
   if (typeof rpe === 'number') payload.rpe = rpe;
-  const createSetEndpoint = /supabase\.co/.test(API_BASE)
-    ? runtimeEndpoint(CREATE_SET_ENDPOINT_ENV, 'CREATE_SET_ENDPOINT', `${API_BASE}/sets/`)
-    : `${API_BASE}/sets/`;
-  const res = await fetchWithTimeout(`${createSetEndpoint}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/sets/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(payload),
