@@ -108,7 +108,9 @@ function supabaseHeaders(contentTypeJson = false): HeadersInit {
     apikey: SUPABASE_ANON_ENV,
   };
   const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (isSupabaseJwtUsable(token)) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   if (contentTypeJson) headers["Content-Type"] = "application/json";
   return headers;
 }
@@ -1508,6 +1510,10 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   }
 
   const createSetViaSupabaseRest = async (): Promise<UiWorkoutSet> => {
+    if (!isSupabaseJwtUsable(getToken())) {
+      throw new Error("Session expired. Please log in again.");
+    }
+
     let resolvedSetNumber = typeof setNumber === "number" ? setNumber : undefined;
     if (typeof resolvedSetNumber !== "number") {
       const lastRes = await fetchWithTimeout(
@@ -1551,53 +1557,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   };
 
   if (shouldUseSupabaseApi()) {
-    const hasCustomCreateSetEndpoint = !!runtimeEndpoint(CREATE_SET_ENDPOINT_ENV, 'CREATE_SET_ENDPOINT', '');
-
-    if (!hasCustomCreateSetEndpoint) {
-      return await createSetViaSupabaseRest();
-    }
-
-    try {
-      const createSetEndpoint = runtimeEndpoint(
-        CREATE_SET_ENDPOINT_ENV,
-        'CREATE_SET_ENDPOINT',
-        `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/functions/v1/create_set`
-      );
-
-      const edgePayload: any = {
-        workout: workoutNum,
-        exercise: exerciseNum,
-        reps,
-        half_reps: typeof halfReps === "number" ? halfReps : 0,
-        weight: typeof weight === "number" ? weight : null,
-        unit: typeof unit !== 'undefined' ? unit : 'kg',
-      };
-      if (typeof setNumber === "number") edgePayload.set_number = setNumber;
-      if (typeof type !== 'undefined') edgePayload.set_type = type;
-      if (typeof rpe === 'number') edgePayload.rpe = rpe;
-
-      const edgeRes = await fetchWithTimeout(createSetEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...supabaseHeaders() },
-        body: JSON.stringify(edgePayload),
-      });
-
-      if (!edgeRes.ok) {
-        let body = "";
-        try { body = await edgeRes.text(); } catch {}
-        throw new Error(`Create set failed: ${edgeRes.status}${body ? ` ${body}` : ""}`);
-      }
-
-      const created = await edgeRes.json();
-      const normalized = normalizeWorkoutSetRow(Array.isArray(created) ? created[0] : created);
-      return mapWorkoutSet(normalized);
-    } catch (edgeError) {
-      try {
-        // eslint-disable-next-line no-console
-        console.warn("createSet edge function failed; falling back to PostgREST", edgeError);
-      } catch (e) {}
-      return await createSetViaSupabaseRest();
-    }
+    return await createSetViaSupabaseRest();
   }
 
   const payload: any = {
