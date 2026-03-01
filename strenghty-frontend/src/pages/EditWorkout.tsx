@@ -1119,17 +1119,43 @@ export default function EditWorkout() {
             if (saved.distancePR) {
               let disp = "";
               if (typeof saved.distance === "number") {
-                if (distanceUnit === "mile") disp = `${(saved.distance / 1609.34).toFixed(2)} mi`;
-                else if (distanceUnit === "m") disp = `${Math.round(saved.distance)} m`;
+                if (distanceUnit === "mile")
+                  disp = `${(saved.distance / 1609.34).toFixed(2)} mi`;
+                else if (distanceUnit === "m")
+                  disp = `${Math.round(saved.distance)} m`;
                 else disp = `${(saved.distance / 1000).toFixed(2)} km`;
               }
               banners.push({ exerciseName, label: "Distance PR", value: disp });
             }
             if (saved.pacePR) {
+              const formatMmSs = (seconds: number) => {
+                const total = Math.max(0, Math.round(seconds));
+                const mins = Math.floor(total / 60);
+                const secs = total % 60;
+                return `${mins}:${String(secs).padStart(2, "0")}`;
+              };
+              let paceValue = "";
+              if (saved.mode === "row") {
+                if (
+                  typeof saved.splitSeconds === "number" &&
+                  saved.splitSeconds > 0
+                ) {
+                  paceValue = `${formatMmSs(saved.splitSeconds)} /500m`;
+                } else if (
+                  typeof saved.durationSeconds === "number" &&
+                  saved.durationSeconds > 0 &&
+                  typeof saved.distance === "number" &&
+                  saved.distance > 0
+                ) {
+                  const pacePer500m =
+                    saved.durationSeconds / (saved.distance / 500);
+                  paceValue = `${formatMmSs(pacePer500m)} /500m`;
+                }
+              }
               banners.push({
                 exerciseName,
                 label: saved.mode === "stairs" ? "Intensity PR" : "Pace PR",
-                value: "",
+                value: paceValue,
               });
             }
             if (saved.ascentPR) {
@@ -1157,7 +1183,8 @@ export default function EditWorkout() {
               banners.push({
                 exerciseName,
                 label: "Best Split",
-                value: saved.splitSeconds != null ? `${saved.splitSeconds}s` : "",
+                value:
+                  saved.splitSeconds != null ? `${saved.splitSeconds}s` : "",
               });
             }
           }
@@ -1529,17 +1556,43 @@ export default function EditWorkout() {
             if (created.distancePR) {
               let disp = "";
               if (typeof created.distance === "number") {
-                if (distanceUnit === "mile") disp = `${(created.distance / 1609.34).toFixed(2)} mi`;
-                else if (distanceUnit === "m") disp = `${Math.round(created.distance)} m`;
+                if (distanceUnit === "mile")
+                  disp = `${(created.distance / 1609.34).toFixed(2)} mi`;
+                else if (distanceUnit === "m")
+                  disp = `${Math.round(created.distance)} m`;
                 else disp = `${(created.distance / 1000).toFixed(2)} km`;
               }
               banners.push({ exerciseName, label: "Distance PR", value: disp });
             }
             if (created.pacePR) {
+              const formatMmSs = (seconds: number) => {
+                const total = Math.max(0, Math.round(seconds));
+                const mins = Math.floor(total / 60);
+                const secs = total % 60;
+                return `${mins}:${String(secs).padStart(2, "0")}`;
+              };
+              let paceValue = "";
+              if (created.mode === "row") {
+                if (
+                  typeof created.splitSeconds === "number" &&
+                  created.splitSeconds > 0
+                ) {
+                  paceValue = `${formatMmSs(created.splitSeconds)} /500m`;
+                } else if (
+                  typeof created.durationSeconds === "number" &&
+                  created.durationSeconds > 0 &&
+                  typeof created.distance === "number" &&
+                  created.distance > 0
+                ) {
+                  const pacePer500m =
+                    created.durationSeconds / (created.distance / 500);
+                  paceValue = `${formatMmSs(pacePer500m)} /500m`;
+                }
+              }
               banners.push({
                 exerciseName,
                 label: created.mode === "stairs" ? "Intensity PR" : "Pace PR",
-                value: "",
+                value: paceValue,
               });
             }
             if (created.ascentPR) {
@@ -1568,7 +1621,9 @@ export default function EditWorkout() {
                 exerciseName,
                 label: "Best Split",
                 value:
-                  created.splitSeconds != null ? `${created.splitSeconds}s` : "",
+                  created.splitSeconds != null
+                    ? `${created.splitSeconds}s`
+                    : "",
               });
             }
           }

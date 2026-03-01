@@ -1682,10 +1682,30 @@ export default function NewWorkout() {
           });
         }
         if (!isHiitCardio && saved.pacePR) {
+          const formatMmSs = (seconds: number) => {
+            const total = Math.max(0, Math.round(seconds));
+            const mins = Math.floor(total / 60);
+            const secs = total % 60;
+            return `${mins}:${String(secs).padStart(2, "0")}`;
+          };
+          let paceValue = "";
+          if (mode === "row") {
+            if (typeof saved.splitSeconds === "number" && saved.splitSeconds > 0) {
+              paceValue = `${formatMmSs(saved.splitSeconds)} /500m`;
+            } else if (
+              typeof saved.durationSeconds === "number" &&
+              saved.durationSeconds > 0 &&
+              typeof saved.distance === "number" &&
+              saved.distance > 0
+            ) {
+              const pacePer500m = saved.durationSeconds / (saved.distance / 500);
+              paceValue = `${formatMmSs(pacePer500m)} /500m`;
+            }
+          }
           banners.push({
             exerciseName: ex.exercise.name,
             label: mode === "stairs" ? "Intensity PR" : "Pace PR",
-            value: "",
+            value: paceValue,
           });
         }
         if (!isHiitCardio && saved.ascentPR) {
