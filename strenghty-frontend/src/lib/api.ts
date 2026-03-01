@@ -28,7 +28,9 @@ function decodeJwtPayload(token: string): any | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    return JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return JSON.parse(atob(padded));
   } catch {
     return null;
   }
@@ -96,9 +98,8 @@ function getJwtUserId(): string | null {
   try {
     const token = getToken();
     if (!token) return null;
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const payload = decodeJwtPayload(token);
+    if (!payload) return null;
     return payload?.sub ? String(payload.sub) : null;
   } catch {
     return null;
