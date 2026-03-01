@@ -697,6 +697,18 @@ export default function EditWorkout() {
     return "treadmill";
   };
 
+  const isHiitCardioExercise = (name: string) => {
+    const n = (name || "").toLowerCase();
+    return (
+      n.includes("burpee") ||
+      n.includes("mountain") ||
+      n.includes("climb") ||
+      n.includes("jump squat") ||
+      n.includes("plank jack") ||
+      n.includes("skater")
+    );
+  };
+
   const setStartDateOnly = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1045,6 +1057,7 @@ export default function EditWorkout() {
         // workouts skip celebrations to avoid noisy retro PRs.
         if (
           allowPrForWorkout &&
+          !isCardioSet &&
           (saved.isPR || saved.absWeightPR || saved.e1rmPR || saved.volumePR)
         ) {
           const unit = (saved.unit as "lbs" | "kg" | undefined) || getUnit();
@@ -1078,26 +1091,80 @@ export default function EditWorkout() {
           }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
         }
-        if (
-          allowPrForWorkout &&
-          isCardioSet &&
-          saved.isPR &&
-          saved.intensityPR &&
-          typeof saved.floors === "number" &&
-          saved.floors > 0 &&
-          !saved.distancePR &&
-          !saved.pacePR &&
-          !saved.ascentPR &&
-          !saved.splitPR
-        ) {
-          setPrQueue((prev) => [
-            ...prev,
-            {
-              exerciseName: (ex.exercise as any).name,
+        if (allowPrForWorkout && isCardioSet && saved.isPR) {
+          const exerciseName = (ex.exercise as any).name;
+          const isHiitCardio = isHiitCardioExercise(exerciseName);
+          const banners: any[] = [];
+
+          if (isHiitCardio) {
+            const repsValue =
+              typeof saved.floors === "number" && saved.floors > 0
+                ? Math.round(saved.floors)
+                : typeof s.reps === "number" && s.reps > 0
+                  ? Math.round(s.reps)
+                  : 0;
+            banners.push({
+              exerciseName,
               label: "Most no of reps",
-              value: String(Math.round(saved.floors)),
-            },
-          ]);
+              value: String(repsValue),
+            });
+          } else {
+            const distanceUnit =
+              (s as any).cardioDistanceUnit === "mile"
+                ? "mile"
+                : (s as any).cardioDistanceUnit === "m"
+                  ? "m"
+                  : "km";
+
+            if (saved.distancePR) {
+              let disp = "";
+              if (typeof saved.distance === "number") {
+                if (distanceUnit === "mile") disp = `${(saved.distance / 1609.34).toFixed(2)} mi`;
+                else if (distanceUnit === "m") disp = `${Math.round(saved.distance)} m`;
+                else disp = `${(saved.distance / 1000).toFixed(2)} km`;
+              }
+              banners.push({ exerciseName, label: "Distance PR", value: disp });
+            }
+            if (saved.pacePR) {
+              banners.push({
+                exerciseName,
+                label: saved.mode === "stairs" ? "Intensity PR" : "Pace PR",
+                value: "",
+              });
+            }
+            if (saved.ascentPR) {
+              banners.push({
+                exerciseName,
+                label: "Ascent PR",
+                value: saved.floors != null ? `${saved.floors} floors` : "",
+              });
+            }
+            if (saved.intensityPR) {
+              banners.push({
+                exerciseName,
+                label: "Intensity PR",
+                value:
+                  saved.level != null
+                    ? String(saved.level)
+                    : saved.spm != null
+                      ? `${saved.spm} spm`
+                      : saved.floors != null
+                        ? `${saved.floors} reps`
+                        : "",
+              });
+            }
+            if (saved.splitPR) {
+              banners.push({
+                exerciseName,
+                label: "Best Split",
+                value: saved.splitSeconds != null ? `${saved.splitSeconds}s` : "",
+              });
+            }
+          }
+
+          if (banners.length > 0) {
+            setPrQueue((prev) => [...prev, ...banners]);
+          }
         }
       } else {
         let created: any;
@@ -1396,6 +1463,7 @@ export default function EditWorkout() {
         // banners only for current-day workouts.
         if (
           allowPrForWorkout &&
+          !isCardioSet &&
           (created.isPR ||
             created.absWeightPR ||
             created.e1rmPR ||
@@ -1433,26 +1501,81 @@ export default function EditWorkout() {
           }
           if (banners.length > 0) setPrQueue((prev) => [...prev, ...banners]);
         }
-        if (
-          allowPrForWorkout &&
-          isCardioSet &&
-          created.isPR &&
-          created.intensityPR &&
-          typeof created.floors === "number" &&
-          created.floors > 0 &&
-          !created.distancePR &&
-          !created.pacePR &&
-          !created.ascentPR &&
-          !created.splitPR
-        ) {
-          setPrQueue((prev) => [
-            ...prev,
-            {
-              exerciseName: (ex.exercise as any).name,
+        if (allowPrForWorkout && isCardioSet && created.isPR) {
+          const exerciseName = (ex.exercise as any).name;
+          const isHiitCardio = isHiitCardioExercise(exerciseName);
+          const banners: any[] = [];
+
+          if (isHiitCardio) {
+            const repsValue =
+              typeof created.floors === "number" && created.floors > 0
+                ? Math.round(created.floors)
+                : typeof s.reps === "number" && s.reps > 0
+                  ? Math.round(s.reps)
+                  : 0;
+            banners.push({
+              exerciseName,
               label: "Most no of reps",
-              value: String(Math.round(created.floors)),
-            },
-          ]);
+              value: String(repsValue),
+            });
+          } else {
+            const distanceUnit =
+              (s as any).cardioDistanceUnit === "mile"
+                ? "mile"
+                : (s as any).cardioDistanceUnit === "m"
+                  ? "m"
+                  : "km";
+
+            if (created.distancePR) {
+              let disp = "";
+              if (typeof created.distance === "number") {
+                if (distanceUnit === "mile") disp = `${(created.distance / 1609.34).toFixed(2)} mi`;
+                else if (distanceUnit === "m") disp = `${Math.round(created.distance)} m`;
+                else disp = `${(created.distance / 1000).toFixed(2)} km`;
+              }
+              banners.push({ exerciseName, label: "Distance PR", value: disp });
+            }
+            if (created.pacePR) {
+              banners.push({
+                exerciseName,
+                label: created.mode === "stairs" ? "Intensity PR" : "Pace PR",
+                value: "",
+              });
+            }
+            if (created.ascentPR) {
+              banners.push({
+                exerciseName,
+                label: "Ascent PR",
+                value: created.floors != null ? `${created.floors} floors` : "",
+              });
+            }
+            if (created.intensityPR) {
+              banners.push({
+                exerciseName,
+                label: "Intensity PR",
+                value:
+                  created.level != null
+                    ? String(created.level)
+                    : created.spm != null
+                      ? `${created.spm} spm`
+                      : created.floors != null
+                        ? `${created.floors} reps`
+                        : "",
+              });
+            }
+            if (created.splitPR) {
+              banners.push({
+                exerciseName,
+                label: "Best Split",
+                value:
+                  created.splitSeconds != null ? `${created.splitSeconds}s` : "",
+              });
+            }
+          }
+
+          if (banners.length > 0) {
+            setPrQueue((prev) => [...prev, ...banners]);
+          }
         }
       }
     } catch (err: any) {

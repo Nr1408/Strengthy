@@ -96,6 +96,18 @@ const allMusclesOrder: MuscleGroup[] = [
 ];
 
 export default function NewWorkout() {
+  const isHiitCardioExercise = (name: string) => {
+    const n = (name || "").toLowerCase();
+    return (
+      n.includes("burpee") ||
+      n.includes("mountain") ||
+      n.includes("climb") ||
+      n.includes("jump squat") ||
+      n.includes("plank jack") ||
+      n.includes("skater")
+    );
+  };
+
   const getCardioModeForExercise = (exercise: Exercise): CardioMode => {
     const name = exercise.name.toLowerCase();
     if (name.includes("treadmill")) return "treadmill";
@@ -1633,20 +1645,19 @@ export default function NewWorkout() {
 
       if (saved.isPR) {
         const banners: PrBanner[] = [];
-        const isRepOnlyCardioPr =
-          !!saved.intensityPR &&
-          typeof saved.floors === "number" &&
-          saved.floors > 0 &&
-          !saved.distancePR &&
-          !saved.pacePR &&
-          !saved.ascentPR &&
-          !saved.splitPR;
+        const isHiitCardio = isHiitCardioExercise(ex.exercise.name);
 
-        if (isRepOnlyCardioPr) {
+        if (isHiitCardio) {
+          const repsValue =
+            typeof saved.floors === "number" && saved.floors > 0
+              ? Math.round(saved.floors)
+              : typeof s.reps === "number" && s.reps > 0
+                ? Math.round(s.reps)
+                : 0;
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Most no of reps",
-            value: String(Math.round(saved.floors)),
+            value: String(repsValue),
           });
         } else if (saved.distancePR) {
           // Backend returns distance in meters; convert to user-facing unit
@@ -1670,21 +1681,21 @@ export default function NewWorkout() {
             value: disp,
           });
         }
-        if (!isRepOnlyCardioPr && saved.pacePR) {
+        if (!isHiitCardio && saved.pacePR) {
           banners.push({
             exerciseName: ex.exercise.name,
             label: mode === "stairs" ? "Intensity PR" : "Pace PR",
             value: "",
           });
         }
-        if (!isRepOnlyCardioPr && saved.ascentPR) {
+        if (!isHiitCardio && saved.ascentPR) {
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Ascent PR",
             value: saved.floors != null ? `${saved.floors} floors` : "",
           });
         }
-        if (!isRepOnlyCardioPr && saved.intensityPR) {
+        if (!isHiitCardio && saved.intensityPR) {
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Intensity PR",
@@ -1698,7 +1709,7 @@ export default function NewWorkout() {
                     : "",
           });
         }
-        if (!isRepOnlyCardioPr && saved.splitPR) {
+        if (!isHiitCardio && saved.splitPR) {
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Best Split",
