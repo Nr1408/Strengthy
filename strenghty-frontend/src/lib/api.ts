@@ -4,7 +4,6 @@ import type { CardioMode } from "@/types/workout";
 
 // Prefer explicit API base env vars; otherwise fall back to deployed backend.
 // `VITE_SUPABASE_URL` is used for auth endpoints, not as global API base.
-const _envSupabase = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
 const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL ?? "").toString().trim();
 // Normalize common bad values (some build systems may inject the string 'undefined')
 // Default to the deployed backend when no VITE_API_BASE is provided so local
@@ -721,9 +720,11 @@ function mapCardioSet(api: ApiCardioSet): UiCardioSet {
 // legacy Django auth endpoints at `API_BASE`.
 const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
 const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
+const USE_SUPABASE_AUTH =
+  !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV) && /supabase\.co/.test(API_BASE);
 
 export async function login(username: string, password: string) {
-  if (SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
+  if (USE_SUPABASE_AUTH) {
     const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
     const res = await fetch(`${supabaseBase}/auth/v1/token?grant_type=password`, {
       method: "POST",
@@ -758,7 +759,7 @@ export async function login(username: string, password: string) {
 }
 
 export async function register(username: string, password: string) {
-  if (SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
+  if (USE_SUPABASE_AUTH) {
     const res = await fetch(`${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_ENV },
