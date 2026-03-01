@@ -34,6 +34,21 @@ const GRID_TEMPLATE_HIIT =
 const GRID_TEMPLATE_HIIT_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
 
+const isHiitExerciseName = (value: string) => {
+  const name = (value || "").toLowerCase();
+  return (
+    name.includes("hiit") ||
+    name.includes("burpee") ||
+    name.includes("mountain") ||
+    name.includes("climb") ||
+    name.includes("jump squat") ||
+    name.includes("plank jack") ||
+    name.includes("skater") ||
+    name.includes("jumping jack") ||
+    name.includes("high knee")
+  );
+};
+
 export default function ExerciseHistory() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -316,14 +331,7 @@ export default function ExerciseHistory() {
                       className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                       style={{
                         gridTemplateColumns: ((): string => {
-                          const name = (exerciseName || "").toLowerCase();
-                          const isHiit =
-                            name.includes("burpee") ||
-                            name.includes("mountain") ||
-                            name.includes("climb") ||
-                            name.includes("jump squat") ||
-                            name.includes("plank jack") ||
-                            name.includes("skater");
+                          const isHiit = isHiitExerciseName(exerciseName || "");
                           if (
                             g.sets &&
                             g.sets.length > 0 &&
@@ -339,14 +347,7 @@ export default function ExerciseHistory() {
                     >
                       {g.sets && g.sets[0] && g.sets[0].cardioMode ? (
                         (() => {
-                          const name = (exerciseName || "").toLowerCase();
-                          const isHiit =
-                            name.includes("burpee") ||
-                            name.includes("mountain") ||
-                            name.includes("climb") ||
-                            name.includes("jump squat") ||
-                            name.includes("plank jack") ||
-                            name.includes("skater");
+                          const isHiit = isHiitExerciseName(exerciseName || "");
 
                           if (isHiit) {
                             return (

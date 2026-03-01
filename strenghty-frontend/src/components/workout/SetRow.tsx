@@ -95,12 +95,15 @@ export function SetRow({
   // render HIIT-style columns even when the saved set is a strength
   // record (no cardioMode) — ensures headers and rows align.
   const isHiitName = (n: string) =>
+    n.includes("hiit") ||
     n.includes("burpee") ||
     n.includes("mountain") ||
     n.includes("climb") ||
     n.includes("jump squat") ||
     n.includes("plank jack") ||
-    n.includes("skater");
+    n.includes("skater") ||
+    n.includes("jumping jack") ||
+    n.includes("high knee");
   const isHiitBodyweight = isHiitName(name);
   const currentType = (set.type || "S") as "W" | "S" | "F" | "D";
   const typeClasses: Record<"W" | "S" | "F" | "D", string> = {
