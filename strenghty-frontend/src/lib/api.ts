@@ -1183,7 +1183,9 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   if (typeof unit !== 'undefined') payload.unit = unit;
   if (typeof type !== 'undefined') payload.set_type = type;
   if (typeof rpe === 'number') payload.rpe = rpe;
-  const createSetEndpoint = runtimeEndpoint(CREATE_SET_ENDPOINT_ENV, 'CREATE_SET_ENDPOINT', `${API_BASE}/sets/`);
+  const createSetEndpoint = /supabase\.co/.test(API_BASE)
+    ? runtimeEndpoint(CREATE_SET_ENDPOINT_ENV, 'CREATE_SET_ENDPOINT', `${API_BASE}/sets/`)
+    : `${API_BASE}/sets/`;
   const res = await fetch(`${createSetEndpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
