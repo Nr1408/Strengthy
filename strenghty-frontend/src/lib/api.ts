@@ -2,9 +2,8 @@ import type { CardioMode } from "@/types/workout";
 // Capacitor Preferences is imported dynamically where needed to avoid
 // bundling/runtime issues on some platforms.
 
-// Prefer explicit env vars; fall back to the local backend IP used in this dev setup.
-// If `VITE_SUPABASE_URL` is provided, prefer it as the API base so the
-// frontend can target Supabase endpoints without setting `VITE_API_BASE`.
+// Prefer explicit API base env vars; otherwise use deployed Django API.
+// `VITE_SUPABASE_URL` is used for GoTrue auth endpoints, not as global API base.
 const _envSupabase = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
 const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL ?? "").toString().trim();
 // Normalize common bad values (some build systems may inject the string 'undefined')
@@ -69,9 +68,7 @@ function pickFromCandidates(list: string[]): string {
   return trimmed[0];
 }
 
-if (_envSupabase && _envSupabase !== "undefined") {
-  resolvedBase = _envSupabase;
-} else if (_envBase && _envBase !== "undefined" && /[,;|]/.test(_envBase)) {
+if (_envBase && _envBase !== "undefined" && /[,;|]/.test(_envBase)) {
   const parts = _envBase.split(/[,;|]/);
   resolvedBase = pickFromCandidates(parts);
 } else {
@@ -723,9 +720,11 @@ function mapCardioSet(api: ApiCardioSet): UiCardioSet {
 // legacy Django auth endpoints at `API_BASE`.
 const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
 const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
+const USE_SUPABASE_AUTH =
+  !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV) && /supabase\.co/.test(API_BASE);
 
 export async function login(username: string, password: string) {
-  if (SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
+  if (USE_SUPABASE_AUTH) {
     const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
     const res = await fetch(`${supabaseBase}/auth/v1/token?grant_type=password`, {
       method: "POST",
@@ -760,7 +759,7 @@ export async function login(username: string, password: string) {
 }
 
 export async function register(username: string, password: string) {
-  if (SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
+  if (USE_SUPABASE_AUTH) {
     const res = await fetch(`${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_ENV },
