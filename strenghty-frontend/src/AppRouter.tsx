@@ -157,8 +157,22 @@ const OAuthPopupBridge = () => {
 
 const AnimatedRoutes = () => {
   const location = useLocation();
-  const isOAuthPopup =
-    typeof window !== "undefined" && window.name === "supabase_google_oauth";
+  const isOAuthPopup = (() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const hasAccessToken = !!hash.get("access_token");
+      const markedPopup = window.sessionStorage?.getItem("supabase_oauth_popup") === "1";
+      return (
+        window.name === "supabase_google_oauth" ||
+        !!window.opener ||
+        markedPopup ||
+        hasAccessToken
+      );
+    } catch {
+      return window.name === "supabase_google_oauth" || !!window.opener;
+    }
+  })();
 
   if (isOAuthPopup) {
     return <OAuthPopupBridge />;
