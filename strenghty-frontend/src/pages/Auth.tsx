@@ -123,6 +123,20 @@ export default function Auth({
     );
   }, []);
 
+  const isInvalidCredentialsError = useCallback((msg: string) => {
+    const lower = msg.toLowerCase();
+    return (
+      lower.includes("invalid login credentials") ||
+      lower.includes("invalid email") ||
+      lower.includes("invalid password") ||
+      lower.includes("incorrect password") ||
+      lower.includes("login failed: 400") ||
+      lower.includes("login failed: 401") ||
+      lower.includes("no active account") ||
+      lower.includes("unable to log in with provided credentials")
+    );
+  }, []);
+
   // Prevent page-level scrolling while on the auth route. This guards against
   // programmatic focus or mobile browser UI adjustments causing the body to
   // scroll up/down while the auth card is visible.
@@ -235,13 +249,13 @@ export default function Auth({
     if (!googleClientIdWeb) return;
 
     const nonce = Math.random().toString(36).slice(2);
+    const redirectUri = `${window.location.origin}/auth/google/redirect`;
 
     const params = new URLSearchParams({
       client_id: googleClientIdWeb,
-      redirect_uri:
-        "https://strengthy-backend.onrender.com/api/auth/google/redirect/",
+      redirect_uri: redirectUri,
       response_type: "id_token",
-      response_mode: "form_post",
+      response_mode: "fragment",
       scope: "openid email profile",
       prompt: "select_account",
       nonce,
@@ -578,7 +592,11 @@ export default function Auth({
       navigate("/dashboard");
     } catch (err: any) {
       const msg = String(err?.message || err || "Authentication failed");
-      setAuthError(msg);
+      const friendlyInvalidCreds =
+        !showSignup && isInvalidCredentialsError(msg)
+          ? "Invalid email id or password, please try again"
+          : msg;
+      setAuthError(friendlyInvalidCreds);
 
       if (isEmailNotConfirmedError(msg)) {
         openConfirmEmailDialog(formData.email);
@@ -592,14 +610,28 @@ export default function Auth({
       setErrorDialogTitle("Authentication error");
       try {
         const deep = JSON.stringify(
-          (err as any)?.response?.data || (err as any)?.message || msg,
+          (err as any)?.response?.data ||
+            (err as any)?.message ||
+            friendlyInvalidCreds,
         );
-        setDialogMessage(`Full Error: ${deep} | API: ${API_BASE}`);
+        setDialogMessage(
+          friendlyInvalidCreds === msg
+            ? `Full Error: ${deep} | API: ${API_BASE}`
+            : friendlyInvalidCreds,
+        );
       } catch (e) {
-        setDialogMessage(msg + `\nAPI: ${API_BASE}`);
+        setDialogMessage(
+          friendlyInvalidCreds === msg
+            ? msg + `\nAPI: ${API_BASE}`
+            : friendlyInvalidCreds,
+        );
       }
       setErrorDialogOpen(true);
-      toast({ title: "Error", description: msg, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: friendlyInvalidCreds,
+        variant: "destructive",
+      });
     } finally {
       setPendingAction(null);
       setIsLoading(false);

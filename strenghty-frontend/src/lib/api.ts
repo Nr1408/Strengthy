@@ -976,6 +976,17 @@ export async function login(username: string, password: string) {
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
+      const lower = txt.toLowerCase();
+      if (lower.includes("email_not_confirmed") || lower.includes("email not confirmed")) {
+        throw new Error(`Login failed: ${res.status} ${txt}`);
+      }
+      if (
+        res.status === 400 ||
+        res.status === 401 ||
+        lower.includes("invalid login credentials")
+      ) {
+        throw new Error("Invalid email id or password, please try again");
+      }
       throw new Error(`Login failed: ${res.status} ${txt}`);
     }
     const data = await res.json();
@@ -991,6 +1002,15 @@ export async function login(username: string, password: string) {
   });
   if (!res.ok) {
     const body = await res.text();
+    const lower = (body || "").toLowerCase();
+    if (
+      res.status === 400 ||
+      res.status === 401 ||
+      lower.includes("unable to log in with provided credentials") ||
+      lower.includes("no active account")
+    ) {
+      throw new Error("Invalid email id or password, please try again");
+    }
     throw new Error(`Login failed: ${res.status} ${body}`);
   }
   const data = (await res.json()) as { token: string };

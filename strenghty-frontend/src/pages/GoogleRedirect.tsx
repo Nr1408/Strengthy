@@ -3,7 +3,7 @@ import { useEffect } from "react";
 export default function GoogleRedirect() {
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
-    const credential = hash.get("credential");
+    const credential = hash.get("credential") || hash.get("id_token");
 
     if (!credential) return;
 
