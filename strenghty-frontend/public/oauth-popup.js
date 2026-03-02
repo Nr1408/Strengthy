@@ -18,7 +18,7 @@
               accessToken: accessToken,
               idToken: idToken || null,
             },
-            window.location.origin,
+            "*",
           );
         }
       } catch (e) {}

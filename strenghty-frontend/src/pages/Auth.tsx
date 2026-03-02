@@ -74,6 +74,9 @@ const GOOGLE_CLIENT_ID_ANDROID_ENV = (
 const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "")
   .toString()
   .trim();
+const APP_ORIGIN_ENV = (import.meta.env.VITE_APP_ORIGIN ?? "")
+  .toString()
+  .trim();
 
 export default function Auth({
   embedded = false,
@@ -130,7 +133,7 @@ export default function Auth({
                 accessToken,
                 idToken: idToken || null,
               },
-              window.location.origin,
+              "*",
             );
           }
         } catch {}
@@ -277,7 +280,23 @@ export default function Auth({
 
   useEffect(() => {
     const onPopupMessage = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin) return;
+      const currentOrigin = window.location.origin.replace(/\/+$/g, "");
+      const configuredOrigin = APP_ORIGIN_ENV
+        ? (() => {
+            try {
+              return new URL(APP_ORIGIN_ENV).origin.replace(/\/+$/g, "");
+            } catch {
+              return APP_ORIGIN_ENV.replace(/\/+$/g, "");
+            }
+          })()
+        : "";
+      const messageOrigin = String(e.origin || "").replace(/\/+$/g, "");
+      if (
+        messageOrigin !== currentOrigin &&
+        (!configuredOrigin || messageOrigin !== configuredOrigin)
+      ) {
+        return;
+      }
       if (e.data?.type !== "supabase-oauth-result") return;
       const accessToken = String(e.data?.accessToken || "").trim();
       const idToken = e.data?.idToken ? String(e.data.idToken) : null;
@@ -372,7 +391,15 @@ export default function Auth({
         return;
       }
 
-      const popupRedirectTo = `${window.location.origin}/oauth-popup.html`;
+      const callbackOrigin = (() => {
+        if (!APP_ORIGIN_ENV) return window.location.origin;
+        try {
+          return new URL(APP_ORIGIN_ENV).origin;
+        } catch {
+          return window.location.origin;
+        }
+      })();
+      const popupRedirectTo = `${callbackOrigin}/oauth-popup.html`;
       const authorizeUrl =
         `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/authorize` +
         `?provider=google` +

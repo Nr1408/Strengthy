@@ -71,3 +71,11 @@ export default defineConfig([
   },
 ])
 ```
+
+## OAuth callback origin
+
+For Google OAuth popup flow with Supabase, you can optionally set:
+
+- `VITE_APP_ORIGIN=https://your-production-domain`
+
+When set, the app uses this origin for `redirect_to=/oauth-popup.html`, which helps avoid callback issues when a temporary Vercel alias differs from your canonical deployment URL.
