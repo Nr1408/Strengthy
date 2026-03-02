@@ -17,10 +17,6 @@ const RUNTIME_API_OVERRIDE_ENABLED =
     .toString()
     .trim() === "1";
 
-// Optional runtime or build-time overrides for Supabase Edge Functions
-// Use env: VITE_GOOGLE_AUTH_ENDPOINT
-// Or set localStorage key `GOOGLE_AUTH_ENDPOINT`
-const GOOGLE_AUTH_ENDPOINT_ENV = (import.meta.env.VITE_GOOGLE_AUTH_ENDPOINT ?? "").toString().trim();
 const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
 const SUPABASE_ANON_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
 const SUPABASE_REST_BASE = SUPABASE_URL_ENV
@@ -63,21 +59,6 @@ function isSupabaseJwtUsable(token: string | null): boolean {
 
 function shouldUseSupabaseApi(): boolean {
   return HAS_SUPABASE_CONFIG;
-}
-
-function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: string) {
-  try {
-    if (envVal && envVal !== "undefined") return envVal.replace(/\/+$/g, "");
-    if (typeof window !== 'undefined') {
-      const allowLocalOverride =
-        RUNTIME_API_OVERRIDE_ENABLED ||
-        localStorage.getItem("ALLOW_API_BASE_OVERRIDE") === "1";
-      if (!allowLocalOverride) return fallback;
-      const ls = localStorage.getItem(localStorageKey);
-      if (ls && ls.trim().length > 0) return ls.trim().replace(/\/+$/g, "");
-    }
-  } catch (e) {}
-  return fallback;
 }
 
 async function fetchWithTimeout(
@@ -1119,11 +1100,21 @@ export async function deleteAccount() {
 }
 
 export async function loginWithGoogle(idToken: string) {
-  const googleEndpoint = runtimeEndpoint(GOOGLE_AUTH_ENDPOINT_ENV, 'GOOGLE_AUTH_ENDPOINT', `${API_BASE}/auth/google/`);
-  const res = await fetch(`${googleEndpoint}`, {
+  if (!SUPABASE_URL_ENV || !SUPABASE_ANON_ENV) {
+    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+  }
+
+  const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+  const res = await fetch(`${supabaseBase}/auth/v1/token?grant_type=id_token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ credential: idToken }),
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_ENV,
+    },
+    body: JSON.stringify({
+      provider: "google",
+      id_token: idToken,
+    }),
   });
     if (!res.ok) throw new Error(`Google login failed: ${res.status} ${await res.text()}`);
     const data = await res.json();

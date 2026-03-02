@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE, login, register, loginWithGoogle } from "@/lib/api";
+import { API_BASE, login, register, loginWithGoogle, setToken } from "@/lib/api";
 import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import {
   Dialog,
@@ -29,12 +29,6 @@ type AuthFormData = {
   email: string;
   password: string;
 };
-
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
 
 type AuthProps = {
   embedded?: boolean;
@@ -66,15 +60,19 @@ const authStepVariants = {
 const GOOGLE_CLIENT_ID_WEB_ENV = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "")
   .toString()
   .trim();
+const GOOGLE_CLIENT_ID_ANDROID_ENV = (
+  import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID ?? ""
+)
+  .toString()
+  .trim();
+const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "")
+  .toString()
+  .trim();
 
 export default function Auth({
   embedded = false,
   defaultSignup,
 }: AuthProps = {}) {
-  if (window.opener && window.location.pathname === "/auth/google/redirect") {
-    return null;
-  }
-
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleSelecting, setIsGoogleSelecting] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | {
@@ -89,12 +87,9 @@ export default function Auth({
   );
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
   const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
-  const [googleClientIdWeb, setGoogleClientIdWeb] = useState<string | null>(
-    null,
-  );
   const [googleClientIdAndroid, setGoogleClientIdAndroid] = useState<
     string | null
-  >(null);
+  >(GOOGLE_CLIENT_ID_ANDROID_ENV || GOOGLE_CLIENT_ID_WEB_ENV || null);
   const [formData, setFormData] = useState<AuthFormData>({
     name: "",
     email: "",
@@ -180,47 +175,9 @@ export default function Auth({
   }, [location.search]);
 
   useEffect(() => {
-    const handler = async (e: MessageEvent) => {
-      if (e.origin !== window.location.origin) return;
-      if (e.data?.type !== "google-credential") return;
-
-      await processGoogleCredential(e.data.credential);
-    };
-
-    window.addEventListener("message", handler);
-
-    // 🛟 Brave fallback polling
-    const interval = setInterval(async () => {
-      const stored = localStorage.getItem("google:credential");
-      if (stored) {
-        localStorage.removeItem("google:credential");
-        await processGoogleCredential(stored);
-      }
-    }, 500);
-
-    return () => {
-      window.removeEventListener("message", handler);
-      clearInterval(interval);
-    };
-  }, []);
-
-  // Ref to ensure GSI is initialized only once
-  const gsiInitializedRef = useRef(false);
-  const waitForGsi = async (timeoutMs = 8000) => {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      if (window.google?.accounts?.id) return true;
-      await new Promise((r) => setTimeout(r, 50));
-    }
-    return false;
-  };
-
-  useEffect(() => {
-    // fetch public config (google client id)
+    // Resolve Android Google client id from env first; legacy backend config as fallback.
     (async () => {
-      if (GOOGLE_CLIENT_ID_WEB_ENV) {
-        setGoogleClientIdWeb(GOOGLE_CLIENT_ID_WEB_ENV);
-      }
+      if (GOOGLE_CLIENT_ID_ANDROID_ENV || GOOGLE_CLIENT_ID_WEB_ENV) return;
 
       if (API_BASE.includes("supabase.co")) {
         return;
@@ -231,12 +188,7 @@ export default function Auth({
         if (res.ok) {
           const data = await res.json();
 
-          // Web client
-          if (data?.google_client_id_web) {
-            setGoogleClientIdWeb(String(data.google_client_id_web));
-          }
-
-          // Android client
+          // Android client fallback for native builds
           if (data?.google_client_id_android) {
             setGoogleClientIdAndroid(String(data.google_client_id_android));
           }
@@ -245,40 +197,44 @@ export default function Auth({
     })();
   }, []);
 
-  const openGoogleOAuthPopup = () => {
-    if (!googleClientIdWeb) return;
+  useEffect(() => {
+    // Supabase OAuth web callback handling
+    try {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const accessToken = hash.get("access_token");
+      const error = hash.get("error_description") || hash.get("error");
 
-    const nonce = Math.random().toString(36).slice(2);
-    const redirectUri = `${window.location.origin}/auth/google/redirect`;
+      if (error) {
+        setDialogMessage(`Google sign-in failed: ${error}`);
+        setErrorDialogOpen(true);
+        return;
+      }
 
-    const params = new URLSearchParams({
-      client_id: googleClientIdWeb,
-      redirect_uri: redirectUri,
-      response_type: "id_token",
-      response_mode: "fragment",
-      scope: "openid email profile",
-      prompt: "select_account",
-      nonce,
-    });
+      if (!accessToken) return;
 
-    const w = 500,
-      h = 600;
-    const y = window.top!.outerHeight / 2 + window.top!.screenY - h / 2;
-    const x = window.top!.outerWidth / 2 + window.top!.screenX - w / 2;
+      setToken(accessToken);
+      try {
+        const idToken = hash.get("id_token");
+        if (idToken) {
+          const payload = JSON.parse(atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+          const profile = {
+            name: payload?.name || null,
+            email: payload?.email || null,
+          };
+          if (profile.name || profile.email) {
+            localStorage.setItem("user:profile", JSON.stringify(profile));
+          }
+        }
+      } catch {}
 
-    const popup = window.open(
-      `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
-      "google_oauth",
-      `width=${w},height=${h},left=${x},top=${y},noopener=false`,
-    );
-
-    // Fallback in case opener gets stripped
-    if (popup) {
-      (popup as any).opener = window;
+      const cleanUrl = `${window.location.pathname}${window.location.search}`;
+      window.history.replaceState({}, document.title, cleanUrl);
+      toast({ title: "Welcome!", description: "Signed in with Google." });
+      navigate("/dashboard");
+    } catch {
+      // no-op
     }
-
-    return popup;
-  };
+  }, [navigate, toast]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -292,159 +248,30 @@ export default function Auth({
 
       if (isNative) return;
 
-      // ✅ ADD THIS BLOCK HERE
-      if (!googleClientIdWeb) {
-        setDialogMessage("Google Client ID still loading. Please try again.");
-        setErrorDialogOpen(true);
-        return;
-      }
-
-      const clientId = googleClientIdWeb.trim();
-
-      if (!clientId) {
-        setDialogMessage("Google Client ID is missing. Please try again.");
-        setErrorDialogOpen(true);
-        return;
-      }
-
-      const popup = openGoogleOAuthPopup();
-      if (!popup) {
+      if (!SUPABASE_URL_ENV) {
         setDialogMessage(
-          "Popup was blocked. Please allow popups for this site and try again.",
+          "Supabase Google auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
         );
         setErrorDialogOpen(true);
-      }
-      return;
-
-      const loaded = await waitForGsi();
-      if (!loaded) {
-        setDialogMessage("Google Identity Services failed to load.");
-        setErrorDialogOpen(true);
         return;
       }
 
-      if (!gsiInitializedRef.current) {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleGoogleCredential,
-
-          // Let Google choose the best available flow
-          ux_mode: "popup",
-
-          // REQUIRED for Chrome 2025+ and Incognito
-          use_fedcm_for_prompt: true,
-
-          auto_select: false,
-          cancel_on_tap_outside: false,
-        });
-
-        gsiInitializedRef.current = true;
-      }
-
-      window.google.accounts.id.disableAutoSelect();
-
-      window.google.accounts.id.prompt((notification: any) => {
-        const reason = notification.getNotDisplayedReason?.();
-
-        if (notification.isNotDisplayed?.()) {
-          console.warn("Google Sign-In not displayed:", reason);
-          if (
-            reason === "opt_out_or_no_session" ||
-            reason === "unknown_reason"
-          ) {
-            openGoogleOAuthPopup();
-          }
-        }
-
-        if (notification.isSkippedMoment?.()) {
-          console.warn(
-            "Google Sign-In skipped:",
-            notification.getSkippedReason?.(),
-          );
-        }
-      });
+      const redirectTo = `${window.location.origin}/auth`;
+      const authorizeUrl =
+        `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/authorize` +
+        `?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+      window.location.assign(authorizeUrl);
     } catch (e: any) {
       setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
       setErrorDialogOpen(true);
     }
   };
 
-  const handleGoogleCredential = async (response: any) => {
-    // If this runs inside popup — do NOTHING here
-    if (window.opener) {
-      console.log("Credential received inside popup — ignoring.");
-      return;
-    }
-
-    const credential = response?.credential || response?.id_token;
-    if (!credential) {
-      setAuthError("No credential returned from Google.");
-      return;
-    }
-
-    setPendingAction({
-      kind: "google",
-      title: "Signing you in",
-      detail: "Connecting to Google and syncing your account…",
-    });
-    setIsLoading(true);
-
-    try {
-      const data = await handleGoogleSuccess(credential);
-
-      toast({ title: "Welcome!", description: "Signed in with Google." });
-
-      const target = data?.created ? "/onboarding" : "/dashboard";
-      navigate(target);
-    } catch (err: any) {
-      const msg = String(err?.message || err || "Google sign-in failed");
-      setDialogMessage(msg);
-      setErrorDialogOpen(true);
-    } finally {
-      setPendingAction(null);
-      setIsLoading(false);
-    }
-  };
-
   // POST the Google credential to the backend, store token and profile
   const handleGoogleSuccess = async (credential: string) => {
-    // Use centralized helper so profile is persisted into Capacitor Preferences
-    // for native builds as well.
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    // Supabase-only exchange of Google ID token (native flow)
     return await loginWithGoogle(credential);
   };
-
-  const processGoogleCredential = useCallback(
-    async (credential: string) => {
-      // Only show the loading/pending UI AFTER the user has selected
-      // an account and we have a credential to exchange with the backend.
-      setPendingAction({
-        kind: "google",
-        title: "Signing you in",
-        detail: "Finishing Google sign-in…",
-      });
-      setIsLoading(true);
-      try {
-        const data = await handleGoogleSuccess(credential);
-        toast({ title: "Welcome!", description: "Signed in with Google." });
-        const target = data?.created ? "/onboarding" : "/dashboard";
-        navigate(target);
-      } catch (err: any) {
-        const msg = String(err?.message || err || "Google sign-in failed");
-        setDialogMessage(msg + `\n\nAPI: ${API_BASE}`);
-        setErrorDialogOpen(true);
-        toast({
-          title: "Google sign-in failed",
-          description: msg,
-          variant: "destructive",
-        });
-      } finally {
-        setPendingAction(null);
-        setIsLoading(false);
-      }
-    },
-    [navigate, toast],
-  );
 
   const onClickContinueWithGoogle = async () => {
     const isNative =
@@ -461,8 +288,13 @@ export default function Auth({
 
     // --- NATIVE FLOW (Keep existing) ---
     try {
-      if (!googleClientIdAndroid) {
-        const msg = `Google sign-in isn't ready (missing Android client id).`;
+      const nativeClientId =
+        (googleClientIdAndroid || GOOGLE_CLIENT_ID_ANDROID_ENV || GOOGLE_CLIENT_ID_WEB_ENV || "")
+          .toString()
+          .trim();
+
+      if (!nativeClientId) {
+        const msg = `Google sign-in isn't ready (missing Android/Web Google client id).`;
         setDialogMessage(msg);
         setErrorDialogOpen(true);
         return;
@@ -477,7 +309,7 @@ export default function Auth({
       // ✅ USE THIS NEW UPDATED BLOCK:
       try {
         await GoogleAuth.initialize({
-          clientId: googleClientIdWeb,
+          clientId: nativeClientId,
           scopes: ["profile", "email"],
           grantOfflineAccess: true,
           // 🔥 NEW: These two settings break the auto-login cache
