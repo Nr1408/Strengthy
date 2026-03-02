@@ -28,6 +28,7 @@ import ViewWorkout from "./pages/ViewWorkout";
 import ExerciseHistory from "./pages/ExerciseHistory";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
+import GoogleRedirect from "./pages/GoogleRedirect";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +110,14 @@ const AnimatedRoutes = () => {
             <AuthFlowTransition>
               <Auth />
             </AuthFlowTransition>
+          }
+        />
+        <Route
+          path="/auth/google/redirect"
+          element={
+            <PageTransition>
+              <GoogleRedirect />
+            </PageTransition>
           }
         />
         <Route

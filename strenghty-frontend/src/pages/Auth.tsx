@@ -13,7 +13,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE, login, register, loginWithGoogle, setToken } from "@/lib/api";
+import {
+  API_BASE,
+  login,
+  register,
+  loginWithGoogle,
+  setToken,
+} from "@/lib/api";
 import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import {
   Dialog,
@@ -99,6 +105,30 @@ export default function Auth({
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const completeWebGoogleLogin = useCallback(
+    (accessToken: string, idToken?: string | null) => {
+      if (!accessToken) return;
+      setToken(accessToken);
+      try {
+        if (idToken) {
+          const payload = JSON.parse(
+            atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+          );
+          const profile = {
+            name: payload?.name || null,
+            email: payload?.email || null,
+          };
+          if (profile.name || profile.email) {
+            localStorage.setItem("user:profile", JSON.stringify(profile));
+          }
+        }
+      } catch {}
+      toast({ title: "Welcome!", description: "Signed in with Google." });
+      navigate("/dashboard");
+    },
+    [navigate, toast],
+  );
 
   const openConfirmEmailDialog = useCallback((email?: string) => {
     setErrorDialogTitle("Please confirm your email");
@@ -198,6 +228,37 @@ export default function Auth({
   }, []);
 
   useEffect(() => {
+    const onPopupMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== "supabase-oauth-result") return;
+      const accessToken = String(e.data?.accessToken || "").trim();
+      const idToken = e.data?.idToken ? String(e.data.idToken) : null;
+      if (!accessToken) return;
+      completeWebGoogleLogin(accessToken, idToken);
+    };
+
+    window.addEventListener("message", onPopupMessage);
+
+    const interval = setInterval(() => {
+      try {
+        const raw = localStorage.getItem("supabase:oauth_result");
+        if (!raw) return;
+        localStorage.removeItem("supabase:oauth_result");
+        const parsed = JSON.parse(raw || "{}");
+        const accessToken = String(parsed?.accessToken || "").trim();
+        const idToken = parsed?.idToken ? String(parsed.idToken) : null;
+        if (!accessToken) return;
+        completeWebGoogleLogin(accessToken, idToken);
+      } catch {}
+    }, 500);
+
+    return () => {
+      window.removeEventListener("message", onPopupMessage);
+      clearInterval(interval);
+    };
+  }, [completeWebGoogleLogin]);
+
+  useEffect(() => {
     // Supabase OAuth web callback handling
     try {
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -211,30 +272,15 @@ export default function Auth({
       }
 
       if (!accessToken) return;
-
-      setToken(accessToken);
-      try {
-        const idToken = hash.get("id_token");
-        if (idToken) {
-          const payload = JSON.parse(atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-          const profile = {
-            name: payload?.name || null,
-            email: payload?.email || null,
-          };
-          if (profile.name || profile.email) {
-            localStorage.setItem("user:profile", JSON.stringify(profile));
-          }
-        }
-      } catch {}
+      const idToken = hash.get("id_token");
 
       const cleanUrl = `${window.location.pathname}${window.location.search}`;
       window.history.replaceState({}, document.title, cleanUrl);
-      toast({ title: "Welcome!", description: "Signed in with Google." });
-      navigate("/dashboard");
+      completeWebGoogleLogin(accessToken, idToken);
     } catch {
       // no-op
     }
-  }, [navigate, toast]);
+  }, [completeWebGoogleLogin]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -257,10 +303,37 @@ export default function Auth({
       }
 
       const redirectTo = `${window.location.origin}/auth`;
+      const popupRedirectTo = `${window.location.origin}/auth/google/redirect`;
+      const oauthState = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const authorizeUrl =
         `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/authorize` +
-        `?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
-      window.location.assign(authorizeUrl);
+        `?provider=google` +
+        `&redirect_to=${encodeURIComponent(popupRedirectTo)}` +
+        `&prompt=${encodeURIComponent("select_account consent")}` +
+        `&state=${encodeURIComponent(oauthState)}`;
+
+      const w = 520;
+      const h = 680;
+      const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+      const top = Math.round(window.screenY + (window.outerHeight - h) / 2);
+      const popup = window.open(
+        authorizeUrl,
+        "supabase_google_oauth",
+        `width=${w},height=${h},left=${left},top=${top},noopener=false`,
+      );
+
+      if (!popup) {
+        setDialogMessage(
+          "Popup was blocked. Please allow popups for this site and try again.",
+        );
+        setErrorDialogOpen(true);
+        return;
+      }
+
+      try {
+        (popup as any).opener = window;
+      } catch {}
+      return;
     } catch (e: any) {
       setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
       setErrorDialogOpen(true);
@@ -288,10 +361,14 @@ export default function Auth({
 
     // --- NATIVE FLOW (Keep existing) ---
     try {
-      const nativeClientId =
-        (googleClientIdAndroid || GOOGLE_CLIENT_ID_ANDROID_ENV || GOOGLE_CLIENT_ID_WEB_ENV || "")
-          .toString()
-          .trim();
+      const nativeClientId = (
+        googleClientIdAndroid ||
+        GOOGLE_CLIENT_ID_ANDROID_ENV ||
+        GOOGLE_CLIENT_ID_WEB_ENV ||
+        ""
+      )
+        .toString()
+        .trim();
 
       if (!nativeClientId) {
         const msg = `Google sign-in isn't ready (missing Android/Web Google client id).`;

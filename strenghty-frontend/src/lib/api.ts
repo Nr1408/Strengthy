@@ -1234,6 +1234,8 @@ export async function signOut() {
     localStorage.removeItem("user:onboarding");
     localStorage.removeItem("user:monthlyGoal");
     localStorage.removeItem("google:credential");
+    localStorage.removeItem("supabase:oauth_result");
+    localStorage.removeItem("supabase:oauth_error");
   } catch (e) {}
 
   try {
