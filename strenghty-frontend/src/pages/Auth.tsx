@@ -333,7 +333,6 @@ export default function Auth({
     try {
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
       const accessToken = hash.get("access_token");
-      const oauthState = String(hash.get("state") || "");
       const error = hash.get("error_description") || hash.get("error");
 
       if (error) {
@@ -344,11 +343,10 @@ export default function Auth({
 
       if (!accessToken) return;
       const idToken = hash.get("id_token");
-      const forcePopupContext = oauthState.startsWith("popup_");
 
       const cleanUrl = `${window.location.pathname}${window.location.search}`;
       window.history.replaceState({}, document.title, cleanUrl);
-      completeWebGoogleLogin(accessToken, idToken, forcePopupContext);
+      completeWebGoogleLogin(accessToken, idToken);
     } catch {
       // no-op
     }
@@ -375,13 +373,11 @@ export default function Auth({
       }
 
       const popupRedirectTo = `${window.location.origin}/oauth-popup.html`;
-      const oauthState = `popup_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const authorizeUrl =
         `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/authorize` +
         `?provider=google` +
         `&redirect_to=${encodeURIComponent(popupRedirectTo)}` +
-        `&prompt=${encodeURIComponent("select_account consent")}` +
-        `&state=${encodeURIComponent(oauthState)}`;
+        `&prompt=${encodeURIComponent("select_account consent")}`;
 
       const w = 520;
       const h = 680;
