@@ -107,10 +107,15 @@ export default function Auth({
   const location = useLocation();
 
   const completeWebGoogleLogin = useCallback(
-    (accessToken: string, idToken?: string | null) => {
+    (
+      accessToken: string,
+      idToken?: string | null,
+      forcePopupContext = false,
+    ) => {
       if (!accessToken) return;
 
       const isPopupWindow =
+        forcePopupContext ||
         typeof window !== "undefined" &&
         (!!window.opener || window.name === "supabase_google_oauth");
 
@@ -326,6 +331,7 @@ export default function Auth({
     try {
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
       const accessToken = hash.get("access_token");
+      const oauthState = String(hash.get("state") || "");
       const error = hash.get("error_description") || hash.get("error");
 
       if (error) {
@@ -336,10 +342,11 @@ export default function Auth({
 
       if (!accessToken) return;
       const idToken = hash.get("id_token");
+      const forcePopupContext = oauthState.startsWith("popup_");
 
       const cleanUrl = `${window.location.pathname}${window.location.search}`;
       window.history.replaceState({}, document.title, cleanUrl);
-      completeWebGoogleLogin(accessToken, idToken);
+      completeWebGoogleLogin(accessToken, idToken, forcePopupContext);
     } catch {
       // no-op
     }
@@ -367,7 +374,7 @@ export default function Auth({
 
       const redirectTo = `${window.location.origin}/auth`;
       const popupRedirectTo = `${window.location.origin}/auth/google/redirect`;
-      const oauthState = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const oauthState = `popup_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const authorizeUrl =
         `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/authorize` +
         `?provider=google` +
