@@ -372,8 +372,7 @@ export default function Auth({
         return;
       }
 
-      const redirectTo = `${window.location.origin}/auth`;
-      const popupRedirectTo = `${window.location.origin}/auth/google/redirect`;
+      const popupRedirectTo = `${window.location.origin}/oauth-popup.html`;
       const oauthState = `popup_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const authorizeUrl =
         `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/authorize` +
