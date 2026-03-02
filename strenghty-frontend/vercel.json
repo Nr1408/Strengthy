@@ -13,6 +13,8 @@
     }
   ],
   "rewrites": [
+    { "source": "/oauth-popup.html", "destination": "/oauth-popup.html" },
+    { "source": "/oauth-popup.js", "destination": "/oauth-popup.js" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }

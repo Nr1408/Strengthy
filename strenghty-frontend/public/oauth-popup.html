@@ -7,65 +7,26 @@
     <style>
       body {
         margin: 0;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
         background: #0b0f17;
         color: #fff;
         display: grid;
         place-items: center;
         min-height: 100vh;
       }
-      .msg { opacity: 0.9; font-size: 14px; }
+      .msg {
+        opacity: 0.9;
+        font-size: 14px;
+      }
     </style>
   </head>
   <body>
     <div class="msg">Finishing sign-in…</div>
-    <script>
-      (function () {
-        function relay() {
-          try {
-            var hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-            var accessToken = hash.get("access_token");
-            var idToken = hash.get("id_token");
-            if (!accessToken) return;
-
-            try {
-              if (window.opener) {
-                window.opener.postMessage(
-                  {
-                    type: "supabase-oauth-result",
-                    accessToken: accessToken,
-                    idToken: idToken || null,
-                  },
-                  window.location.origin,
-                );
-              }
-            } catch (e) {}
-
-            try {
-              localStorage.setItem(
-                "supabase:oauth_result",
-                JSON.stringify({ accessToken: accessToken, idToken: idToken || null }),
-              );
-            } catch (e) {}
-
-            try {
-              var ch = new BroadcastChannel("supabase_oauth");
-              ch.postMessage({
-                type: "supabase-oauth-result",
-                accessToken: accessToken,
-                idToken: idToken || null,
-              });
-              ch.close();
-            } catch (e) {}
-          } catch (e) {}
-
-          try { window.close(); } catch (e) {}
-        }
-
-        relay();
-        var timer = setInterval(relay, 250);
-        setTimeout(function () { clearInterval(timer); }, 5000);
-      })();
-    </script>
+    <script src="/oauth-popup.js"></script>
   </body>
 </html>
