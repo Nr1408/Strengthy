@@ -7,6 +7,10 @@
       if (!accessToken) return;
 
       try {
+        sessionStorage.setItem("supabase_oauth_popup", "1");
+      } catch (e) {}
+
+      try {
         if (window.opener) {
           window.opener.postMessage(
             {

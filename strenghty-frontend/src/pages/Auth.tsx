@@ -116,8 +116,10 @@ export default function Auth({
 
       const isPopupWindow =
         forcePopupContext ||
-        typeof window !== "undefined" &&
-        (!!window.opener || window.name === "supabase_google_oauth");
+        (typeof window !== "undefined" &&
+          window.sessionStorage?.getItem("supabase_oauth_popup") === "1") ||
+        (typeof window !== "undefined" &&
+          (!!window.opener || window.name === "supabase_google_oauth"));
 
       if (isPopupWindow) {
         try {
@@ -386,7 +388,7 @@ export default function Auth({
       const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
       const top = Math.round(window.screenY + (window.outerHeight - h) / 2);
       const popup = window.open(
-        authorizeUrl,
+        "about:blank",
         "supabase_google_oauth",
         `width=${w},height=${h},left=${left},top=${top},noopener=false`,
       );
@@ -401,6 +403,14 @@ export default function Auth({
 
       try {
         (popup as any).opener = window;
+      } catch {}
+
+      try {
+        popup.sessionStorage.setItem("supabase_oauth_popup", "1");
+      } catch {}
+
+      try {
+        popup.location.href = authorizeUrl;
       } catch {}
       return;
     } catch (e: any) {

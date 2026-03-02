@@ -95,7 +95,9 @@ const OAuthPopupBridge = () => {
   useEffect(() => {
     const emitAndClose = () => {
       try {
-        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const hash = new URLSearchParams(
+          window.location.hash.replace(/^#/, ""),
+        );
         const accessToken = hash.get("access_token");
         const idToken = hash.get("id_token");
 
