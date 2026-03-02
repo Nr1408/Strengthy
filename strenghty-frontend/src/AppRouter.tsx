@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import ScrollManager from "@/components/layout/ScrollManager";
 import SwipeNavigator from "@/components/layout/SwipeNavigator";
@@ -90,8 +91,76 @@ const AuthFlowTransition = ({ children }: { children: React.ReactNode }) => (
   </motion.div>
 );
 
+const OAuthPopupBridge = () => {
+  useEffect(() => {
+    const emitAndClose = () => {
+      try {
+        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const accessToken = hash.get("access_token");
+        const idToken = hash.get("id_token");
+
+        if (accessToken) {
+          try {
+            if (window.opener) {
+              window.opener.postMessage(
+                {
+                  type: "supabase-oauth-result",
+                  accessToken,
+                  idToken: idToken || null,
+                },
+                window.location.origin,
+              );
+            }
+          } catch {}
+
+          try {
+            localStorage.setItem(
+              "supabase:oauth_result",
+              JSON.stringify({ accessToken, idToken: idToken || null }),
+            );
+          } catch {}
+
+          try {
+            const ch = new BroadcastChannel("supabase_oauth");
+            ch.postMessage({
+              type: "supabase-oauth-result",
+              accessToken,
+              idToken: idToken || null,
+            });
+            ch.close();
+          } catch {}
+        }
+      } catch {}
+
+      try {
+        window.close();
+      } catch {}
+    };
+
+    emitAndClose();
+    const timer = setInterval(emitAndClose, 250);
+    const stop = setTimeout(() => clearInterval(timer), 4000);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(stop);
+    };
+  }, []);
+
+  return (
+    <div className="h-screen flex items-center justify-center text-white">
+      Finishing sign-in…
+    </div>
+  );
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
+  const isOAuthPopup =
+    typeof window !== "undefined" && window.name === "supabase_google_oauth";
+
+  if (isOAuthPopup) {
+    return <OAuthPopupBridge />;
+  }
 
   return (
     <AnimatePresence mode="wait">
