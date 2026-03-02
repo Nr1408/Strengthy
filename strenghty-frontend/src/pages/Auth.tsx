@@ -110,16 +110,22 @@ export default function Auth({
     (accessToken: string, idToken?: string | null) => {
       if (!accessToken) return;
 
-      if (typeof window !== "undefined" && window.opener) {
+      const isPopupWindow =
+        typeof window !== "undefined" &&
+        (!!window.opener || window.name === "supabase_google_oauth");
+
+      if (isPopupWindow) {
         try {
-          window.opener.postMessage(
-            {
-              type: "supabase-oauth-result",
-              accessToken,
-              idToken: idToken || null,
-            },
-            window.location.origin,
-          );
+          if (window.opener) {
+            window.opener.postMessage(
+              {
+                type: "supabase-oauth-result",
+                accessToken,
+                idToken: idToken || null,
+              },
+              window.location.origin,
+            );
+          }
         } catch {}
         try {
           localStorage.setItem(
@@ -127,11 +133,20 @@ export default function Auth({
             JSON.stringify({ accessToken, idToken: idToken || null }),
           );
         } catch {}
+        try {
+          const ch = new BroadcastChannel("supabase_oauth");
+          ch.postMessage({
+            type: "supabase-oauth-result",
+            accessToken,
+            idToken: idToken || null,
+          });
+          ch.close();
+        } catch {}
         setTimeout(() => {
           try {
             window.close();
           } catch {}
-        }, 120);
+        }, 80);
         return;
       }
 
@@ -263,7 +278,25 @@ export default function Auth({
       completeWebGoogleLogin(accessToken, idToken);
     };
 
+    const channel = (() => {
+      try {
+        return new BroadcastChannel("supabase_oauth");
+      } catch {
+        return null;
+      }
+    })();
+
+    const onChannelMessage = (event: MessageEvent) => {
+      const payload: any = event?.data || {};
+      if (payload?.type !== "supabase-oauth-result") return;
+      const accessToken = String(payload?.accessToken || "").trim();
+      const idToken = payload?.idToken ? String(payload.idToken) : null;
+      if (!accessToken) return;
+      completeWebGoogleLogin(accessToken, idToken);
+    };
+
     window.addEventListener("message", onPopupMessage);
+    if (channel) channel.addEventListener("message", onChannelMessage as any);
 
     const interval = setInterval(() => {
       try {
@@ -280,6 +313,10 @@ export default function Auth({
 
     return () => {
       window.removeEventListener("message", onPopupMessage);
+      if (channel) {
+        channel.removeEventListener("message", onChannelMessage as any);
+        channel.close();
+      }
       clearInterval(interval);
     };
   }, [completeWebGoogleLogin]);
