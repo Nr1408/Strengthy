@@ -109,6 +109,32 @@ export default function Auth({
   const completeWebGoogleLogin = useCallback(
     (accessToken: string, idToken?: string | null) => {
       if (!accessToken) return;
+
+      if (typeof window !== "undefined" && window.opener) {
+        try {
+          window.opener.postMessage(
+            {
+              type: "supabase-oauth-result",
+              accessToken,
+              idToken: idToken || null,
+            },
+            window.location.origin,
+          );
+        } catch {}
+        try {
+          localStorage.setItem(
+            "supabase:oauth_result",
+            JSON.stringify({ accessToken, idToken: idToken || null }),
+          );
+        } catch {}
+        setTimeout(() => {
+          try {
+            window.close();
+          } catch {}
+        }, 120);
+        return;
+      }
+
       setToken(accessToken);
       try {
         if (idToken) {
