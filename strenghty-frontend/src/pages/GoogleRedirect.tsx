@@ -11,7 +11,7 @@ export default function GoogleRedirect() {
     if (window.opener) {
       window.opener.postMessage(
         { type: "google-credential", credential },
-        window.location.origin
+        window.location.origin,
       );
     }
 

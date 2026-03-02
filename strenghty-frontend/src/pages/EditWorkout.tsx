@@ -1530,9 +1530,7 @@ export default function EditWorkout() {
                           absWeightPR: allowPrForExercise
                             ? created.absWeightPR
                             : false,
-                          e1rmPR: allowPrForExercise
-                            ? created.e1rmPR
-                            : false,
+                          e1rmPR: allowPrForExercise ? created.e1rmPR : false,
                           volumePR: allowPrForExercise
                             ? created.volumePR
                             : false,

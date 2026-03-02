@@ -276,6 +276,8 @@ export default function Auth({
     if (popup) {
       (popup as any).opener = window;
     }
+
+    return popup;
   };
 
   const handleGoogleLogin = async () => {
@@ -298,6 +300,21 @@ export default function Auth({
       }
 
       const clientId = googleClientIdWeb.trim();
+
+      if (!clientId) {
+        setDialogMessage("Google Client ID is missing. Please try again.");
+        setErrorDialogOpen(true);
+        return;
+      }
+
+      const popup = openGoogleOAuthPopup();
+      if (!popup) {
+        setDialogMessage(
+          "Popup was blocked. Please allow popups for this site and try again.",
+        );
+        setErrorDialogOpen(true);
+      }
+      return;
 
       const loaded = await waitForGsi();
       if (!loaded) {
@@ -741,11 +758,7 @@ export default function Auth({
                       <button
                         type="button"
                         onClick={onClickContinueWithGoogle}
-                        disabled={
-                          (!googleClientIdWeb && !googleClientIdAndroid) ||
-                          isLoading ||
-                          isGoogleSelecting
-                        }
+                        disabled={isLoading || isGoogleSelecting}
                         className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
                       >
                         <img

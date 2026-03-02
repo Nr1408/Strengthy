@@ -326,13 +326,6 @@ export function SetRow({
     });
   }
 
-  if (set.isPR && prLines.length === 0) {
-    prLines.push({
-      label: "Personal Record",
-      value: "New best set",
-    });
-  }
-
   const [open, setOpen] = useState(false);
   const [halfDialogOpen, setHalfDialogOpen] = useState(false);
   const [halfSliderValue, setHalfSliderValue] = useState<number>(

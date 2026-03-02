@@ -12,6 +12,10 @@ const _envBase = (import.meta.env.VITE_API_BASE ?? import.meta.env.VITE_API_URL 
 // localStorage key `USE_LOCAL_API=1` when you want to force local usage.
 const DEPLOYED_API = "https://strengthy-backend.onrender.com/api";
 const LOCAL_API = "http://localhost:8000/api";
+const RUNTIME_API_OVERRIDE_ENABLED =
+  (import.meta.env.VITE_ALLOW_RUNTIME_API_OVERRIDE ?? "")
+    .toString()
+    .trim() === "1";
 
 // Optional runtime or build-time overrides for Supabase Edge Functions
 // Use env: VITE_GOOGLE_AUTH_ENDPOINT
@@ -65,6 +69,10 @@ function runtimeEndpoint(envVal: string, localStorageKey: string, fallback: stri
   try {
     if (envVal && envVal !== "undefined") return envVal.replace(/\/+$/g, "");
     if (typeof window !== 'undefined') {
+      const allowLocalOverride =
+        RUNTIME_API_OVERRIDE_ENABLED ||
+        localStorage.getItem("ALLOW_API_BASE_OVERRIDE") === "1";
+      if (!allowLocalOverride) return fallback;
       const ls = localStorage.getItem(localStorageKey);
       if (ls && ls.trim().length > 0) return ls.trim().replace(/\/+$/g, "");
     }
@@ -291,7 +299,11 @@ function pickFromCandidates(list: string[]): string {
   try {
     // Only honor local override in DEV. In production (including Capacitor APKs),
     // forcing LOCAL_API will break networking on device.
-    const wantLocal = import.meta.env.DEV && typeof window !== "undefined" && (localStorage.getItem("USE_LOCAL_API") === "1");
+    const wantLocal =
+      RUNTIME_API_OVERRIDE_ENABLED &&
+      import.meta.env.DEV &&
+      typeof window !== "undefined" &&
+      localStorage.getItem("USE_LOCAL_API") === "1";
     if (import.meta.env.DEV || wantLocal) {
       for (const c of trimmed) {
         try {
@@ -325,7 +337,8 @@ if (_envBase && _envBase !== "undefined" && /[,;|]/.test(_envBase)) {
 // will make dev use the deployed backend.
 try {
   if (import.meta.env.DEV && typeof window !== "undefined") {
-    const useLocal = localStorage.getItem("USE_LOCAL_API") === "1";
+    const useLocal =
+      RUNTIME_API_OVERRIDE_ENABLED && localStorage.getItem("USE_LOCAL_API") === "1";
     resolvedBase = useLocal ? LOCAL_API : DEPLOYED_API;
   }
 } catch (e) {}
@@ -376,7 +389,9 @@ try {
   if (typeof window !== 'undefined') {
     try {
       const o = localStorage.getItem('API_BASE_OVERRIDE');
-      const allowOverride = import.meta.env.DEV || localStorage.getItem('ALLOW_API_BASE_OVERRIDE') === '1';
+      const allowOverride =
+        RUNTIME_API_OVERRIDE_ENABLED ||
+        localStorage.getItem('ALLOW_API_BASE_OVERRIDE') === '1';
       if (allowOverride && o && typeof o === 'string' && o.trim().length > 0) {
         let candidate = o.trim();
         // normalize trailing slashes
