@@ -392,11 +392,24 @@ export default function Auth({
       }
 
       const callbackOrigin = (() => {
-        if (!APP_ORIGIN_ENV) return window.location.origin;
+        const currentOrigin = window.location.origin;
+        if (!APP_ORIGIN_ENV) return currentOrigin;
         try {
-          return new URL(APP_ORIGIN_ENV).origin;
+          const configured = new URL(APP_ORIGIN_ENV);
+          const current = new URL(currentOrigin);
+          const configuredHost = configured.hostname.toLowerCase();
+          const currentHost = current.hostname.toLowerCase();
+          const bothVercelAliases =
+            configuredHost.endsWith(".vercel.app") &&
+            currentHost.endsWith(".vercel.app");
+
+          if (bothVercelAliases && configuredHost !== currentHost) {
+            return currentOrigin;
+          }
+
+          return configured.origin;
         } catch {
-          return window.location.origin;
+          return currentOrigin;
         }
       })();
       const popupRedirectTo = `${callbackOrigin}/oauth-popup.html`;
