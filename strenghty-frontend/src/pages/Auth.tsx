@@ -20,6 +20,7 @@ import {
   loginWithGoogle,
   setToken,
 } from "@/lib/api";
+import { createClient } from "@supabase/supabase-js";
 import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import {
   Dialog,
@@ -74,9 +75,23 @@ const GOOGLE_CLIENT_ID_ANDROID_ENV = (
 const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "")
   .toString()
   .trim();
-const APP_ORIGIN_ENV = (import.meta.env.VITE_APP_ORIGIN ?? "")
+const SUPABASE_ANON_KEY_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "")
   .toString()
   .trim();
+const REDIRECT_ORIGIN = "https://strengthy-strengthy-frontend.vercel.app";
+const GOOGLE_REDIRECT_TO = `${REDIRECT_ORIGIN}/auth`;
+
+const supabase =
+  SUPABASE_URL_ENV && SUPABASE_ANON_KEY_ENV
+    ? createClient(SUPABASE_URL_ENV, SUPABASE_ANON_KEY_ENV, {
+        auth: {
+          flowType: "implicit",
+          detectSessionInUrl: false,
+          persistSession: true,
+          autoRefreshToken: true,
+        },
+      })
+    : null;
 
 export default function Auth({
   embedded = false,
@@ -279,79 +294,9 @@ export default function Auth({
   }, []);
 
   useEffect(() => {
-    const onPopupMessage = (e: MessageEvent) => {
-      const currentOrigin = window.location.origin.replace(/\/+$/g, "");
-      const configuredOrigin = APP_ORIGIN_ENV
-        ? (() => {
-            try {
-              return new URL(APP_ORIGIN_ENV).origin.replace(/\/+$/g, "");
-            } catch {
-              return APP_ORIGIN_ENV.replace(/\/+$/g, "");
-            }
-          })()
-        : "";
-      const messageOrigin = String(e.origin || "").replace(/\/+$/g, "");
-      if (
-        messageOrigin !== currentOrigin &&
-        (!configuredOrigin || messageOrigin !== configuredOrigin)
-      ) {
-        return;
-      }
-      if (e.data?.type !== "supabase-oauth-result") return;
-      const accessToken = String(e.data?.accessToken || "").trim();
-      const idToken = e.data?.idToken ? String(e.data.idToken) : null;
-      if (!accessToken) return;
-      completeWebGoogleLogin(accessToken, idToken);
-    };
-
-    const channel = (() => {
-      try {
-        return new BroadcastChannel("supabase_oauth");
-      } catch {
-        return null;
-      }
-    })();
-
-    const onChannelMessage = (event: MessageEvent) => {
-      const payload: any = event?.data || {};
-      if (payload?.type !== "supabase-oauth-result") return;
-      const accessToken = String(payload?.accessToken || "").trim();
-      const idToken = payload?.idToken ? String(payload.idToken) : null;
-      if (!accessToken) return;
-      completeWebGoogleLogin(accessToken, idToken);
-    };
-
-    window.addEventListener("message", onPopupMessage);
-    if (channel) channel.addEventListener("message", onChannelMessage as any);
-
-    const interval = setInterval(() => {
-      try {
-        const raw = localStorage.getItem("supabase:oauth_result");
-        if (!raw) return;
-        localStorage.removeItem("supabase:oauth_result");
-        const parsed = JSON.parse(raw || "{}");
-        const accessToken = String(parsed?.accessToken || "").trim();
-        const idToken = parsed?.idToken ? String(parsed.idToken) : null;
-        if (!accessToken) return;
-        completeWebGoogleLogin(accessToken, idToken);
-      } catch {}
-    }, 500);
-
-    return () => {
-      window.removeEventListener("message", onPopupMessage);
-      if (channel) {
-        channel.removeEventListener("message", onChannelMessage as any);
-        channel.close();
-      }
-      clearInterval(interval);
-    };
-  }, [completeWebGoogleLogin]);
-
-  useEffect(() => {
-    // Supabase OAuth web callback handling
+    // Supabase OAuth full-page callback handling
     try {
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-      const accessToken = hash.get("access_token");
       const error = hash.get("error_description") || hash.get("error");
 
       if (error) {
@@ -360,8 +305,17 @@ export default function Auth({
         return;
       }
 
+      const accessToken = (hash.get("access_token") || "").trim();
       if (!accessToken) return;
-      const idToken = hash.get("id_token");
+      const idToken = (hash.get("id_token") || "").trim() || null;
+      const refreshToken = (hash.get("refresh_token") || "").trim();
+
+      if (refreshToken && supabase) {
+        void supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+      }
 
       const cleanUrl = `${window.location.pathname}${window.location.search}`;
       window.history.replaceState({}, document.title, cleanUrl);
@@ -391,63 +345,27 @@ export default function Auth({
         return;
       }
 
-      const callbackOrigin = (() => {
-        const currentOrigin = window.location.origin;
-        if (!APP_ORIGIN_ENV) return currentOrigin;
-        try {
-          const configured = new URL(APP_ORIGIN_ENV);
-          const current = new URL(currentOrigin);
-          const configuredHost = configured.hostname.toLowerCase();
-          const currentHost = current.hostname.toLowerCase();
-          const bothVercelAliases =
-            configuredHost.endsWith(".vercel.app") &&
-            currentHost.endsWith(".vercel.app");
-
-          if (bothVercelAliases && configuredHost !== currentHost) {
-            return currentOrigin;
-          }
-
-          return configured.origin;
-        } catch {
-          return currentOrigin;
-        }
-      })();
-      const popupRedirectTo = `${callbackOrigin}/oauth-popup.html`;
-      const authorizeUrl =
-        `${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/authorize` +
-        `?provider=google` +
-        `&redirect_to=${encodeURIComponent(popupRedirectTo)}` +
-        `&prompt=${encodeURIComponent("select_account consent")}`;
-
-      const w = 520;
-      const h = 680;
-      const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
-      const top = Math.round(window.screenY + (window.outerHeight - h) / 2);
-      const popup = window.open(
-        "about:blank",
-        "supabase_google_oauth",
-        `width=${w},height=${h},left=${left},top=${top},noopener=false`,
-      );
-
-      if (!popup) {
+      if (!supabase) {
         setDialogMessage(
-          "Popup was blocked. Please allow popups for this site and try again.",
+          "Supabase Google auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
         );
         setErrorDialogOpen(true);
         return;
       }
 
-      try {
-        (popup as any).opener = window;
-      } catch {}
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: GOOGLE_REDIRECT_TO,
+          queryParams: {
+            prompt: "select_account consent",
+          },
+        },
+      });
 
-      try {
-        popup.sessionStorage.setItem("supabase_oauth_popup", "1");
-      } catch {}
-
-      try {
-        popup.location.href = authorizeUrl;
-      } catch {}
+      if (error) {
+        throw error;
+      }
       return;
     } catch (e: any) {
       setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
