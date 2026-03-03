@@ -124,8 +124,54 @@ export default function Auth({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const shouldRouteToOnboarding = useCallback(
+    async (accessToken: string): Promise<boolean> => {
+      if (!SUPABASE_URL_ENV || !SUPABASE_ANON_KEY_ENV || !accessToken) {
+        return false;
+      }
+
+      try {
+        const payload = JSON.parse(
+          atob(accessToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+        );
+        const userId = String(payload?.sub || "").trim();
+        if (!userId) return false;
+
+        const base = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+        const res = await fetch(
+          `${base}/rest/v1/profiles?select=goals,experience,monthly_workouts&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+          {
+            headers: {
+              apikey: SUPABASE_ANON_KEY_ENV,
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+        );
+
+        if (!res.ok) return false;
+        const rows = (await res.json()) as Array<{
+          goals?: string[] | null;
+          experience?: string | null;
+          monthly_workouts?: number | null;
+        }>;
+        const profile = rows?.[0];
+        if (!profile) return true;
+
+        const hasGoals = Array.isArray(profile.goals) && profile.goals.length > 0;
+        const hasExperience = !!String(profile.experience || "").trim();
+        const hasMonthlyWorkouts =
+          typeof profile.monthly_workouts === "number" && profile.monthly_workouts > 0;
+
+        return !(hasGoals || hasExperience || hasMonthlyWorkouts);
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
+
   const completeWebGoogleLogin = useCallback(
-    (
+    async (
       accessToken: string,
       idToken?: string | null,
       forcePopupContext = false,
@@ -190,10 +236,18 @@ export default function Auth({
           }
         }
       } catch {}
+      const goOnboarding = await shouldRouteToOnboarding(accessToken);
+      if (goOnboarding) {
+        try {
+          localStorage.removeItem("user:onboarding");
+          localStorage.removeItem("user:monthlyGoal");
+        } catch {}
+      }
+
       toast({ title: "Welcome!", description: "Signed in with Google." });
-      navigate("/dashboard");
+      navigate(goOnboarding ? "/onboarding" : "/dashboard");
     },
-    [navigate, toast],
+    [navigate, shouldRouteToOnboarding, toast],
   );
 
   const openConfirmEmailDialog = useCallback((email?: string) => {
@@ -319,7 +373,7 @@ export default function Auth({
 
       const cleanUrl = `${window.location.pathname}${window.location.search}`;
       window.history.replaceState({}, document.title, cleanUrl);
-      completeWebGoogleLogin(accessToken, idToken);
+      void completeWebGoogleLogin(accessToken, idToken);
     } catch {
       // no-op
     }
