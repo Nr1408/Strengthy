@@ -20,6 +20,7 @@ import {
   loginWithGoogle,
   setToken,
 } from "@/lib/api";
+import ConfirmEmailDialog from "@/components/ConfirmEmailDialog";
 import { createClient } from "@supabase/supabase-js";
 import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import {
@@ -109,6 +110,10 @@ export default function Auth({
     "Authentication error",
   );
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
+  const [confirmEmailOpen, setConfirmEmailOpen] = useState(false);
+  const [confirmEmailTarget, setConfirmEmailTarget] = useState<string | null>(
+    null,
+  );
   const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
   const [googleClientIdAndroid, setGoogleClientIdAndroid] = useState<
     string | null
@@ -252,13 +257,9 @@ export default function Auth({
   );
 
   const openConfirmEmailDialog = useCallback((email?: string) => {
-    setErrorDialogTitle("Please confirm your email");
-    setDialogMessage(
-      email
-        ? `Please confirm your email (${email}) before logging in. Check your inbox and spam folder.`
-        : "Please confirm your email before logging in. Check your inbox and spam folder.",
-    );
-    setErrorDialogOpen(true);
+    const normalized = String(email || "").trim();
+    setConfirmEmailTarget(normalized || null);
+    setConfirmEmailOpen(true);
   }, []);
 
   const isEmailNotConfirmedError = useCallback((msg: string) => {
@@ -549,6 +550,10 @@ export default function Auth({
         // Create the account
         await register(formData.email, formData.password);
         openConfirmEmailDialog(formData.email);
+        toast({
+          title: "Please confirm your email",
+          description: "Check your inbox, then log in.",
+        });
         setShowSignup(false);
         return;
       }
@@ -856,6 +861,12 @@ export default function Auth({
             </DialogHeader>
           </DialogContent>
         </Dialog>
+
+        <ConfirmEmailDialog
+          open={confirmEmailOpen}
+          setOpen={setConfirmEmailOpen}
+          email={confirmEmailTarget}
+        />
       </main>
     </div>
   );
