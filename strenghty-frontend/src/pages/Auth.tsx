@@ -258,6 +258,7 @@ export default function Auth({
 
   const openConfirmEmailDialog = useCallback((email?: string) => {
     const normalized = String(email || "").trim();
+    setErrorDialogOpen(false);
     setConfirmEmailTarget(normalized || null);
     setConfirmEmailOpen(true);
   }, []);
@@ -266,7 +267,10 @@ export default function Auth({
     const lower = msg.toLowerCase();
     return (
       lower.includes("email_not_confirmed") ||
-      lower.includes("email not confirmed")
+      lower.includes("email not confirmed") ||
+      lower.includes("confirm your email") ||
+      lower.includes("email confirmation") ||
+      lower.includes("verify your email")
     );
   }, []);
 

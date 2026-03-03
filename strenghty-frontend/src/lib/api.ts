@@ -972,9 +972,25 @@ export async function login(username: string, password: string) {
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      const lower = txt.toLowerCase();
-      if (lower.includes("email_not_confirmed") || lower.includes("email not confirmed")) {
-        throw new Error(`Login failed: ${res.status} ${txt}`);
+      let payload: any = null;
+      try {
+        payload = txt ? JSON.parse(txt) : null;
+      } catch {
+        payload = null;
+      }
+
+      const detail = String(payload?.error_description || payload?.error || payload?.msg || payload?.message || "");
+      const code = String(payload?.code || "");
+      const lower = `${txt} ${detail} ${code}`.toLowerCase();
+
+      if (
+        lower.includes("email_not_confirmed") ||
+        lower.includes("email not confirmed") ||
+        lower.includes("confirm your email") ||
+        lower.includes("email confirmation") ||
+        lower.includes("verify your email")
+      ) {
+        throw new Error("email_not_confirmed");
       }
       if (
         res.status === 400 ||
