@@ -157,10 +157,12 @@ export default function Auth({
         const profile = rows?.[0];
         if (!profile) return true;
 
-        const hasGoals = Array.isArray(profile.goals) && profile.goals.length > 0;
+        const hasGoals =
+          Array.isArray(profile.goals) && profile.goals.length > 0;
         const hasExperience = !!String(profile.experience || "").trim();
         const hasMonthlyWorkouts =
-          typeof profile.monthly_workouts === "number" && profile.monthly_workouts > 0;
+          typeof profile.monthly_workouts === "number" &&
+          profile.monthly_workouts > 0;
 
         return !(hasGoals || hasExperience || hasMonthlyWorkouts);
       } catch {
@@ -591,10 +593,10 @@ export default function Auth({
       navigate("/dashboard");
     } catch (err: any) {
       const msg = String(err?.message || err || "Authentication failed");
-      const friendlyInvalidCreds =
-        !showSignup && isInvalidCredentialsError(msg)
-          ? "Invalid email id or password, please try again"
-          : msg;
+      const isInvalidCreds = !showSignup && isInvalidCredentialsError(msg);
+      const friendlyInvalidCreds = isInvalidCreds
+        ? "Invalid email id or password, please try again"
+        : "Authentication failed. Please try again.";
       setAuthError(friendlyInvalidCreds);
 
       if (isEmailNotConfirmedError(msg)) {
@@ -607,30 +609,8 @@ export default function Auth({
       }
 
       setErrorDialogTitle("Authentication error");
-      try {
-        const deep = JSON.stringify(
-          (err as any)?.response?.data ||
-            (err as any)?.message ||
-            friendlyInvalidCreds,
-        );
-        setDialogMessage(
-          friendlyInvalidCreds === msg
-            ? `Full Error: ${deep} | API: ${API_BASE}`
-            : friendlyInvalidCreds,
-        );
-      } catch (e) {
-        setDialogMessage(
-          friendlyInvalidCreds === msg
-            ? msg + `\nAPI: ${API_BASE}`
-            : friendlyInvalidCreds,
-        );
-      }
+      setDialogMessage(friendlyInvalidCreds);
       setErrorDialogOpen(true);
-      toast({
-        title: "Error",
-        description: friendlyInvalidCreds,
-        variant: "destructive",
-      });
     } finally {
       setPendingAction(null);
       setIsLoading(false);
