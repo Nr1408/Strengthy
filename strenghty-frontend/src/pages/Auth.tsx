@@ -874,23 +874,25 @@ export default function Auth({
           open={errorDialogOpen}
           onOpenChange={(o) => setErrorDialogOpen(o)}
         >
-          <DialogContent className="relative overflow-hidden rounded-2xl border border-white/10 bg-background/85 p-6 shadow-2xl shadow-black/50 backdrop-blur-xl duration-200 ease-out data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95">
-            <div className="pointer-events-none absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-red-500/80" />
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={() => setErrorDialogOpen(false)}
-              className="absolute right-4 top-4 text-muted-foreground transition-all duration-200 hover:scale-105 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
+          <DialogContent className="relative bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl shadow-black/60 p-6 max-w-md w-full">
+            <DialogHeader className="space-y-0">
+              <button
+                type="button"
+                aria-label="Close"
+                className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors duration-200 cursor-pointer"
+                onClick={() => setErrorDialogOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
 
-            <DialogHeader className="space-y-3 pr-8">
-              <DialogTitle className="flex items-center gap-3 text-lg font-semibold tracking-tight text-white">
+              <div className="flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-red-500" />
-                {errorDialogTitle}
-              </DialogTitle>
-              <DialogDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                <DialogTitle className="text-lg font-semibold text-white tracking-tight">
+                  {errorDialogTitle}
+                </DialogTitle>
+              </div>
+
+              <DialogDescription className="text-sm text-zinc-400 leading-relaxed mt-3">
                 {dialogMessage || "An error occurred during authentication."}
               </DialogDescription>
             </DialogHeader>
