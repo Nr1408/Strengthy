@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, AlertCircle, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 
 type AuthFormData = {
@@ -875,39 +874,28 @@ export default function Auth({
           open={errorDialogOpen}
           onOpenChange={(o) => setErrorDialogOpen(o)}
         >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{errorDialogTitle}</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="relative overflow-hidden rounded-2xl border border-white/10 bg-background/85 p-6 shadow-2xl shadow-black/50 backdrop-blur-xl data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:duration-200 data-[state=closed]:duration-200 ease-out">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.12),transparent_45%)]" />
+            <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-red-500/80" />
+
+            <button
+              type="button"
+              aria-label="Close error dialog"
+              onClick={() => setErrorDialogOpen(false)}
+              className="absolute right-4 top-4 text-muted-foreground transition-all duration-200 hover:scale-105 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <DialogHeader className="relative space-y-3 pr-8">
+              <DialogTitle className="flex items-center gap-3 text-lg font-semibold tracking-tight text-white/95">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+                {errorDialogTitle}
+              </DialogTitle>
+              <DialogDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {dialogMessage || "An error occurred during authentication."}
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    try {
-                      if (dialogMessage)
-                        navigator.clipboard.writeText(dialogMessage);
-                      toast({
-                        title: "Copied",
-                        description: "Error copied to clipboard.",
-                      });
-                    } catch (e) {}
-                  }}
-                >
-                  Copy
-                </Button>
-                <Button
-                  onClick={() => {
-                    setErrorDialogOpen(false);
-                  }}
-                >
-                  Close
-                </Button>
-              </div>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </main>
