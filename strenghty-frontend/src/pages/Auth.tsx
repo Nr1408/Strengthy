@@ -874,25 +874,23 @@ export default function Auth({
           open={errorDialogOpen}
           onOpenChange={(o) => setErrorDialogOpen(o)}
         >
-          <DialogContent className="relative overflow-hidden rounded-2xl border border-white/20 bg-[#0b0f14]/95 p-6 shadow-2xl shadow-black/60 backdrop-blur-xl data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:duration-200 data-[state=closed]:duration-200 ease-out">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.18),transparent_50%)]" />
-            <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-red-500/80" />
-
+          <DialogContent className="relative overflow-hidden rounded-2xl border border-white/10 bg-background/85 p-6 shadow-2xl shadow-black/50 backdrop-blur-xl duration-200 ease-out data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95">
+            <div className="pointer-events-none absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-red-500/80" />
             <button
               type="button"
-              aria-label="Close error dialog"
+              aria-label="Close"
               onClick={() => setErrorDialogOpen(false)}
-              className="absolute right-4 top-4 text-white/60 transition-all duration-200 hover:scale-105 hover:text-white"
+              className="absolute right-4 top-4 text-muted-foreground transition-all duration-200 hover:scale-105 hover:text-white"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <DialogHeader className="relative space-y-3 pr-8">
+            <DialogHeader className="space-y-3 pr-8">
               <DialogTitle className="flex items-center gap-3 text-lg font-semibold tracking-tight text-white">
                 <AlertCircle className="h-5 w-5 text-red-500" />
                 {errorDialogTitle}
               </DialogTitle>
-              <DialogDescription className="mt-2 text-sm leading-relaxed text-white/80">
+              <DialogDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {dialogMessage || "An error occurred during authentication."}
               </DialogDescription>
             </DialogHeader>
