@@ -704,7 +704,7 @@ export default function Auth({
                         type="button"
                         onClick={onClickContinueWithGoogle}
                         disabled={isLoading || isGoogleSelecting}
-                        className="inline-flex items-center rounded-md border border-white/40 px-4 py-2 text-sm text-white hover:bg-white/5"
+                        className="inline-flex w-full sm:w-auto justify-center items-center rounded-md border border-white/40 px-3 sm:px-4 py-2.5 sm:py-2 text-sm text-white hover:bg-white/5"
                       >
                         <img
                           src="/google-logo.svg"
@@ -786,7 +786,7 @@ export default function Auth({
 
                       <Button
                         type="submit"
-                        className="w-full"
+                        className="w-full min-h-[44px] sm:min-h-[40px]"
                         disabled={isLoading}
                       >
                         {isLoading ? (
