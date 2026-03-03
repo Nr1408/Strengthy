@@ -43,7 +43,7 @@ import {
 } from "@/lib/api";
 import { countPrTypesFromSet } from "@/lib/utils";
 
-type HeightUnit = "cm" | "inch";
+type HeightUnit = "cm" | "inch" | "ft";
 
 type OnboardingInfo = {
   goals: string[];
@@ -74,12 +74,60 @@ const EXPERIENCE_LABELS: Record<string, string> = {
 };
 
 const FITNESS_GOAL_OPTIONS: { id: string; label: string }[] = [
+  { id: "hypertrophy", label: "Build Muscle" },
+  { id: "calorie-burn", label: "Burn Fat" },
+  { id: "powerlifting", label: "Get Stronger" },
   { id: "build-muscle", label: "Build Muscle" },
   { id: "lose-weight", label: "Lose Weight" },
   { id: "get-stronger", label: "Get Stronger" },
   { id: "stay-healthy", label: "Stay Healthy" },
   { id: "improve-endurance", label: "Improve Endurance" },
 ];
+
+function normalizeOnboardingInfo(raw: any): OnboardingInfo {
+  const goalsFromArray = Array.isArray(raw?.goals)
+    ? raw.goals.map((g: unknown) => String(g)).filter(Boolean)
+    : [];
+  const singleGoal = String(raw?.goal || "").trim();
+  const goals = goalsFromArray.length
+    ? goalsFromArray
+    : singleGoal
+      ? [singleGoal]
+      : [];
+
+  const normalizedHeightUnit = (() => {
+    const unit = String(raw?.heightUnit || raw?.height_unit || "cm").toLowerCase();
+    if (unit === "cm" || unit === "inch" || unit === "ft") return unit as HeightUnit;
+    if (unit === "in") return "inch";
+    return "cm";
+  })();
+
+  const monthly =
+    raw?.monthlyWorkouts ?? raw?.monthly_workouts ?? raw?.monthlyGoal ?? "";
+
+  return {
+    goals,
+    age: raw?.age != null ? String(raw.age) : "",
+    height: raw?.height != null ? String(raw.height) : "",
+    heightUnit: normalizedHeightUnit,
+    currentWeight:
+      raw?.currentWeight != null
+        ? String(raw.currentWeight)
+        : raw?.weight != null
+          ? String(raw.weight)
+          : raw?.current_weight != null
+            ? String(raw.current_weight)
+            : "",
+    goalWeight:
+      raw?.goalWeight != null
+        ? String(raw.goalWeight)
+        : raw?.goal_weight != null
+          ? String(raw.goal_weight)
+          : "",
+    experience: raw?.experience ? String(raw.experience) : "",
+    monthlyWorkouts: monthly != null ? String(monthly) : "",
+  };
+}
 
 const MAX_MONTHLY_GOAL = 40;
 
@@ -229,15 +277,13 @@ export default function Profile() {
     try {
       const rawOnboarding = localStorage.getItem("user:onboarding");
       if (rawOnboarding) {
-        const parsed = JSON.parse(rawOnboarding) as Partial<OnboardingInfo>;
-        setOnboardingInfo({
-          ...DEFAULT_ONBOARDING,
-          ...parsed,
-          heightUnit:
-            parsed.heightUnit === "inch" || parsed.heightUnit === "cm"
-              ? parsed.heightUnit
-              : "cm",
-        });
+        const parsed = JSON.parse(rawOnboarding);
+        const normalized = normalizeOnboardingInfo(parsed);
+        setOnboardingInfo(normalized);
+        const monthly = Number(normalized.monthlyWorkouts || "");
+        if (Number.isFinite(monthly) && monthly > 0) {
+          setMonthlyGoal(Math.min(monthly, MAX_MONTHLY_GOAL));
+        }
       }
     } catch {}
   }, []);
@@ -483,7 +529,8 @@ export default function Profile() {
                       key={g}
                       className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-sm text-white"
                     >
-                      {g.replace(/-/g, " ")}
+                      {FITNESS_GOAL_OPTIONS.find((opt) => opt.id === g)?.label ||
+                        g.replace(/-/g, " ")}
                     </span>
                   ))
                 ) : (
