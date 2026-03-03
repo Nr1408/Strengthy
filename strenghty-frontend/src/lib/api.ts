@@ -972,34 +972,37 @@ export async function login(username: string, password: string) {
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      let payload: any = null;
-      try {
-        payload = txt ? JSON.parse(txt) : null;
-      } catch {
-        payload = null;
+      let rawMessage = "";
+
+      if (txt) {
+        try {
+          const parsed = JSON.parse(txt) as {
+            message?: string;
+            error?: string;
+            error_description?: string;
+            msg?: string;
+          };
+          rawMessage = String(
+            parsed?.message ??
+              parsed?.error_description ??
+              parsed?.error ??
+              parsed?.msg ??
+              "",
+          ).trim();
+        } catch {
+          rawMessage = "";
+        }
       }
 
-      const detail = String(payload?.error_description || payload?.error || payload?.msg || payload?.message || "");
-      const code = String(payload?.code || "");
-      const lower = `${txt} ${detail} ${code}`.toLowerCase();
+      if (!rawMessage) {
+        rawMessage = txt.trim();
+      }
 
-      if (
-        lower.includes("email_not_confirmed") ||
-        lower.includes("email not confirmed") ||
-        lower.includes("confirm your email") ||
-        lower.includes("email confirmation") ||
-        lower.includes("verify your email")
-      ) {
-        throw new Error("email_not_confirmed");
+      if (rawMessage) {
+        throw new Error(rawMessage);
       }
-      if (
-        res.status === 400 ||
-        res.status === 401 ||
-        lower.includes("invalid login credentials")
-      ) {
-        throw new Error("Invalid email id or password, please try again");
-      }
-      throw new Error(`Login failed: ${res.status} ${txt}`);
+
+      throw new Error(res.statusText || String(res.status));
     }
     const data = await res.json();
     if (data.access_token) setToken(data.access_token);
