@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Mail, Lock, User, ArrowRight, AlertCircle, X } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, AlertCircle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -281,35 +281,6 @@ export default function Auth({
       lower.includes("no active account") ||
       lower.includes("unable to log in with provided credentials")
     );
-  }, []);
-
-  // Prevent page-level scrolling while on the auth route. This guards against
-  // programmatic focus or mobile browser UI adjustments causing the body to
-  // scroll up/down while the auth card is visible.
-  useEffect(() => {
-    if (embedded) return;
-    try {
-      const html = document.documentElement;
-      const body = document.body;
-      const prevHtmlOverflow = html.style.overflow;
-      const prevBodyOverflow = body.style.overflow;
-      const prevHtmlHeight = html.style.height;
-      const prevBodyHeight = body.style.height;
-
-      html.style.overflow = "hidden";
-      body.style.overflow = "hidden";
-      html.style.height = "100vh";
-      body.style.height = "100vh";
-
-      return () => {
-        html.style.overflow = prevHtmlOverflow;
-        body.style.overflow = prevBodyOverflow;
-        html.style.height = prevHtmlHeight;
-        body.style.height = prevBodyHeight;
-      };
-    } catch (e) {
-      // ignore in non-browser environments
-    }
   }, []);
 
   useEffect(() => {
@@ -874,17 +845,8 @@ export default function Auth({
           open={errorDialogOpen}
           onOpenChange={(o) => setErrorDialogOpen(o)}
         >
-          <DialogContent className="relative bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl shadow-black/60 p-6 max-w-md w-full">
+          <DialogContent className="bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl shadow-black/60 p-6 max-w-md w-full">
             <DialogHeader className="space-y-0">
-              <button
-                type="button"
-                aria-label="Close"
-                className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors duration-200 cursor-pointer"
-                onClick={() => setErrorDialogOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </button>
-
               <div className="flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-red-500" />
                 <DialogTitle className="text-lg font-semibold text-white tracking-tight">
@@ -892,7 +854,7 @@ export default function Auth({
                 </DialogTitle>
               </div>
 
-              <DialogDescription className="text-sm text-zinc-400 leading-relaxed mt-3">
+              <DialogDescription className="mt-3 text-sm text-zinc-400 leading-relaxed break-words whitespace-pre-wrap">
                 {dialogMessage || "An error occurred during authentication."}
               </DialogDescription>
             </DialogHeader>
