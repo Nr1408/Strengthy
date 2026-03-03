@@ -33,13 +33,13 @@ export default function ConfirmEmailDialog({
 
           <DialogDescription className="mt-3 text-sm text-zinc-400 leading-relaxed break-words whitespace-pre-wrap">
             {hasEmail
-              ? `We’ve sent a confirmation link to ${email}.\nPlease check your inbox and click the link to activate your account.`
+              ? `We’ve sent a confirmation link to ${email}.\nPlease check your inbox and activate your account.`
               : "Please check your inbox and confirm your email before logging in."}
           </DialogDescription>
 
           <p className="mt-4 text-xs text-zinc-500">
-            Didn&apos;t receive the email? Check your spam folder or try signing up
-            again.
+            Didn&apos;t receive the email? Check your spam folder or try signing
+            up again.
           </p>
         </DialogHeader>
       </DialogContent>

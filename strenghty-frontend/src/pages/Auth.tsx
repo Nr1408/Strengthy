@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Mail, Lock, User, ArrowRight, AlertCircle } from "lucide-react";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,15 +21,9 @@ import {
   setToken,
 } from "@/lib/api";
 import ConfirmEmailDialog from "@/components/ConfirmEmailDialog";
+import InvalidCredentialsDialog from "@/components/InvalidCredentialsDialog";
 import { createClient } from "@supabase/supabase-js";
 import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 
 type AuthFormData = {
   name: string;
@@ -105,13 +99,9 @@ export default function Auth({
     detail: string;
   }>(null);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
-  const [errorDialogTitle, setErrorDialogTitle] = useState(
-    "Authentication error",
-  );
-  const [dialogMessage, setDialogMessage] = useState<string | null>(null);
+  const [invalidCredsOpen, setInvalidCredsOpen] = useState(false);
   const [confirmEmailOpen, setConfirmEmailOpen] = useState(false);
-  const [confirmEmailTarget, setConfirmEmailTarget] = useState<string | null>(
+  const [confirmEmailAddress, setConfirmEmailAddress] = useState<string | null>(
     null,
   );
   const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
@@ -258,8 +248,7 @@ export default function Auth({
 
   const openConfirmEmailDialog = useCallback((email?: string) => {
     const normalized = String(email || "").trim();
-    setErrorDialogOpen(false);
-    setConfirmEmailTarget(normalized || null);
+    setConfirmEmailAddress(normalized || null);
     setConfirmEmailOpen(true);
   }, []);
 
@@ -267,10 +256,7 @@ export default function Auth({
     const lower = msg.toLowerCase();
     return (
       lower.includes("email_not_confirmed") ||
-      lower.includes("email not confirmed") ||
-      lower.includes("confirm your email") ||
-      lower.includes("email confirmation") ||
-      lower.includes("verify your email")
+      lower.includes("email not confirmed")
     );
   }, []);
 
@@ -331,8 +317,11 @@ export default function Auth({
       const error = hash.get("error_description") || hash.get("error");
 
       if (error) {
-        setDialogMessage(`Google sign-in failed: ${error}`);
-        setErrorDialogOpen(true);
+        toast({
+          title: "Google sign-in failed",
+          description: String(error),
+          variant: "destructive",
+        });
         return;
       }
 
@@ -359,14 +348,14 @@ export default function Auth({
   const handleGoogleLogin = async () => {
     try {
       setAuthError(null);
-      setDialogMessage(null);
-      setErrorDialogOpen(false);
+      setInvalidCredsOpen(false);
 
       if (!supabase) {
-        setDialogMessage(
-          "Supabase Google auth is not configured. Check environment variables.",
-        );
-        setErrorDialogOpen(true);
+        toast({
+          title: "Google sign-in failed",
+          description: "Supabase Google auth is not configured. Check environment variables.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -385,8 +374,11 @@ export default function Auth({
       }
       return;
     } catch (e: any) {
-      setDialogMessage(`Google sign-in failed: ${e?.message || e}`);
-      setErrorDialogOpen(true);
+      toast({
+        title: "Google sign-in failed",
+        description: String(e?.message || e || "Google auth failed"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -422,8 +414,11 @@ export default function Auth({
 
       if (!nativeClientId) {
         const msg = `Google sign-in isn't ready (missing Android/Web Google client id).`;
-        setDialogMessage(msg);
-        setErrorDialogOpen(true);
+        toast({
+          title: "Google sign-in failed",
+          description: msg,
+          variant: "destructive",
+        });
         return;
       }
 
@@ -451,8 +446,11 @@ export default function Auth({
       }
 
       if (!initialized) {
-        setDialogMessage("Failed to initialize Google sign-in. Try again.");
-        setErrorDialogOpen(true);
+        toast({
+          title: "Google sign-in failed",
+          description: "Failed to initialize Google sign-in. Try again.",
+          variant: "destructive",
+        });
         setIsGoogleSelecting(false);
         return;
       }
@@ -467,16 +465,22 @@ export default function Auth({
       console.log("GoogleAuth.signIn response:", res);
 
       if (!res) {
-        setDialogMessage("Google sign-in was cancelled or failed to start.");
-        setErrorDialogOpen(true);
+        toast({
+          title: "Google sign-in failed",
+          description: "Google sign-in was cancelled or failed to start.",
+          variant: "destructive",
+        });
         return;
       }
 
       const idToken = res?.authentication?.idToken || res?.idToken;
 
       if (!idToken) {
-        setDialogMessage("Google did not return an ID token.");
-        setErrorDialogOpen(true);
+        toast({
+          title: "Google sign-in failed",
+          description: "Google did not return an ID token.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -521,16 +525,13 @@ export default function Auth({
       const hint =
         "If this keeps happening on Android, it's usually an OAuth config issue (missing SHA-1/SHA-256 for the debug keystore, wrong package name, or Google Play Services).";
 
-      setDialogMessage(
-        `Google sign-in failed: ${msg}` +
+      toast({
+        title: "Google sign-in failed",
+        description:
+          `Google sign-in failed: ${msg}` +
           (extra ? `\n\nDetails: ${extra}` : "") +
           `\n\nAPI: ${API_BASE}` +
           `\n\nHint: ${hint}`,
-      );
-      setErrorDialogOpen(true);
-      toast({
-        title: "Google sign-in failed",
-        description: msg,
         variant: "destructive",
       });
     }
@@ -568,14 +569,9 @@ export default function Auth({
       navigate("/dashboard");
     } catch (err: any) {
       const msg = String(err?.message || err || "Authentication failed");
-      const isInvalidCreds = !showSignup && isInvalidCredentialsError(msg);
-      const friendlyInvalidCreds = isInvalidCreds
-        ? "Invalid email id or password, please try again"
-        : "Authentication failed. Please try again.";
-      setAuthError(friendlyInvalidCreds);
-
       if (isEmailNotConfirmedError(msg)) {
-        openConfirmEmailDialog(formData.email);
+        setConfirmEmailAddress(formData.email || null);
+        setConfirmEmailOpen(true);
         toast({
           title: "Please confirm your email",
           description: "Check your inbox, then try logging in again.",
@@ -583,9 +579,17 @@ export default function Auth({
         return;
       }
 
-      setErrorDialogTitle("Authentication error");
-      setDialogMessage(friendlyInvalidCreds);
-      setErrorDialogOpen(true);
+      if (isInvalidCredentialsError(msg)) {
+        setInvalidCredsOpen(true);
+        return;
+      }
+
+      setAuthError("Authentication failed. Please try again.");
+      toast({
+        title: "Authentication error",
+        description: "Authentication failed. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setPendingAction(null);
       setIsLoading(false);
@@ -846,30 +850,15 @@ export default function Auth({
             )}
           </MotionCard>
         </div>
-        <Dialog
-          open={errorDialogOpen}
-          onOpenChange={(o) => setErrorDialogOpen(o)}
-        >
-          <DialogContent className="bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl shadow-black/60 p-6 max-w-md w-full">
-            <DialogHeader className="space-y-0">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-red-500" />
-                <DialogTitle className="text-lg font-semibold text-white tracking-tight">
-                  {errorDialogTitle}
-                </DialogTitle>
-              </div>
-
-              <DialogDescription className="mt-3 text-sm text-zinc-400 leading-relaxed break-words whitespace-pre-wrap">
-                {dialogMessage || "An error occurred during authentication."}
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
+        <InvalidCredentialsDialog
+          open={invalidCredsOpen}
+          setOpen={setInvalidCredsOpen}
+        />
 
         <ConfirmEmailDialog
           open={confirmEmailOpen}
           setOpen={setConfirmEmailOpen}
-          email={confirmEmailTarget}
+          email={confirmEmailAddress}
         />
       </main>
     </div>
