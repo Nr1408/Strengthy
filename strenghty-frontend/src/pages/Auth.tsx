@@ -255,8 +255,11 @@ export default function Auth({
   const isEmailNotConfirmedError = useCallback((msg: string) => {
     const lower = msg.toLowerCase();
     return (
-      lower.includes("email_not_confirmed") ||
-      lower.includes("email not confirmed")
+      lower.includes("not confirmed") ||
+      lower.includes("user not confirmed") ||
+      lower.includes("email not verified") ||
+      lower.includes("verify your email") ||
+      lower.includes("email address not confirmed")
     );
   }, []);
 
@@ -353,7 +356,8 @@ export default function Auth({
       if (!supabase) {
         toast({
           title: "Google sign-in failed",
-          description: "Supabase Google auth is not configured. Check environment variables.",
+          description:
+            "Supabase Google auth is not configured. Check environment variables.",
           variant: "destructive",
         });
         return;
@@ -569,17 +573,17 @@ export default function Auth({
       navigate("/dashboard");
     } catch (err: any) {
       const msg = String(err?.message || err || "Authentication failed");
-      if (isEmailNotConfirmedError(msg)) {
-        setConfirmEmailAddress(formData.email || null);
-        setConfirmEmailOpen(true);
-        toast({
-          title: "Please confirm your email",
-          description: "Check your inbox, then try logging in again.",
-        });
+
+      if (showSignup) {
+        openConfirmEmailDialog(formData.email);
         return;
       }
 
-      if (isInvalidCredentialsError(msg)) {
+      if (isEmailNotConfirmedError(msg)) {
+        setConfirmEmailAddress(formData.email?.trim() || null);
+        setConfirmEmailOpen(true);
+        return;
+      } else if (isInvalidCredentialsError(msg)) {
         setInvalidCredsOpen(true);
         return;
       }
