@@ -331,23 +331,9 @@ export default function Auth({
       setDialogMessage(null);
       setErrorDialogOpen(false);
 
-      const isNative =
-        typeof window !== "undefined" &&
-        (window as any).Capacitor?.isNativePlatform?.() === true;
-
-      if (isNative) return;
-
-      if (!SUPABASE_URL_ENV) {
-        setDialogMessage(
-          "Supabase Google auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
-        );
-        setErrorDialogOpen(true);
-        return;
-      }
-
       if (!supabase) {
         setDialogMessage(
-          "Supabase Google auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
+          "Supabase Google auth is not configured. Check environment variables.",
         );
         setErrorDialogOpen(true);
         return;
@@ -356,9 +342,9 @@ export default function Auth({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: GOOGLE_REDIRECT_TO,
+          redirectTo: window.location.origin,
           queryParams: {
-            prompt: "select_account consent",
+            prompt: "select_account",
           },
         },
       });
