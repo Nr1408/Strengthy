@@ -549,10 +549,6 @@ export default function Auth({
         // Create the account
         await register(formData.email, formData.password);
         openConfirmEmailDialog(formData.email);
-        toast({
-          title: "Please confirm your email",
-          description: "Check your inbox, then log in.",
-        });
         setShowSignup(false);
         return;
       }
