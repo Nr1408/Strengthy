@@ -501,21 +501,22 @@ export default function ExerciseInfo() {
               Progress over time
             </p>
             <CardTitle className="text-white">
-              {graphMetric === "volume" ? "Volume Progress (kg)" : "Progress Graph"}
+              {graphMetric === "volume"
+                ? "Volume Progress (kg)"
+                : "Progress Graph"}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
             {progressionPoints.length >= 2 ? (
               <div className="mt-2.5 rounded-xl border border-white/5 bg-zinc-900/60 px-4 py-3">
                 <div className="mb-3 text-sm text-muted-foreground">
-                  {latestProgressPoint ? (
-                    graphMetric === "volume" ?
-                      `Latest Volume: ${formatVolumeCompact(latestProgressPoint.value)} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
-                    :
-                      `Latest: ${Math.round(latestProgressPoint.value)} ${graphMetricUnit} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
-                  ) : (
-                    graphMetric === "volume" ? "Latest Volume: -" : `Latest: - ${graphMetricUnit}`
-                  )}
+                  {latestProgressPoint
+                    ? graphMetric === "volume"
+                      ? `Latest Volume: ${formatVolumeCompact(latestProgressPoint.value)} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
+                      : `Latest: ${Math.round(latestProgressPoint.value)} ${graphMetricUnit} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
+                    : graphMetric === "volume"
+                      ? "Latest Volume: -"
+                      : `Latest: - ${graphMetricUnit}`}
                 </div>
 
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -555,11 +556,11 @@ export default function ExerciseInfo() {
                 </div>
 
                 <div className="flex items-stretch gap-2">
-                  <div className="w-11 shrink-0 flex h-24 flex-col justify-between pr-2 text-[10px] text-muted-foreground text-right">
+                  <div className="w-[48px] shrink-0 flex h-24 flex-col justify-between pr-2 text-xs text-muted-foreground text-right">
                     {graphRenderData.yAxisTicks.map((tick, idx) => (
                       <span
                         key={`y-tick-label-${idx}`}
-                        className="leading-none"
+                        className="leading-none whitespace-nowrap"
                       >
                         {`${yAxisLabelFormatter(tick.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
                       </span>
