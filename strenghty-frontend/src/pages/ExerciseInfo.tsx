@@ -432,59 +432,82 @@ export default function ExerciseInfo() {
                 {groupedHistory.map((g, idx) => (
                   <div
                     key={`h-${g.workoutId}`}
-                    className={idx === 0 ? "" : "border-t border-white/5 pt-5"}
+                    className={
+                      idx === 0 ? "" : "mt-3 border-t border-white/5 pt-3"
+                    }
                   >
                     <Card className="w-full rounded-2xl overflow-hidden">
                       <CardContent className="px-3 py-[6px] overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <div>
+                        <div className="flex items-center justify-between">
                           <div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(`/workouts/${g.workoutId}/view`)
-                              }
-                              className="pt-1 text-lg font-semibold text-white text-left hover:underline"
-                            >
-                              {g.workoutName}
-                            </button>
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {g.date
-                              ? format(new Date(g.date), "dd LLL yyyy, HH:mm")
-                              : "-"}
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate(`/workouts/${g.workoutId}/view`)
+                                }
+                                className="pt-1 text-lg font-semibold text-white text-left hover:underline"
+                              >
+                                {g.workoutName}
+                              </button>
+                            </div>
+                            <div className="mt-0.5 text-xs text-muted-foreground/80">
+                              {g.date
+                                ? format(new Date(g.date), "dd LLL yyyy, HH:mm")
+                                : "-"}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="mt-3">
-                        <div
-                          className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                          style={{
-                            gridTemplateColumns: ((): string => {
-                              const isHiit = isHiitExerciseName(
-                                selectedExercise.name || "",
-                              );
-                              if (
-                                g.sets &&
-                                g.sets.length > 0 &&
-                                g.sets[0].cardioMode
-                              ) {
-                                return isHiit
-                                  ? GRID_TEMPLATE_HIIT_NO_CHECK
-                                  : GRID_TEMPLATE_CARDIO_NO_CHECK;
-                              }
-                              return GRID_TEMPLATE_STRENGTH_NO_CHECK;
-                            })(),
-                          }}
-                        >
-                          {g.sets && g.sets[0] && g.sets[0].cardioMode ? (
-                            (() => {
-                              const isHiit = isHiitExerciseName(
-                                selectedExercise.name || "",
-                              );
+                        <div className="mt-3">
+                          <div
+                            className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
+                            style={{
+                              gridTemplateColumns: ((): string => {
+                                const isHiit = isHiitExerciseName(
+                                  selectedExercise.name || "",
+                                );
+                                if (
+                                  g.sets &&
+                                  g.sets.length > 0 &&
+                                  g.sets[0].cardioMode
+                                ) {
+                                  return isHiit
+                                    ? GRID_TEMPLATE_HIIT_NO_CHECK
+                                    : GRID_TEMPLATE_CARDIO_NO_CHECK;
+                                }
+                                return GRID_TEMPLATE_STRENGTH_NO_CHECK;
+                              })(),
+                            }}
+                          >
+                            {g.sets && g.sets[0] && g.sets[0].cardioMode ? (
+                              (() => {
+                                const isHiit = isHiitExerciseName(
+                                  selectedExercise.name || "",
+                                );
 
-                              if (isHiit) {
+                                if (isHiit) {
+                                  return (
+                                    <>
+                                      <span className="flex justify-center">
+                                        SET
+                                      </span>
+                                      <span className="flex justify-center">
+                                        DURATION
+                                      </span>
+                                      <span className="flex justify-center">
+                                        REPS
+                                      </span>
+                                      <span className="flex justify-center">
+                                        RPE
+                                      </span>
+                                      <span className="flex justify-center">
+                                        PR
+                                      </span>
+                                    </>
+                                  );
+                                }
+
                                 return (
                                   <>
                                     <span className="flex justify-center">
@@ -494,75 +517,56 @@ export default function ExerciseInfo() {
                                       DURATION
                                     </span>
                                     <span className="flex justify-center">
-                                      REPS
+                                      DISTANCE
                                     </span>
                                     <span className="flex justify-center">
-                                      RPE
+                                      LEVEL
                                     </span>
                                     <span className="flex justify-center">
                                       PR
                                     </span>
                                   </>
                                 );
-                              }
+                              })()
+                            ) : (
+                              <>
+                                <span className="flex justify-center translate-x-[2px]">
+                                  SET
+                                </span>
+                                <span className="flex justify-center">
+                                  WEIGHT
+                                </span>
+                                <span />
+                                <span className="flex justify-center">
+                                  REPS
+                                </span>
+                                <span className="flex justify-center">RPE</span>
+                                <span className="flex justify-center">
+                                  <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
+                                </span>
+                              </>
+                            )}
+                          </div>
 
-                              return (
-                                <>
-                                  <span className="flex justify-center">
-                                    SET
-                                  </span>
-                                  <span className="flex justify-center">
-                                    DURATION
-                                  </span>
-                                  <span className="flex justify-center">
-                                    DISTANCE
-                                  </span>
-                                  <span className="flex justify-center">
-                                    LEVEL
-                                  </span>
-                                  <span className="flex justify-center">
-                                    PR
-                                  </span>
-                                </>
-                              );
-                            })()
-                          ) : (
-                            <>
-                              <span className="flex justify-center translate-x-[2px]">
-                                SET
-                              </span>
-                              <span className="flex justify-center">
-                                WEIGHT
-                              </span>
-                              <span />
-                              <span className="flex justify-center">REPS</span>
-                              <span className="flex justify-center">RPE</span>
-                              <span className="flex justify-center">
-                                <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                              </span>
-                            </>
-                          )}
+                          <div className="space-y-2">
+                            {g.sets.map((s: any, idx: number) => (
+                              <SetRow
+                                key={`${g.workoutId}-${idx}`}
+                                set={s}
+                                exerciseName={selectedExercise.name || ""}
+                                unit={s.unit || "kg"}
+                                setNumber={s.setNumber ?? idx + 1}
+                                onUpdate={() => {}}
+                                onUnitChange={() => {}}
+                                onComplete={() => {}}
+                                readOnly
+                                showComplete={false}
+                              />
+                            ))}
+                          </div>
                         </div>
-
-                        <div className="space-y-2">
-                          {g.sets.map((s: any, idx: number) => (
-                            <SetRow
-                              key={`${g.workoutId}-${idx}`}
-                              set={s}
-                              exerciseName={selectedExercise.name || ""}
-                              unit={s.unit || "kg"}
-                              setNumber={s.setNumber ?? idx + 1}
-                              onUpdate={() => {}}
-                              onUnitChange={() => {}}
-                              onComplete={() => {}}
-                              readOnly
-                              showComplete={false}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
                   </div>
                 ))}
               </div>
