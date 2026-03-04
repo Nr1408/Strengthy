@@ -98,9 +98,9 @@ export default function ExerciseInfo() {
     queryFn: getWorkouts,
   });
 
-  const [graphMetric, setGraphMetric] = useState<
-    "heaviest" | "orm" | "volume"
-  >("heaviest");
+  const [graphMetric, setGraphMetric] = useState<"heaviest" | "orm" | "volume">(
+    "heaviest",
+  );
 
   const selectedExercise = useMemo(() => {
     const byId = exercises.find(
@@ -316,11 +316,12 @@ export default function ExerciseInfo() {
     const maxValue = Math.max(...values, 1);
     const minValue = Math.min(...values, maxValue);
     const range = Math.max(maxValue - minValue, 1);
+    const step = range / 3;
 
     const yAxisLabelValues = [
       maxValue,
-      maxValue - range / 3,
-      maxValue - (2 * range) / 3,
+      maxValue - step,
+      maxValue - step * 2,
       minValue,
     ];
 
@@ -328,12 +329,9 @@ export default function ExerciseInfo() {
       const x =
         progressionPoints.length === 1
           ? viewWidth / 2
-          : leftPadding +
-            (idx / (progressionPoints.length - 1)) * chartWidth;
+          : leftPadding + (idx / (progressionPoints.length - 1)) * chartWidth;
       const y =
-        topPadding +
-        chartHeight -
-        ((p.value - minValue) / range) * chartHeight;
+        topPadding + chartHeight - ((p.value - minValue) / range) * chartHeight;
       return { x, y, value: p.value };
     });
 
@@ -366,21 +364,35 @@ export default function ExerciseInfo() {
       : null;
 
   const graphMetricUnit = graphMetric === "volume" ? "kg·reps" : "kg";
+  const yAxisLabelFormatter = (value: number) => {
+    if (graphMetric === "volume") return String(Math.round(value));
+    if (Number.isInteger(value)) return String(value);
+    return value.toFixed(1);
+  };
+
   const xAxisDateLabels = useMemo(() => {
     if (progressionPoints.length === 0) {
       return { first: "-", middle: "-", last: "-" };
     }
     const first = progressionPoints[0];
-    const middle = progressionPoints[Math.floor((progressionPoints.length - 1) / 2)];
+    const middle =
+      progressionPoints[Math.floor((progressionPoints.length - 1) / 2)];
     const last = progressionPoints[progressionPoints.length - 1];
 
     const toLabel = (value?: Date) =>
       value ? format(new Date(value), "MMM d") : "-";
 
+    const firstLabel = toLabel(first?.date);
+    const middleLabel = toLabel(middle?.date);
+    const lastLabel = toLabel(last?.date);
+
     return {
-      first: toLabel(first?.date),
-      middle: toLabel(middle?.date),
-      last: toLabel(last?.date),
+      first: firstLabel,
+      middle:
+        middleLabel === firstLabel || middleLabel === lastLabel
+          ? ""
+          : middleLabel,
+      last: lastLabel,
     };
   }, [progressionPoints]);
 
@@ -486,7 +498,7 @@ export default function ExerciseInfo() {
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
             {progressionPoints.length >= 2 ? (
               <div className="mt-2.5 rounded-xl border border-white/5 bg-zinc-900/60 px-4 py-3">
-                <div className="mb-2 text-sm text-muted-foreground">
+                <div className="mb-3 text-sm text-muted-foreground">
                   {latestProgressPoint
                     ? `Latest: ${Math.round(latestProgressPoint.value)} ${graphMetricUnit} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
                     : `Latest: - ${graphMetricUnit}`}
@@ -498,8 +510,8 @@ export default function ExerciseInfo() {
                     onClick={() => setGraphMetric("heaviest")}
                     className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                       graphMetric === "heaviest"
-                        ? "border-primary/70 bg-primary/20 text-white"
-                        : "border-white/10 bg-zinc-800 text-muted-foreground hover:text-white"
+                        ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
+                        : "border-white/10 bg-zinc-800/50 text-muted-foreground hover:text-white"
                     }`}
                   >
                     Heaviest Weight
@@ -509,8 +521,8 @@ export default function ExerciseInfo() {
                     onClick={() => setGraphMetric("orm")}
                     className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                       graphMetric === "orm"
-                        ? "border-primary/70 bg-primary/20 text-white"
-                        : "border-white/10 bg-zinc-800 text-muted-foreground hover:text-white"
+                        ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
+                        : "border-white/10 bg-zinc-800/50 text-muted-foreground hover:text-white"
                     }`}
                   >
                     1RM
@@ -520,8 +532,8 @@ export default function ExerciseInfo() {
                     onClick={() => setGraphMetric("volume")}
                     className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                       graphMetric === "volume"
-                        ? "border-primary/70 bg-primary/20 text-white"
-                        : "border-white/10 bg-zinc-800 text-muted-foreground hover:text-white"
+                        ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
+                        : "border-white/10 bg-zinc-800/50 text-muted-foreground hover:text-white"
                     }`}
                   >
                     Volume
@@ -582,7 +594,7 @@ export default function ExerciseInfo() {
                       fontSize="10"
                       fill="rgba(255,255,255,0.6)"
                     >
-                      {`${Math.round(label.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
+                      {`${yAxisLabelFormatter(label.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
                     </text>
                   ))}
 
