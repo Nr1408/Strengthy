@@ -152,6 +152,17 @@ export default function ViewRoutine() {
                       <ExerciseHeader
                         exerciseName={we.exercise.name}
                         muscleGroup={normalizedGroup}
+                        onClick={() => {
+                          try {
+                            const exId = String(we.exercise.id);
+                            navigate(`/exercises/${exId}/info`, {
+                              state: {
+                                exerciseName: we.exercise.name,
+                                muscleGroup: normalizedGroup,
+                              },
+                            });
+                          } catch (e) {}
+                        }}
                       />
                     );
                   })()}
