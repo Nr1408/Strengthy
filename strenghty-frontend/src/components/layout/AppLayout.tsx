@@ -15,8 +15,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { loadSettings } from "@/lib/settings";
 import { Capacitor } from "@capacitor/core";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 // Lazy import local notifications helper when needed to avoid bundling issues
 async function checkNativeNotificationPermission() {
@@ -351,20 +353,20 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
 
       {/* Discard confirmation dialog */}
-      {showDiscardConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div className="relative w-[min(520px,90%)] rounded-[18px] border border-white/10 bg-neutral-900/95 p-7 shadow-2xl">
+      <Dialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <DialogPortal>
+          <DialogOverlay className="fixed inset-0 z-[9999] bg-black/70" />
+          <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-[10000] -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[92vw] rounded-[18px] border border-white/10 bg-neutral-900/95 p-7 shadow-2xl">
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15 text-destructive">
               <AlertTriangle className="h-5 w-5" />
             </div>
-            <div className="mb-3 text-center text-lg font-semibold text-white">
+            <DialogPrimitive.Title className="mb-3 text-center text-lg font-semibold text-white">
               Discard Workout?
-            </div>
-            <div className="text-sm text-muted-foreground mb-6 text-center">
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Description className="text-sm text-muted-foreground mb-6 text-center">
               Are you sure you want to discard this in-progress workout? This
               cannot be undone.
-            </div>
+            </DialogPrimitive.Description>
             <div className="flex items-center justify-center gap-3">
               <button
                 className="px-5 py-2.5 rounded-lg bg-red-600 text-white shadow-md shadow-red-600/20 hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
@@ -418,9 +420,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
     </div>
   );
 }
