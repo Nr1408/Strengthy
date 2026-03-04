@@ -363,9 +363,16 @@ export default function ExerciseInfo() {
       ? progressionPoints[progressionPoints.length - 1]
       : null;
 
-  const graphMetricUnit = graphMetric === "volume" ? "kg·reps" : "kg";
+  const formatVolumeCompact = (value: number) => {
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(1).replace(".0", "")}k`;
+    }
+    return `${Math.round(value)}`;
+  };
+
+  const graphMetricUnit = graphMetric === "volume" ? "kg" : "kg";
   const yAxisLabelFormatter = (value: number) => {
-    if (graphMetric === "volume") return String(Math.round(value));
+    if (graphMetric === "volume") return formatVolumeCompact(value);
     if (Number.isInteger(value)) return String(value);
     return value.toFixed(1);
   };
@@ -493,15 +500,22 @@ export default function ExerciseInfo() {
             <p className="text-xs text-muted-foreground mb-1">
               Progress over time
             </p>
-            <CardTitle className="text-white">Progress Graph</CardTitle>
+            <CardTitle className="text-white">
+              {graphMetric === "volume" ? "Volume Progress (kg)" : "Progress Graph"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
             {progressionPoints.length >= 2 ? (
               <div className="mt-2.5 rounded-xl border border-white/5 bg-zinc-900/60 px-4 py-3">
                 <div className="mb-3 text-sm text-muted-foreground">
-                  {latestProgressPoint
-                    ? `Latest: ${Math.round(latestProgressPoint.value)} ${graphMetricUnit} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
-                    : `Latest: - ${graphMetricUnit}`}
+                  {latestProgressPoint ? (
+                    graphMetric === "volume" ?
+                      `Latest Volume: ${formatVolumeCompact(latestProgressPoint.value)} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
+                    :
+                      `Latest: ${Math.round(latestProgressPoint.value)} ${graphMetricUnit} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
+                  ) : (
+                    graphMetric === "volume" ? "Latest Volume: -" : `Latest: - ${graphMetricUnit}`
+                  )}
                 </div>
 
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -541,7 +555,7 @@ export default function ExerciseInfo() {
                 </div>
 
                 <div className="flex items-stretch gap-2">
-                  <div className="flex h-24 flex-col justify-between pr-1 text-[10px] text-muted-foreground">
+                  <div className="w-11 shrink-0 flex h-24 flex-col justify-between pr-2 text-[10px] text-muted-foreground text-right">
                     {graphRenderData.yAxisTicks.map((tick, idx) => (
                       <span
                         key={`y-tick-label-${idx}`}
