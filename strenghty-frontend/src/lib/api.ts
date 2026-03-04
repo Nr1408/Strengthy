@@ -1347,6 +1347,22 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
+      // Recover from duplicate exercise name conflicts by reusing
+      // the existing exercise for this user.
+      if (res.status === 409) {
+        try {
+          const candidates = await getExercises();
+          const norm = (s: string) =>
+            s
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, " ")
+              .trim();
+          const match = candidates.find((c) => norm(c.name) === norm(name));
+          if (match) return match;
+        } catch (e) {
+          // fall through to throw with original error details
+        }
+      }
       throw new Error(`Create exercise failed: ${res.status}${detail ? ` ${detail}` : ""}`);
     }
     const rows = (await res.json()) as ApiExercise[];
