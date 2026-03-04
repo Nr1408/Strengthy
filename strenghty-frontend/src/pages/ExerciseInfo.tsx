@@ -267,6 +267,48 @@ export default function ExerciseInfo() {
       .join(" ");
   }, [progressionPoints]);
 
+  const graphRenderData = useMemo(() => {
+    if (progressionPoints.length === 0) {
+      return {
+        points: [] as Array<{ x: number; y: number; value: number }>,
+        linePoints: "",
+        areaPoints: "",
+        latestIndex: -1,
+      };
+    }
+
+    const viewWidth = 300;
+    const viewHeight = 120;
+    const minX = 8;
+    const maxX = viewWidth - 8;
+    const minY = 8;
+    const maxYCoord = viewHeight - 8;
+    const maxValue = Math.max(...progressionPoints.map((p) => p.value), 1);
+
+    const points = progressionPoints.map((p, idx) => {
+      const x =
+        progressionPoints.length === 1
+          ? viewWidth / 2
+          : minX + (idx / (progressionPoints.length - 1)) * (maxX - minX);
+      const y = maxYCoord - (p.value / maxValue) * (maxYCoord - minY);
+      return { x, y, value: p.value };
+    });
+
+    const linePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+
+    const areaPoints =
+      points.length >= 2
+        ? `${points[0].x},${maxYCoord} ${linePoints} ${points[points.length - 1].x},${maxYCoord}`
+        : "";
+
+    return {
+      points,
+      linePoints,
+      areaPoints,
+      latestIndex: points.length - 1,
+    };
+  }, [progressionPoints]);
+
   const pill =
     "inline-flex items-center rounded-full border border-white/10 bg-zinc-800 px-3 py-1 text-xs font-semibold text-white uppercase tracking-wide";
 
@@ -361,27 +403,89 @@ export default function ExerciseInfo() {
 
         <Card className="rounded-2xl overflow-hidden">
           <CardHeader className="pb-3">
+            <p className="text-xs text-muted-foreground">Progress over time</p>
             <CardTitle className="text-white">Progress Graph</CardTitle>
           </CardHeader>
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
             {progressionPoints.length >= 2 ? (
-              <div className="mt-2.5 rounded-xl border border-white/10 bg-zinc-900/60 p-4">
+              <div className="mt-2.5 rounded-xl border border-white/5 bg-zinc-900/60 px-4 py-3">
                 <svg
-                  viewBox="0 0 100 40"
+                  viewBox="0 0 300 120"
                   preserveAspectRatio="none"
-                  className="w-full h-28"
+                  className="w-full h-32"
                 >
+                  <defs>
+                    <linearGradient
+                      id="progressGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor="rgba(249,115,22,0.35)" />
+                      <stop offset="100%" stopColor="rgba(249,115,22,0)" />
+                    </linearGradient>
+                  </defs>
+
+                  <line
+                    x1="0"
+                    y1="8"
+                    x2="300"
+                    y2="8"
+                    stroke="rgba(255,255,255,0.06)"
+                    strokeWidth="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="60"
+                    x2="300"
+                    y2="60"
+                    stroke="rgba(255,255,255,0.06)"
+                    strokeWidth="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="112"
+                    x2="300"
+                    y2="112"
+                    stroke="rgba(255,255,255,0.06)"
+                    strokeWidth="1"
+                  />
+
+                  <polygon
+                    points={graphRenderData.areaPoints}
+                    fill="url(#progressGradient)"
+                  />
+
                   <polyline
                     fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="text-primary"
-                    points={progressPolyline}
+                    stroke="#f97316"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    points={graphRenderData.linePoints}
                   />
+
+                  {graphRenderData.points.map((point, idx) => {
+                    const isLatest = idx === graphRenderData.latestIndex;
+                    return (
+                      <circle
+                        key={`progress-point-${idx}`}
+                        cx={point.x}
+                        cy={point.y}
+                        r={isLatest ? 4 : 3}
+                        fill="#f97316"
+                        stroke={isLatest ? "#fff" : "#18181b"}
+                        strokeWidth="2"
+                      >
+                        <title>{`${point.value} kg`}</title>
+                      </circle>
+                    );
+                  })}
                 </svg>
               </div>
             ) : (
-              <div className="mt-2.5 rounded-xl border border-white/10 bg-zinc-900/60 p-4 text-sm text-muted-foreground text-center flex items-center justify-center min-h-[112px]">
+              <div className="mt-2.5 flex min-h-[110px] items-center justify-center rounded-xl border border-white/5 bg-zinc-900/60 text-sm text-muted-foreground">
                 Not enough data yet to draw progression.
               </div>
             )}
