@@ -147,6 +147,14 @@ export default function ExerciseHistory() {
     queryFn: getWorkouts,
   });
 
+  const completedWorkoutIds = useMemo(() => {
+    return new Set(
+      (workouts || [])
+        .filter((w: any) => !!w?.endedAt)
+        .map((w: any) => String(w.id)),
+    );
+  }, [workouts]);
+
   const localHistory = useMemo(() => {
     if (!exerciseName) return [] as any[];
     const out: any[] = [];
@@ -191,6 +199,7 @@ export default function ExerciseHistory() {
         const wid = String(
           s.workout || s.workout_id || s.workoutId || "unknown",
         );
+        if (!completedWorkoutIds.has(wid)) return;
         if (!m.has(wid)) m.set(wid, []);
         m.get(wid).push(s);
       });
@@ -218,7 +227,9 @@ export default function ExerciseHistory() {
     }
 
     // fallback to localHistory
-    const arr = localHistory.slice().map((h) => ({
+    const arr = localHistory
+      .filter((h: any) => completedWorkoutIds.has(String(h.workoutId)))
+      .map((h) => ({
       workoutId: h.workoutId,
       workoutName: h.workoutName,
       date: h.date,
@@ -230,7 +241,7 @@ export default function ExerciseHistory() {
       return bd - ad;
     });
     return arr;
-  }, [serverSets, workouts, localHistory]);
+  }, [serverSets, workouts, localHistory, completedWorkoutIds]);
 
   return (
     <AppLayout>
