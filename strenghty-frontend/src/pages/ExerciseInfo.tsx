@@ -428,13 +428,14 @@ export default function ExerciseInfo() {
                 </Card>
               </div>
             ) : (
-              <div className="space-y-4">
-                {groupedHistory.map((g) => (
-                  <Card
+              <div className="space-y-5">
+                {groupedHistory.map((g, idx) => (
+                  <div
                     key={`h-${g.workoutId}`}
-                    className="w-full rounded-2xl overflow-hidden"
+                    className={idx === 0 ? "" : "border-t border-white/5 pt-5"}
                   >
-                    <CardContent className="px-3 py-[6px] overflow-hidden">
+                    <Card className="w-full rounded-2xl overflow-hidden">
+                      <CardContent className="px-3 py-[6px] overflow-hidden">
                       <div className="flex items-center justify-between">
                         <div>
                           <div>
@@ -456,7 +457,7 @@ export default function ExerciseInfo() {
                         </div>
                       </div>
 
-                      <div className="mt-1">
+                      <div className="mt-3">
                         <div
                           className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                           style={{
@@ -562,6 +563,7 @@ export default function ExerciseInfo() {
                       </div>
                     </CardContent>
                   </Card>
+                  </div>
                 ))}
               </div>
             )}
