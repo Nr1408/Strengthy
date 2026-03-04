@@ -601,7 +601,7 @@ export default function ViewWorkout() {
                     onClick={() => {
                       try {
                         const exId = String(we.exercise.id);
-                        navigate(`/exercises/${exId}/history`, {
+                        navigate(`/exercises/${exId}/info`, {
                           state: {
                             exerciseName: we.exercise.name,
                             muscleGroup: we.exercise.muscleGroup,

@@ -2812,7 +2812,7 @@ export default function NewWorkout() {
                                   const exId = String(
                                     workoutExercise.exercise.id,
                                   );
-                                  navigate(`/exercises/${exId}/history`, {
+                                  navigate(`/exercises/${exId}/info`, {
                                     state: {
                                       exerciseName:
                                         workoutExercise.exercise.name,

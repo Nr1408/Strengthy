@@ -230,7 +230,7 @@ export default function Exercises() {
             exercise={exercise}
             onClick={() => {
               try {
-                navigate(`/exercises/${exercise.id}/history`, {
+                navigate(`/exercises/${exercise.id}/info`, {
                   state: {
                     exerciseName: exercise.name,
                     muscleGroup: exercise.muscleGroup,
@@ -258,7 +258,7 @@ export default function Exercises() {
           onDelete={handleDelete}
           onClick={() => {
             try {
-              navigate(`/exercises/${exercise.id}/history`, {
+              navigate(`/exercises/${exercise.id}/info`, {
                 state: {
                   exerciseName: exercise.name,
                   muscleGroup: exercise.muscleGroup,
