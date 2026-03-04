@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -97,6 +97,10 @@ export default function ExerciseInfo() {
     queryKey: ["workouts"],
     queryFn: getWorkouts,
   });
+
+  const [graphMetric, setGraphMetric] = useState<
+    "heaviest" | "orm" | "volume"
+  >("heaviest");
 
   const selectedExercise = useMemo(() => {
     const byId = exercises.find(
@@ -235,21 +239,40 @@ export default function ExerciseInfo() {
       .slice()
       .reverse()
       .map((group) => {
-        let maxWeight = 0;
+        let metricValue = 0;
         (group.sets || []).forEach((s: any) => {
           const w = Number(s.weight || 0);
-          if (w > maxWeight) maxWeight = w;
+          const reps = Number(s.reps || 0);
+
+          if (graphMetric === "heaviest") {
+            if (w > metricValue) metricValue = w;
+            return;
+          }
+
+          if (graphMetric === "orm") {
+            if (w > 0 && reps > 0) {
+              const est = w * (1 + reps / 30);
+              if (est > metricValue) metricValue = est;
+            }
+            return;
+          }
+
+          if (graphMetric === "volume") {
+            if (w > 0 && reps > 0) {
+              metricValue += w * reps;
+            }
+          }
         });
         return {
           workoutId: group.workoutId,
-          value: maxWeight,
+          value: metricValue,
           date: group.date,
         };
       })
       .filter((p) => p.value > 0);
 
     return points;
-  }, [groupedHistory]);
+  }, [groupedHistory, graphMetric]);
 
   const progressPolyline = useMemo(() => {
     if (progressionPoints.length < 2) return "";
@@ -273,28 +296,44 @@ export default function ExerciseInfo() {
         points: [] as Array<{ x: number; y: number; value: number }>,
         linePoints: "",
         areaPoints: "",
+        yAxisLabels: [] as Array<{ value: number; y: number }>,
+        baselineY: 0,
         latestIndex: -1,
       };
     }
 
     const viewWidth = 300;
     const viewHeight = 120;
-    const padding = 8;
-    const verticalPadding = 6;
-    const maxYCoord = viewHeight - verticalPadding;
-    const maxValue = Math.max(...progressionPoints.map((p) => p.value), 1);
+    const leftPadding = 36;
+    const rightPadding = 8;
+    const topPadding = 6;
+    const bottomPadding = 8;
+    const chartWidth = viewWidth - leftPadding - rightPadding;
+    const chartHeight = viewHeight - topPadding - bottomPadding;
+    const baselineY = topPadding + chartHeight;
+
+    const values = progressionPoints.map((p) => p.value);
+    const maxValue = Math.max(...values, 1);
+    const minValue = Math.min(...values, maxValue);
+    const range = Math.max(maxValue - minValue, 1);
+
+    const yAxisLabelValues = [
+      maxValue,
+      maxValue - range / 3,
+      maxValue - (2 * range) / 3,
+      minValue,
+    ];
 
     const points = progressionPoints.map((p, idx) => {
       const x =
         progressionPoints.length === 1
           ? viewWidth / 2
-          : padding +
-            (idx / (progressionPoints.length - 1)) *
-              (viewWidth - padding * 2);
+          : leftPadding +
+            (idx / (progressionPoints.length - 1)) * chartWidth;
       const y =
-        verticalPadding +
-        (viewHeight - verticalPadding * 2) -
-        (p.value / maxValue) * (viewHeight - verticalPadding * 2);
+        topPadding +
+        chartHeight -
+        ((p.value - minValue) / range) * chartHeight;
       return { x, y, value: p.value };
     });
 
@@ -302,14 +341,46 @@ export default function ExerciseInfo() {
 
     const areaPoints =
       points.length >= 2
-        ? `${points[0].x},${maxYCoord} ${linePoints} ${points[points.length - 1].x},${maxYCoord}`
+        ? `${points[0].x},${baselineY} ${linePoints} ${points[points.length - 1].x},${baselineY}`
         : "";
+
+    const yAxisLabels = yAxisLabelValues.map((value, idx) => {
+      const ratio = idx / (yAxisLabelValues.length - 1);
+      const y = topPadding + ratio * chartHeight;
+      return { value, y };
+    });
 
     return {
       points,
       linePoints,
       areaPoints,
+      yAxisLabels,
+      baselineY,
       latestIndex: points.length - 1,
+    };
+  }, [progressionPoints]);
+
+  const latestProgressPoint =
+    progressionPoints.length > 0
+      ? progressionPoints[progressionPoints.length - 1]
+      : null;
+
+  const graphMetricUnit = graphMetric === "volume" ? "kg·reps" : "kg";
+  const xAxisDateLabels = useMemo(() => {
+    if (progressionPoints.length === 0) {
+      return { first: "-", middle: "-", last: "-" };
+    }
+    const first = progressionPoints[0];
+    const middle = progressionPoints[Math.floor((progressionPoints.length - 1) / 2)];
+    const last = progressionPoints[progressionPoints.length - 1];
+
+    const toLabel = (value?: Date) =>
+      value ? format(new Date(value), "MMM d") : "-";
+
+    return {
+      first: toLabel(first?.date),
+      middle: toLabel(middle?.date),
+      last: toLabel(last?.date),
     };
   }, [progressionPoints]);
 
@@ -415,6 +486,48 @@ export default function ExerciseInfo() {
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
             {progressionPoints.length >= 2 ? (
               <div className="mt-2.5 rounded-xl border border-white/5 bg-zinc-900/60 px-4 py-3">
+                <div className="mb-2 text-sm text-muted-foreground">
+                  {latestProgressPoint
+                    ? `Latest: ${Math.round(latestProgressPoint.value)} ${graphMetricUnit} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
+                    : `Latest: - ${graphMetricUnit}`}
+                </div>
+
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGraphMetric("heaviest")}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      graphMetric === "heaviest"
+                        ? "border-primary/70 bg-primary/20 text-white"
+                        : "border-white/10 bg-zinc-800 text-muted-foreground hover:text-white"
+                    }`}
+                  >
+                    Heaviest Weight
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGraphMetric("orm")}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      graphMetric === "orm"
+                        ? "border-primary/70 bg-primary/20 text-white"
+                        : "border-white/10 bg-zinc-800 text-muted-foreground hover:text-white"
+                    }`}
+                  >
+                    1RM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGraphMetric("volume")}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      graphMetric === "volume"
+                        ? "border-primary/70 bg-primary/20 text-white"
+                        : "border-white/10 bg-zinc-800 text-muted-foreground hover:text-white"
+                    }`}
+                  >
+                    Volume
+                  </button>
+                </div>
+
                 <svg
                   viewBox="0 0 300 120"
                   preserveAspectRatio="none"
@@ -435,7 +548,7 @@ export default function ExerciseInfo() {
                   </defs>
 
                   <line
-                    x1="0"
+                    x1="36"
                     y1="30"
                     x2="300"
                     y2="30"
@@ -443,7 +556,7 @@ export default function ExerciseInfo() {
                     strokeWidth="1"
                   />
                   <line
-                    x1="0"
+                    x1="36"
                     y1="60"
                     x2="300"
                     y2="60"
@@ -451,7 +564,7 @@ export default function ExerciseInfo() {
                     strokeWidth="1"
                   />
                   <line
-                    x1="0"
+                    x1="36"
                     y1="90"
                     x2="300"
                     y2="90"
@@ -459,11 +572,25 @@ export default function ExerciseInfo() {
                     strokeWidth="1"
                   />
 
+                  {graphRenderData.yAxisLabels.map((label, idx) => (
+                    <text
+                      key={`y-label-${idx}`}
+                      x="32"
+                      y={label.y}
+                      textAnchor="end"
+                      dominantBaseline="middle"
+                      fontSize="10"
+                      fill="rgba(255,255,255,0.6)"
+                    >
+                      {`${Math.round(label.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
+                    </text>
+                  ))}
+
                   <line
-                    x1="0"
-                    y1="112"
+                    x1="36"
+                    y1={graphRenderData.baselineY}
                     x2="300"
-                    y2="112"
+                    y2={graphRenderData.baselineY}
                     stroke="rgba(255,255,255,0.05)"
                     strokeWidth="1"
                   />
@@ -499,6 +626,12 @@ export default function ExerciseInfo() {
                     );
                   })}
                 </svg>
+
+                <div className="mt-2 grid grid-cols-3 text-[11px] text-muted-foreground">
+                  <span className="text-left">{xAxisDateLabels.first}</span>
+                  <span className="text-center">{xAxisDateLabels.middle}</span>
+                  <span className="text-right">{xAxisDateLabels.last}</span>
+                </div>
               </div>
             ) : (
               <div className="mt-2.5 flex min-h-[110px] items-center justify-center rounded-xl border border-white/5 bg-zinc-900/60 text-sm text-muted-foreground">
