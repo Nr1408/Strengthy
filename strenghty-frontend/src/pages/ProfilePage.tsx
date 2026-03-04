@@ -96,8 +96,11 @@ function normalizeOnboardingInfo(raw: any): OnboardingInfo {
       : [];
 
   const normalizedHeightUnit = (() => {
-    const unit = String(raw?.heightUnit || raw?.height_unit || "cm").toLowerCase();
-    if (unit === "cm" || unit === "inch" || unit === "ft") return unit as HeightUnit;
+    const unit = String(
+      raw?.heightUnit || raw?.height_unit || "cm",
+    ).toLowerCase();
+    if (unit === "cm" || unit === "inch" || unit === "ft")
+      return unit as HeightUnit;
     if (unit === "in") return "inch";
     return "cm";
   })();
@@ -529,8 +532,8 @@ export default function Profile() {
                       key={g}
                       className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-sm text-white"
                     >
-                      {FITNESS_GOAL_OPTIONS.find((opt) => opt.id === g)?.label ||
-                        g.replace(/-/g, " ")}
+                      {FITNESS_GOAL_OPTIONS.find((opt) => opt.id === g)
+                        ?.label || g.replace(/-/g, " ")}
                     </span>
                   ))
                 ) : (

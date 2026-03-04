@@ -134,7 +134,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden isolate">
       {/* Top status bar shelf (minimal height) */}
       <div
         className="fixed top-0 left-0 w-full z-[100] h-px"
@@ -355,7 +355,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Discard confirmation dialog */}
       <Dialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
         <DialogPortal>
-          <DialogOverlay className="fixed inset-0 z-[9999] bg-black/70" />
+          <DialogOverlay className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-[1px] will-change-transform" />
           <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-[10000] -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[92vw] rounded-[18px] border border-white/10 bg-neutral-900/95 p-7 shadow-2xl">
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15 text-destructive">
               <AlertTriangle className="h-5 w-5" />
