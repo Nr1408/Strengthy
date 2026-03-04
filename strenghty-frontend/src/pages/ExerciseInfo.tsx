@@ -105,14 +105,23 @@ export default function ExerciseInfo() {
 
   const records = useMemo(() => {
     let heaviestWeight = 0;
+    let heaviestUnit = "kg";
     let bestSet = "-";
+    let estimated1RM = 0;
 
     (loggedSets || []).forEach((s: any) => {
       const weight = Number(s.weight || 0);
       const reps = Number(s.reps || 0);
-      if (weight > heaviestWeight) heaviestWeight = weight;
+      if (weight > heaviestWeight) {
+        heaviestWeight = weight;
+        heaviestUnit = String(s.unit || "kg");
+      }
       if (reps > 0 && (bestSet === "-" || reps > Number(String(bestSet).split(" reps")[0] || 0))) {
         bestSet = `${reps} reps @ ${weight || 0}`;
+      }
+      if (weight > 0 && reps > 0) {
+        const est = weight * (1 + reps / 30);
+        if (est > estimated1RM) estimated1RM = est;
       }
     });
 
@@ -120,12 +129,20 @@ export default function ExerciseInfo() {
       (loggedSets || []).map((s: any) => String(s.workout || s.workoutId || s.workout_id || "")),
     ).size;
 
+    const lastPerformed =
+      groupedHistory && groupedHistory.length > 0 && groupedHistory[0].date
+        ? new Date(groupedHistory[0].date)
+        : null;
+
     return {
       heaviestWeight,
+      heaviestUnit,
       bestSet,
+      estimated1RM,
       totalWorkouts,
+      lastPerformed,
     };
-  }, [loggedSets]);
+  }, [loggedSets, groupedHistory]);
 
   const groupedHistory = useMemo(() => {
     const map = new Map<
@@ -168,6 +185,45 @@ export default function ExerciseInfo() {
   const primaryMuscle = selectedExercise.muscleGroup || "other";
   const secondaryMuscles = SECONDARY_BY_PRIMARY[primaryMuscle] || ["Support Muscles"];
 
+  const progressionPoints = useMemo(() => {
+    const points = groupedHistory
+      .slice()
+      .reverse()
+      .map((group) => {
+        let maxWeight = 0;
+        (group.sets || []).forEach((s: any) => {
+          const w = Number(s.weight || 0);
+          if (w > maxWeight) maxWeight = w;
+        });
+        return {
+          workoutId: group.workoutId,
+          value: maxWeight,
+          date: group.date,
+        };
+      })
+      .filter((p) => p.value > 0);
+
+    return points;
+  }, [groupedHistory]);
+
+  const progressPolyline = useMemo(() => {
+    if (progressionPoints.length < 2) return "";
+
+    const width = 100;
+    const height = 40;
+    const maxY = Math.max(...progressionPoints.map((p) => p.value), 1);
+
+    return progressionPoints
+      .map((p, idx) => {
+        const x = (idx / (progressionPoints.length - 1)) * width;
+        const y = height - (p.value / maxY) * height;
+        return `${x},${y}`;
+      })
+      .join(" ");
+  }, [progressionPoints]);
+
+  const pill = "inline-flex items-center rounded-full border border-white/10 bg-zinc-800 px-3 py-1 text-xs font-semibold text-white uppercase tracking-wide";
+
   return (
     <AppLayout>
       <div className="space-y-5 mt-1 px-1 sm:px-0 max-w-3xl mx-auto">
@@ -180,26 +236,31 @@ export default function ExerciseInfo() {
         </button>
 
         <Card className="rounded-2xl overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-white">Exercise Name</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-1 sm:pt-2">
+          <CardContent className="space-y-4 pt-5 sm:pt-6">
             <h2 className="text-2xl font-bold text-white">{selectedExercise.name}</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">Primary:</span>
-              <MuscleTag muscle={selectedExercise.muscleGroup} />
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Secondary: <span className="text-white">{secondaryMuscles.join(", ")}</span>
-            </div>
 
-            <div className="pt-2">
-              <div className="h-28 w-28 rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center">
+            <div className="pt-1">
+              <div className="h-[110px] w-[110px] rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center">
                 <img
                   src={`/icons/${getExerciseIconFile(selectedExercise.name, selectedExercise.muscleGroup || "")}`}
                   alt={selectedExercise.name}
-                  className="h-20 w-20 object-contain"
+                  className="h-[110px] w-[110px] object-contain"
                 />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground w-full">Primary</span>
+              <span className={pill}>{String(selectedExercise.muscleGroup || "other")}</span>
+            </div>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <div>Secondary</div>
+              <div className="flex flex-wrap items-center gap-2">
+                {secondaryMuscles.map((m) => (
+                  <span key={m} className={pill}>
+                    {m}
+                  </span>
+                ))}
               </div>
             </div>
           </CardContent>
@@ -209,25 +270,60 @@ export default function ExerciseInfo() {
           <CardHeader>
             <CardTitle className="text-white">Your Records</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 sm:pt-2">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1 sm:pt-2">
             <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
               <p className="text-xs text-muted-foreground">Heaviest Weight</p>
-              <p className="text-lg font-semibold text-white">{records.heaviestWeight || 0}</p>
+              <p className="text-lg font-semibold text-white">{records.heaviestWeight || 0} {records.heaviestUnit}</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
               <p className="text-xs text-muted-foreground">Best Set</p>
               <p className="text-lg font-semibold text-white">{records.bestSet}</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
+              <p className="text-xs text-muted-foreground">Estimated 1RM</p>
+              <p className="text-lg font-semibold text-white">{Math.round(records.estimated1RM || 0)} {records.heaviestUnit}</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
               <p className="text-xs text-muted-foreground">Total Workouts</p>
               <p className="text-lg font-semibold text-white">{records.totalWorkouts}</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
+              <p className="text-xs text-muted-foreground">Last Performed</p>
+              <p className="text-lg font-semibold text-white">
+                {records.lastPerformed ? format(records.lastPerformed, "MMM d") : "-"}
+              </p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-white">Exercise history section</CardTitle>
+            <CardTitle className="text-white">Progress Graph</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-1 sm:pt-2">
+            {progressionPoints.length >= 2 ? (
+              <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-4">
+                <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-28">
+                  <polyline
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-primary"
+                    points={progressPolyline}
+                  />
+                </svg>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 text-sm text-muted-foreground">
+                Not enough data yet to draw progression.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl overflow-hidden">
+          <CardHeader>
+            <CardTitle className="text-white">History</CardTitle>
           </CardHeader>
           <CardContent className="pt-1 sm:pt-2">
             {groupedHistory.length === 0 ? (
