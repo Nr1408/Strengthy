@@ -26,7 +26,7 @@ import WorkoutPreview from "./pages/WorkoutPreview";
 import WorkoutComplete from "./pages/WorkoutComplete";
 import EditWorkout from "./pages/EditWorkout";
 import ViewWorkout from "./pages/ViewWorkout";
-import ExerciseInfo from "./pages/ExerciseInfo";
+import ExerciseHistory from "./pages/ExerciseHistory";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import GoogleRedirect from "./pages/GoogleRedirect";
@@ -287,15 +287,7 @@ const AnimatedRoutes = () => {
           path="/exercises/:id/history"
           element={
             <PageTransition>
-              <ExerciseInfo />
-            </PageTransition>
-          }
-        />
-        <Route
-          path="/exercises/:id/info"
-          element={
-            <PageTransition>
-              <ExerciseInfo />
+              <ExerciseHistory />
             </PageTransition>
           }
         />

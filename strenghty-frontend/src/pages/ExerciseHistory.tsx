@@ -10,13 +10,26 @@ import { format } from "date-fns";
 import { SetRow } from "@/components/workout/SetRow";
 import { Trophy, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
+// Exercise history uses a slightly tighter grid so entries align closer
+// to the card edges without affecting other pages.
+// Use the same tightened "no-check" templates from SetRow so the
+// header labels line up exactly with the read-only set boxes below.
+const GRID_TEMPLATE =
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+// same as above but without the final check column
 const GRID_TEMPLATE_STRENGTH_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
 
+// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
+const GRID_TEMPLATE_CARDIO =
+  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 const GRID_TEMPLATE_CARDIO_NO_CHECK =
   "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(56px, 0.8fr) minmax(28px, 0.25fr) 32px";
+
+// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
+const GRID_TEMPLATE_HIIT =
+  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 const GRID_TEMPLATE_HIIT_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
@@ -37,24 +50,6 @@ const isHiitExerciseName = (value: string) => {
 };
 
 export default function ExerciseHistory() {
-  return (
-    <AppLayout>
-      <ExerciseHistoryContent />
-    </AppLayout>
-  );
-}
-
-type ExerciseHistoryContentProps = {
-  showBackButton?: boolean;
-  showExerciseHeader?: boolean;
-  className?: string;
-};
-
-export function ExerciseHistoryContent({
-  showBackButton = true,
-  showExerciseHeader = true,
-  className,
-}: ExerciseHistoryContentProps) {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation() as any;
@@ -63,25 +58,29 @@ export function ExerciseHistoryContent({
 
   const isNumericId = id != null && /^[0-9]+$/.test(String(id));
 
-  const { data: serverSets = [] } = useQuery({
+  const { data: serverSets = [], isLoading } = useQuery({
     queryKey: ["exerciseSets", id],
     queryFn: async () => {
       if (!id) return [] as any[];
       try {
+        // Fetch both strength sets and cardio sets for this exercise and merge them
         const [strength, cardio] = await Promise.all([
           getSetsForExercise(String(id)),
+          // cardio API may return an empty array if none
+          // getCardioSetsForExercise was added to the API helpers
           (async () => {
             try {
               const cs = await (
                 await import("@/lib/api")
               ).getCardioSetsForExercise(String(id));
               return cs;
-            } catch {
+            } catch (e) {
               return [] as any[];
             }
           })(),
         ] as any);
 
+        // Map cardio sets into the same WorkoutSet shape expected by SetRow
         const cardioMapped = (cardio || []).map((s: any) => {
           const mode = s.mode as any;
           const durationSeconds =
@@ -91,7 +90,6 @@ export function ExerciseHistoryContent({
               ? s.distance
               : 0;
           const distance = mode === "stairs" ? rawDistance : rawDistance / 1000;
-
           let cardioStat: number | undefined;
           if (mode === "stairs") {
             cardioStat =
@@ -137,7 +135,7 @@ export function ExerciseHistoryContent({
         });
 
         return [...(strength || []), ...cardioMapped];
-      } catch {
+      } catch (e) {
         return [] as any[];
       }
     },
@@ -163,7 +161,8 @@ export function ExerciseHistoryContent({
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (!key || !key.startsWith("workout:state:")) continue;
+        if (!key) continue;
+        if (!key.startsWith("workout:state:")) continue;
         try {
           const raw = localStorage.getItem(key);
           if (!raw) continue;
@@ -185,22 +184,25 @@ export function ExerciseHistoryContent({
               });
             }
           });
-        } catch {}
+        } catch (e) {}
       }
-    } catch {}
+    } catch (e) {}
     return out;
   }, [exerciseName]);
 
   const grouped = useMemo(() => {
+    // Prefer serverSets if available
     if (serverSets && serverSets.length > 0) {
+      // serverSets items include workout id and set details
       const m = new Map<string, any>();
       serverSets.forEach((s: any) => {
-        const wid = String(s.workout || s.workout_id || s.workoutId || "unknown");
+        const wid = String(
+          s.workout || s.workout_id || s.workoutId || "unknown",
+        );
         if (!completedWorkoutIds.has(wid)) return;
         if (!m.has(wid)) m.set(wid, []);
         m.get(wid).push(s);
       });
-
       const arr = Array.from(m.entries()).map(([wid, sets]) => {
         const workout = workouts.find((w: any) => String(w.id) === wid);
         return {
@@ -215,7 +217,7 @@ export function ExerciseHistoryContent({
           sets,
         };
       });
-
+      // sort by date desc when available
       arr.sort((a: any, b: any) => {
         const ad = a.date ? new Date(a.date).getTime() : 0;
         const bd = b.date ? new Date(b.date).getTime() : 0;
@@ -224,15 +226,15 @@ export function ExerciseHistoryContent({
       return arr;
     }
 
+    // fallback to localHistory
     const arr = localHistory
       .filter((h: any) => completedWorkoutIds.has(String(h.workoutId)))
       .map((h) => ({
-        workoutId: h.workoutId,
-        workoutName: h.workoutName,
-        date: h.date,
-        sets: h.sets,
-      }));
-
+      workoutId: h.workoutId,
+      workoutName: h.workoutName,
+      date: h.date,
+      sets: h.sets,
+    }));
     arr.sort((a: any, b: any) => {
       const ad = a.date ? new Date(a.date).getTime() : 0;
       const bd = b.date ? new Date(b.date).getTime() : 0;
@@ -242,8 +244,8 @@ export function ExerciseHistoryContent({
   }, [serverSets, workouts, localHistory, completedWorkoutIds]);
 
   return (
-    <div className={cn("space-y-3 -mt-4", className)}>
-      {showBackButton && (
+    <AppLayout>
+      <div className="space-y-3 -mt-4">
         <div className="mt-0.5">
           <button
             type="button"
@@ -253,9 +255,7 @@ export function ExerciseHistoryContent({
             ◀
           </button>
         </div>
-      )}
 
-      {showExerciseHeader && (
         <div>
           <div className="flex items-start gap-4">
             <div className="h-16 w-16 flex items-center justify-center rounded-md bg-zinc-800 border border-white/10">
@@ -273,131 +273,162 @@ export function ExerciseHistoryContent({
             </div>
           </div>
         </div>
-      )}
 
-      <div className="space-y-2">
-        {grouped.length === 0 ? (
-          <div className="flex items-center justify-center">
-            <Card className="w-full max-w-2xl rounded-2xl overflow-hidden">
-              <CardContent className="px-2 py-4 sm:p-4 overflow-hidden">
-                <div className="flex flex-col items-center text-center gap-4 py-6">
-                  <div className="h-16 w-16 rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center">
-                    <PlusCircle className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h2 className="text-lg font-semibold text-white">No history yet</h2>
-                  <p className="text-sm text-muted-foreground max-w-xl">
-                    We couldn't find any logged sets for this exercise. Try logging
-                    a workout that includes this exercise, or browse the exercise
-                    library for alternatives.
-                  </p>
-                  <div className="flex gap-3 mt-2">
-                    <Button onClick={() => navigate("/workouts/new")} className="bg-primary">
-                      Log a workout
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate("/exercises")}>
-                      Browse exercises
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          grouped.map((g) => (
-            <Card key={`h-${g.workoutId}`} className="w-full rounded-2xl overflow-hidden">
-              <CardContent className="px-2 py-4 sm:p-4 overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/workouts/${g.workoutId}/view`)}
-                        className="pt-2 text-lg font-semibold text-white text-left hover:underline"
+        <div className="space-y-2">
+          {grouped.length === 0 ? (
+            <div className="flex items-center justify-center">
+              <Card className="w-full max-w-2xl rounded-2xl overflow-hidden">
+                <CardContent className="px-2 py-4 sm:p-4 overflow-hidden">
+                  <div className="flex flex-col items-center text-center gap-4 py-6">
+                    <div className="h-16 w-16 rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center">
+                      <PlusCircle className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-white">
+                      No history yet
+                    </h2>
+                    <p className="text-sm text-muted-foreground max-w-xl">
+                      We couldn't find any logged sets for this exercise. Try
+                      logging a workout that includes this exercise, or browse
+                      the exercise library for alternatives.
+                    </p>
+                    <div className="flex gap-3 mt-2">
+                      <Button
+                        onClick={() => navigate("/workouts/new")}
+                        className="bg-primary"
                       >
-                        {g.workoutName}
-                      </button>
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {g.date ? format(new Date(g.date), "dd LLL yyyy, HH:mm") : "-"}
+                        Log a workout
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate("/exercises")}
+                      >
+                        Browse exercises
+                      </Button>
                     </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            grouped.map((g) => (
+              <Card
+                key={`h-${g.workoutId}`}
+                className="w-full rounded-2xl overflow-hidden"
+              >
+                <CardContent className="px-2 py-4 sm:p-4 overflow-hidden">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/workouts/${g.workoutId}/view`)
+                          }
+                          className="pt-2 text-lg font-semibold text-white text-left hover:underline"
+                        >
+                          {g.workoutName}
+                        </button>
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {g.date
+                          ? format(new Date(g.date), "dd LLL yyyy, HH:mm")
+                          : "-"}
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="mt-4">
-                  <div
-                    className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                    style={{
-                      gridTemplateColumns: (() => {
-                        const isHiit = isHiitExerciseName(exerciseName || "");
-                        if (g.sets && g.sets.length > 0 && g.sets[0].cardioMode) {
-                          return isHiit
-                            ? GRID_TEMPLATE_HIIT_NO_CHECK
-                            : GRID_TEMPLATE_CARDIO_NO_CHECK;
-                        }
-                        return GRID_TEMPLATE_STRENGTH_NO_CHECK;
-                      })(),
-                    }}
-                  >
-                    {g.sets && g.sets[0] && g.sets[0].cardioMode ? (
-                      (() => {
-                        const isHiit = isHiitExerciseName(exerciseName || "");
-                        if (isHiit) {
+                  <div className="mt-4">
+                    <div
+                      className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
+                      style={{
+                        gridTemplateColumns: ((): string => {
+                          const isHiit = isHiitExerciseName(exerciseName || "");
+                          if (
+                            g.sets &&
+                            g.sets.length > 0 &&
+                            g.sets[0].cardioMode
+                          ) {
+                            return isHiit
+                              ? GRID_TEMPLATE_HIIT_NO_CHECK
+                              : GRID_TEMPLATE_CARDIO_NO_CHECK;
+                          }
+                          return GRID_TEMPLATE_STRENGTH_NO_CHECK;
+                        })(),
+                      }}
+                    >
+                      {g.sets && g.sets[0] && g.sets[0].cardioMode ? (
+                        (() => {
+                          const isHiit = isHiitExerciseName(exerciseName || "");
+
+                          if (isHiit) {
+                            return (
+                              <>
+                                <span className="flex justify-center">SET</span>
+                                <span className="flex justify-center">
+                                  DURATION
+                                </span>
+                                <span className="flex justify-center">
+                                  REPS
+                                </span>
+                                <span className="flex justify-center">RPE</span>
+                                <span className="flex justify-center">PR</span>
+                              </>
+                            );
+                          }
+
                           return (
                             <>
                               <span className="flex justify-center">SET</span>
-                              <span className="flex justify-center">DURATION</span>
-                              <span className="flex justify-center">REPS</span>
-                              <span className="flex justify-center">RPE</span>
+                              <span className="flex justify-center">
+                                DURATION
+                              </span>
+                              <span className="flex justify-center">
+                                DISTANCE
+                              </span>
+                              <span className="flex justify-center">LEVEL</span>
                               <span className="flex justify-center">PR</span>
                             </>
                           );
-                        }
-                        return (
-                          <>
-                            <span className="flex justify-center">SET</span>
-                            <span className="flex justify-center">DURATION</span>
-                            <span className="flex justify-center">DISTANCE</span>
-                            <span className="flex justify-center">LEVEL</span>
-                            <span className="flex justify-center">PR</span>
-                          </>
-                        );
-                      })()
-                    ) : (
-                      <>
-                        <span className="flex justify-center translate-x-[2px]">SET</span>
-                        <span className="flex justify-center">WEIGHT</span>
-                        <span />
-                        <span className="flex justify-center">REPS</span>
-                        <span className="flex justify-center">RPE</span>
-                        <span className="flex justify-center">
-                          <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                        </span>
-                      </>
-                    )}
-                  </div>
+                        })()
+                      ) : (
+                        <>
+                          <span className="flex justify-center translate-x-[2px]">
+                            SET
+                          </span>
+                          <span className="flex justify-center">WEIGHT</span>
+                          <span />
+                          <span className="flex justify-center">REPS</span>
+                          <span className="flex justify-center">RPE</span>
+                          <span className="flex justify-center">
+                            <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
+                          </span>
+                        </>
+                      )}
+                    </div>
 
-                  <div className="space-y-2">
-                    {g.sets.map((s: any, idx: number) => (
-                      <SetRow
-                        key={`${g.workoutId}-${idx}`}
-                        set={s}
-                        exerciseName={exerciseName || ""}
-                        unit={s.unit || "kg"}
-                        setNumber={s.setNumber ?? idx + 1}
-                        onUpdate={() => {}}
-                        onUnitChange={() => {}}
-                        onComplete={() => {}}
-                        readOnly
-                        showComplete={false}
-                      />
-                    ))}
+                    <div className="space-y-2">
+                      {g.sets.map((s: any, idx: number) => (
+                        <SetRow
+                          key={`${g.workoutId}-${idx}`}
+                          set={s}
+                          exerciseName={exerciseName || ""}
+                          unit={s.unit || "kg"}
+                          setNumber={s.setNumber ?? idx + 1}
+                          onUpdate={() => {}}
+                          onUnitChange={() => {}}
+                          onComplete={() => {}}
+                          readOnly
+                          showComplete={false}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
