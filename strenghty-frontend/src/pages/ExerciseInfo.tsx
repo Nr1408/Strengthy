@@ -279,18 +279,22 @@ export default function ExerciseInfo() {
 
     const viewWidth = 300;
     const viewHeight = 120;
-    const minX = 8;
-    const maxX = viewWidth - 8;
-    const minY = 8;
-    const maxYCoord = viewHeight - 8;
+    const padding = 8;
+    const verticalPadding = 6;
+    const maxYCoord = viewHeight - verticalPadding;
     const maxValue = Math.max(...progressionPoints.map((p) => p.value), 1);
 
     const points = progressionPoints.map((p, idx) => {
       const x =
         progressionPoints.length === 1
           ? viewWidth / 2
-          : minX + (idx / (progressionPoints.length - 1)) * (maxX - minX);
-      const y = maxYCoord - (p.value / maxValue) * (maxYCoord - minY);
+          : padding +
+            (idx / (progressionPoints.length - 1)) *
+              (viewWidth - padding * 2);
+      const y =
+        verticalPadding +
+        (viewHeight - verticalPadding * 2) -
+        (p.value / maxValue) * (viewHeight - verticalPadding * 2);
       return { x, y, value: p.value };
     });
 
@@ -403,7 +407,9 @@ export default function ExerciseInfo() {
 
         <Card className="rounded-2xl overflow-hidden">
           <CardHeader className="pb-3">
-            <p className="text-xs text-muted-foreground mb-1">Progress over time</p>
+            <p className="text-xs text-muted-foreground mb-1">
+              Progress over time
+            </p>
             <CardTitle className="text-white">Progress Graph</CardTitle>
           </CardHeader>
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
@@ -423,7 +429,7 @@ export default function ExerciseInfo() {
                       y2="1"
                     >
                       <stop offset="0%" stopColor="rgba(249,115,22,0.28)" />
-                      <stop offset="60%" stopColor="rgba(249,115,22,0.10)" />
+                      <stop offset="50%" stopColor="rgba(249,115,22,0.10)" />
                       <stop offset="100%" stopColor="rgba(249,115,22,0)" />
                     </linearGradient>
                   </defs>
@@ -433,7 +439,7 @@ export default function ExerciseInfo() {
                     y1="30"
                     x2="300"
                     y2="30"
-                    stroke="rgba(255,255,255,0.07)"
+                    stroke="rgba(255,255,255,0.04)"
                     strokeWidth="1"
                   />
                   <line
@@ -441,7 +447,7 @@ export default function ExerciseInfo() {
                     y1="60"
                     x2="300"
                     y2="60"
-                    stroke="rgba(255,255,255,0.07)"
+                    stroke="rgba(255,255,255,0.04)"
                     strokeWidth="1"
                   />
                   <line
@@ -449,7 +455,7 @@ export default function ExerciseInfo() {
                     y1="90"
                     x2="300"
                     y2="90"
-                    stroke="rgba(255,255,255,0.07)"
+                    stroke="rgba(255,255,255,0.04)"
                     strokeWidth="1"
                   />
 
@@ -483,7 +489,7 @@ export default function ExerciseInfo() {
                         key={`progress-point-${idx}`}
                         cx={point.x}
                         cy={point.y}
-                        r={isLatest ? 4 : 3}
+                        r={isLatest ? 4 : 3.5}
                         fill="#f97316"
                         stroke={isLatest ? "#ffffff" : "#0b0f14"}
                         strokeWidth="2"
