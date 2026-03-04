@@ -296,7 +296,7 @@ export default function ExerciseInfo() {
         points: [] as Array<{ x: number; y: number; value: number }>,
         linePoints: "",
         areaPoints: "",
-        yAxisLabels: [] as Array<{ value: number; y: number }>,
+        yAxisTicks: [] as Array<{ value: number; y: number }>,
         baselineY: 0,
         latestIndex: -1,
       };
@@ -304,34 +304,40 @@ export default function ExerciseInfo() {
 
     const viewWidth = 300;
     const viewHeight = 120;
-    const leftPadding = 36;
-    const rightPadding = 8;
+    const horizontalPadding = 8;
     const topPadding = 6;
     const bottomPadding = 8;
-    const chartWidth = viewWidth - leftPadding - rightPadding;
+    const chartWidth = viewWidth - horizontalPadding * 2;
     const chartHeight = viewHeight - topPadding - bottomPadding;
     const baselineY = topPadding + chartHeight;
 
     const values = progressionPoints.map((p) => p.value);
     const maxValue = Math.max(...values, 1);
     const minValue = Math.min(...values, maxValue);
-    const range = Math.max(maxValue - minValue, 1);
-    const step = range / 3;
+    const valuePadding = Math.max((maxValue - minValue) * 0.1, 2);
+    const top = Math.ceil((maxValue + valuePadding) / 2) * 2;
+    const bottom = Math.floor((minValue - valuePadding) / 2) * 2;
+    const domainRange = Math.max(top - bottom, 1);
+    const steps = 3;
+    const stepSize = domainRange / steps;
 
-    const yAxisLabelValues = [
-      maxValue,
-      maxValue - step,
-      maxValue - step * 2,
-      minValue,
-    ];
+    const yAxisTicks = Array.from({ length: steps + 1 }, (_, idx) => {
+      const value = Math.round((top - idx * stepSize) * 10) / 10;
+      const ratio = idx / steps;
+      const y = topPadding + ratio * chartHeight;
+      return { value, y };
+    });
 
     const points = progressionPoints.map((p, idx) => {
       const x =
         progressionPoints.length === 1
           ? viewWidth / 2
-          : leftPadding + (idx / (progressionPoints.length - 1)) * chartWidth;
+          : horizontalPadding +
+            (idx / (progressionPoints.length - 1)) * chartWidth;
       const y =
-        topPadding + chartHeight - ((p.value - minValue) / range) * chartHeight;
+        topPadding +
+        chartHeight -
+        ((p.value - bottom) / domainRange) * chartHeight;
       return { x, y, value: p.value };
     });
 
@@ -342,17 +348,11 @@ export default function ExerciseInfo() {
         ? `${points[0].x},${baselineY} ${linePoints} ${points[points.length - 1].x},${baselineY}`
         : "";
 
-    const yAxisLabels = yAxisLabelValues.map((value, idx) => {
-      const ratio = idx / (yAxisLabelValues.length - 1);
-      const y = topPadding + ratio * chartHeight;
-      return { value, y };
-    });
-
     return {
       points,
       linePoints,
       areaPoints,
-      yAxisLabels,
+      yAxisTicks,
       baselineY,
       latestIndex: points.length - 1,
     };
@@ -540,104 +540,90 @@ export default function ExerciseInfo() {
                   </button>
                 </div>
 
-                <svg
-                  viewBox="0 0 300 120"
-                  preserveAspectRatio="none"
-                  className="w-full h-24"
-                >
-                  <defs>
-                    <linearGradient
-                      id="progressGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="rgba(249,115,22,0.28)" />
-                      <stop offset="50%" stopColor="rgba(249,115,22,0.10)" />
-                      <stop offset="100%" stopColor="rgba(249,115,22,0)" />
-                    </linearGradient>
-                  </defs>
-
-                  <line
-                    x1="36"
-                    y1="30"
-                    x2="300"
-                    y2="30"
-                    stroke="rgba(255,255,255,0.04)"
-                    strokeWidth="1"
-                  />
-                  <line
-                    x1="36"
-                    y1="60"
-                    x2="300"
-                    y2="60"
-                    stroke="rgba(255,255,255,0.04)"
-                    strokeWidth="1"
-                  />
-                  <line
-                    x1="36"
-                    y1="90"
-                    x2="300"
-                    y2="90"
-                    stroke="rgba(255,255,255,0.04)"
-                    strokeWidth="1"
-                  />
-
-                  {graphRenderData.yAxisLabels.map((label, idx) => (
-                    <text
-                      key={`y-label-${idx}`}
-                      x="32"
-                      y={label.y}
-                      textAnchor="end"
-                      dominantBaseline="middle"
-                      fontSize="10"
-                      fill="rgba(255,255,255,0.6)"
-                    >
-                      {`${yAxisLabelFormatter(label.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
-                    </text>
-                  ))}
-
-                  <line
-                    x1="36"
-                    y1={graphRenderData.baselineY}
-                    x2="300"
-                    y2={graphRenderData.baselineY}
-                    stroke="rgba(255,255,255,0.05)"
-                    strokeWidth="1"
-                  />
-
-                  <polygon
-                    points={graphRenderData.areaPoints}
-                    fill="url(#progressGradient)"
-                  />
-
-                  <polyline
-                    fill="none"
-                    stroke="#f97316"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    points={graphRenderData.linePoints}
-                  />
-
-                  {graphRenderData.points.map((point, idx) => {
-                    const isLatest = idx === graphRenderData.latestIndex;
-                    return (
-                      <circle
-                        key={`progress-point-${idx}`}
-                        cx={point.x}
-                        cy={point.y}
-                        r={isLatest ? 4 : 3.5}
-                        fill="#f97316"
-                        stroke={isLatest ? "#ffffff" : "#0b0f14"}
-                        strokeWidth="2"
+                <div className="flex items-stretch gap-2">
+                  <div className="flex h-24 flex-col justify-between pr-1 text-[10px] text-muted-foreground">
+                    {graphRenderData.yAxisTicks.map((tick, idx) => (
+                      <span
+                        key={`y-tick-label-${idx}`}
+                        className="leading-none"
                       >
-                        <title>{`${point.value} kg`}</title>
-                      </circle>
-                    );
-                  })}
-                </svg>
+                        {`${yAxisLabelFormatter(tick.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
+                      </span>
+                    ))}
+                  </div>
+
+                  <svg
+                    viewBox="0 0 300 120"
+                    preserveAspectRatio="none"
+                    className="h-24 flex-1"
+                  >
+                    <defs>
+                      <linearGradient
+                        id="progressGradient"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="0%" stopColor="rgba(249,115,22,0.28)" />
+                        <stop offset="50%" stopColor="rgba(249,115,22,0.10)" />
+                        <stop offset="100%" stopColor="rgba(249,115,22,0)" />
+                      </linearGradient>
+                    </defs>
+
+                    {graphRenderData.yAxisTicks.map((tick, idx) => (
+                      <line
+                        key={`grid-line-${idx}`}
+                        x1="0"
+                        y1={tick.y}
+                        x2="300"
+                        y2={tick.y}
+                        stroke="rgba(255,255,255,0.04)"
+                        strokeWidth="1"
+                      />
+                    ))}
+
+                    <line
+                      x1="0"
+                      y1={graphRenderData.baselineY}
+                      x2="300"
+                      y2={graphRenderData.baselineY}
+                      stroke="rgba(255,255,255,0.05)"
+                      strokeWidth="1"
+                    />
+
+                    <polygon
+                      points={graphRenderData.areaPoints}
+                      fill="url(#progressGradient)"
+                    />
+
+                    <polyline
+                      fill="none"
+                      stroke="#f97316"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      points={graphRenderData.linePoints}
+                    />
+
+                    {graphRenderData.points.map((point, idx) => {
+                      const isLatest = idx === graphRenderData.latestIndex;
+                      return (
+                        <circle
+                          key={`progress-point-${idx}`}
+                          cx={point.x}
+                          cy={point.y}
+                          r={isLatest ? 4 : 3.5}
+                          fill="#f97316"
+                          stroke={isLatest ? "#ffffff" : "#0b0f14"}
+                          strokeWidth="2"
+                        >
+                          <title>{`${point.value} kg`}</title>
+                        </circle>
+                      );
+                    })}
+                  </svg>
+                </div>
 
                 <div className="mt-2 grid grid-cols-3 text-[11px] text-muted-foreground">
                   <span className="text-left">{xAxisDateLabels.first}</span>
