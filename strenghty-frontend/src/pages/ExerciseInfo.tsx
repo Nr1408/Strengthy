@@ -129,20 +129,14 @@ export default function ExerciseInfo() {
       (loggedSets || []).map((s: any) => String(s.workout || s.workoutId || s.workout_id || "")),
     ).size;
 
-    const lastPerformed =
-      groupedHistory && groupedHistory.length > 0 && groupedHistory[0].date
-        ? new Date(groupedHistory[0].date)
-        : null;
-
     return {
       heaviestWeight,
       heaviestUnit,
       bestSet,
       estimated1RM,
       totalWorkouts,
-      lastPerformed,
     };
-  }, [loggedSets, groupedHistory]);
+  }, [loggedSets]);
 
   const groupedHistory = useMemo(() => {
     const map = new Map<
@@ -181,6 +175,12 @@ export default function ExerciseInfo() {
       return bt - at;
     });
   }, [loggedSets, workouts]);
+
+  const lastPerformed = useMemo(() => {
+    return groupedHistory && groupedHistory.length > 0 && groupedHistory[0].date
+      ? new Date(groupedHistory[0].date)
+      : null;
+  }, [groupedHistory]);
 
   const primaryMuscle = selectedExercise.muscleGroup || "other";
   const secondaryMuscles = SECONDARY_BY_PRIMARY[primaryMuscle] || ["Support Muscles"];
@@ -290,7 +290,7 @@ export default function ExerciseInfo() {
             <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
               <p className="text-xs text-muted-foreground">Last Performed</p>
               <p className="text-lg font-semibold text-white">
-                {records.lastPerformed ? format(records.lastPerformed, "MMM d") : "-"}
+                {lastPerformed ? format(lastPerformed, "MMM d") : "-"}
               </p>
             </div>
           </CardContent>
