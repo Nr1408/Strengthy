@@ -403,7 +403,7 @@ export default function ExerciseInfo() {
 
         <Card className="rounded-2xl overflow-hidden">
           <CardHeader className="pb-3">
-            <p className="text-xs text-muted-foreground">Progress over time</p>
+            <p className="text-xs text-muted-foreground mb-1">Progress over time</p>
             <CardTitle className="text-white">Progress Graph</CardTitle>
           </CardHeader>
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
@@ -412,7 +412,7 @@ export default function ExerciseInfo() {
                 <svg
                   viewBox="0 0 300 120"
                   preserveAspectRatio="none"
-                  className="w-full h-32"
+                  className="w-full h-24"
                 >
                   <defs>
                     <linearGradient
@@ -422,17 +422,18 @@ export default function ExerciseInfo() {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="0%" stopColor="rgba(249,115,22,0.35)" />
+                      <stop offset="0%" stopColor="rgba(249,115,22,0.28)" />
+                      <stop offset="60%" stopColor="rgba(249,115,22,0.10)" />
                       <stop offset="100%" stopColor="rgba(249,115,22,0)" />
                     </linearGradient>
                   </defs>
 
                   <line
                     x1="0"
-                    y1="8"
+                    y1="30"
                     x2="300"
-                    y2="8"
-                    stroke="rgba(255,255,255,0.06)"
+                    y2="30"
+                    stroke="rgba(255,255,255,0.07)"
                     strokeWidth="1"
                   />
                   <line
@@ -440,15 +441,24 @@ export default function ExerciseInfo() {
                     y1="60"
                     x2="300"
                     y2="60"
-                    stroke="rgba(255,255,255,0.06)"
+                    stroke="rgba(255,255,255,0.07)"
                     strokeWidth="1"
                   />
+                  <line
+                    x1="0"
+                    y1="90"
+                    x2="300"
+                    y2="90"
+                    stroke="rgba(255,255,255,0.07)"
+                    strokeWidth="1"
+                  />
+
                   <line
                     x1="0"
                     y1="112"
                     x2="300"
                     y2="112"
-                    stroke="rgba(255,255,255,0.06)"
+                    stroke="rgba(255,255,255,0.05)"
                     strokeWidth="1"
                   />
 
@@ -460,7 +470,7 @@ export default function ExerciseInfo() {
                   <polyline
                     fill="none"
                     stroke="#f97316"
-                    strokeWidth="3"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     points={graphRenderData.linePoints}
@@ -475,7 +485,7 @@ export default function ExerciseInfo() {
                         cy={point.y}
                         r={isLatest ? 4 : 3}
                         fill="#f97316"
-                        stroke={isLatest ? "#fff" : "#18181b"}
+                        stroke={isLatest ? "#ffffff" : "#0b0f14"}
                         strokeWidth="2"
                       >
                         <title>{`${point.value} kg`}</title>
