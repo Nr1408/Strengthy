@@ -17,6 +17,7 @@
     }
     ,
     "GoogleAuth": {
+      "androidClientId": "REPLACE_WITH_ANDROID_CLIENT_ID",
       "serverClientId": "REPLACE_WITH_WEB_CLIENT_ID"
     }
   }

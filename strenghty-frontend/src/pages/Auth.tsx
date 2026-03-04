@@ -75,6 +75,14 @@ const SUPABASE_ANON_KEY_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "")
 const REDIRECT_ORIGIN = "https://strengthy-strengthy-frontend.vercel.app";
 const GOOGLE_REDIRECT_TO = `${REDIRECT_ORIGIN}/auth`;
 
+const sanitizeGoogleClientId = (value: unknown): string => {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "";
+  if (normalized.toLowerCase().includes("replace_with")) return "";
+  if (normalized.includes("<") || normalized.includes(">")) return "";
+  return normalized;
+};
+
 const supabase =
   SUPABASE_URL_ENV && SUPABASE_ANON_KEY_ENV
     ? createClient(SUPABASE_URL_ENV, SUPABASE_ANON_KEY_ENV, {
@@ -105,9 +113,29 @@ export default function Auth({
     null,
   );
   const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
+
+  const getCapacitorGoogleClientId = useCallback((): string => {
+    try {
+      const plugins = (window as any)?.Capacitor?.config?.plugins;
+      const google = plugins?.GoogleAuth || {};
+      return (
+        sanitizeGoogleClientId(google.androidClientId) ||
+        sanitizeGoogleClientId(google.clientId) ||
+        sanitizeGoogleClientId(google.serverClientId)
+      );
+    } catch {
+      return "";
+    }
+  }, []);
+
   const [googleClientIdAndroid, setGoogleClientIdAndroid] = useState<
     string | null
-  >(GOOGLE_CLIENT_ID_ANDROID_ENV || GOOGLE_CLIENT_ID_WEB_ENV || null);
+  >(
+    GOOGLE_CLIENT_ID_ANDROID_ENV ||
+      GOOGLE_CLIENT_ID_WEB_ENV ||
+      getCapacitorGoogleClientId() ||
+      null,
+  );
   const [formData, setFormData] = useState<AuthFormData>({
     name: "",
     email: "",
@@ -293,7 +321,17 @@ export default function Auth({
   useEffect(() => {
     // Resolve Android Google client id from env first; legacy backend config as fallback.
     (async () => {
-      if (GOOGLE_CLIENT_ID_ANDROID_ENV || GOOGLE_CLIENT_ID_WEB_ENV) return;
+      const fromCapacitor = getCapacitorGoogleClientId();
+      if (fromCapacitor) {
+        setGoogleClientIdAndroid(fromCapacitor);
+      }
+
+      if (
+        GOOGLE_CLIENT_ID_ANDROID_ENV ||
+        GOOGLE_CLIENT_ID_WEB_ENV ||
+        fromCapacitor
+      )
+        return;
 
       if (API_BASE.includes("supabase.co")) {
         return;
@@ -311,7 +349,7 @@ export default function Auth({
         }
       } catch (e) {}
     })();
-  }, []);
+  }, [getCapacitorGoogleClientId]);
 
   useEffect(() => {
     // Supabase OAuth full-page callback handling
@@ -411,6 +449,7 @@ export default function Auth({
         googleClientIdAndroid ||
         GOOGLE_CLIENT_ID_ANDROID_ENV ||
         GOOGLE_CLIENT_ID_WEB_ENV ||
+        getCapacitorGoogleClientId() ||
         ""
       )
         .toString()
