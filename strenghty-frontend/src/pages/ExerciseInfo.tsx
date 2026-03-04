@@ -91,14 +91,19 @@ export default function ExerciseInfo() {
   }, [exercises, id, exerciseNameFromState, muscleFromState]);
 
   const completedWorkoutIds = useMemo(
-    () => new Set(workouts.filter((w: any) => !!w?.endedAt).map((w: any) => String(w.id))),
+    () =>
+      new Set(
+        workouts.filter((w: any) => !!w?.endedAt).map((w: any) => String(w.id)),
+      ),
     [workouts],
   );
 
   const loggedSets = useMemo(
     () =>
       (sets || []).filter((s: any) =>
-        completedWorkoutIds.has(String(s.workout || s.workoutId || s.workout_id || "")),
+        completedWorkoutIds.has(
+          String(s.workout || s.workoutId || s.workout_id || ""),
+        ),
       ),
     [sets, completedWorkoutIds],
   );
@@ -116,7 +121,11 @@ export default function ExerciseInfo() {
         heaviestWeight = weight;
         heaviestUnit = String(s.unit || "kg");
       }
-      if (reps > 0 && (bestSet === "-" || reps > Number(String(bestSet).split(" reps")[0] || 0))) {
+      if (
+        reps > 0 &&
+        (bestSet === "-" ||
+          reps > Number(String(bestSet).split(" reps")[0] || 0))
+      ) {
         bestSet = `${reps} reps @ ${weight || 0}`;
       }
       if (weight > 0 && reps > 0) {
@@ -126,7 +135,9 @@ export default function ExerciseInfo() {
     });
 
     const totalWorkouts = new Set(
-      (loggedSets || []).map((s: any) => String(s.workout || s.workoutId || s.workout_id || "")),
+      (loggedSets || []).map((s: any) =>
+        String(s.workout || s.workoutId || s.workout_id || ""),
+      ),
     ).size;
 
     return {
@@ -141,7 +152,12 @@ export default function ExerciseInfo() {
   const groupedHistory = useMemo(() => {
     const map = new Map<
       string,
-      { workoutId: string; workoutName: string; date: Date | undefined; sets: any[] }
+      {
+        workoutId: string;
+        workoutName: string;
+        date: Date | undefined;
+        sets: any[];
+      }
     >();
 
     (loggedSets || []).forEach((set: any) => {
@@ -183,7 +199,9 @@ export default function ExerciseInfo() {
   }, [groupedHistory]);
 
   const primaryMuscle = selectedExercise.muscleGroup || "other";
-  const secondaryMuscles = SECONDARY_BY_PRIMARY[primaryMuscle] || ["Support Muscles"];
+  const secondaryMuscles = SECONDARY_BY_PRIMARY[primaryMuscle] || [
+    "Support Muscles",
+  ];
 
   const progressionPoints = useMemo(() => {
     const points = groupedHistory
@@ -222,11 +240,12 @@ export default function ExerciseInfo() {
       .join(" ");
   }, [progressionPoints]);
 
-  const pill = "inline-flex items-center rounded-full border border-white/10 bg-zinc-800 px-3 py-1 text-xs font-semibold text-white uppercase tracking-wide";
+  const pill =
+    "inline-flex items-center rounded-full border border-white/10 bg-zinc-800 px-3 py-1 text-xs font-semibold text-white uppercase tracking-wide";
 
   return (
     <AppLayout>
-      <div className="space-y-5 mt-1 px-1 sm:px-0 max-w-3xl mx-auto">
+      <div className="space-y-6 mt-1 px-1 sm:px-0 max-w-3xl mx-auto">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -236,26 +255,35 @@ export default function ExerciseInfo() {
         </button>
 
         <Card className="rounded-2xl overflow-hidden">
-          <CardContent className="space-y-4 pt-5 sm:pt-6">
-            <h2 className="text-2xl font-bold text-white">{selectedExercise.name}</h2>
+          <CardContent className="px-[18px] py-5">
+            <h2 className="text-2xl font-bold text-white">
+              {selectedExercise.name}
+            </h2>
 
-            <div className="pt-1">
-              <div className="h-[110px] w-[110px] rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center">
+            <div className="mt-4">
+              <div className="h-[100px] w-[100px] rounded-md bg-zinc-800 border border-white/10 p-2 flex items-center justify-center">
                 <img
                   src={`/icons/${getExerciseIconFile(selectedExercise.name, selectedExercise.muscleGroup || "")}`}
                   alt={selectedExercise.name}
-                  className="h-[110px] w-[110px] object-contain"
+                  className="h-full w-full object-contain"
                 />
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground w-full">Primary</span>
-              <span className={pill}>{String(selectedExercise.muscleGroup || "other")}</span>
+            <div className="mt-3">
+              <span className="text-sm text-muted-foreground block">
+                Primary
+              </span>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className={pill}>
+                  {String(selectedExercise.muscleGroup || "other")}
+                </span>
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground space-y-2">
+
+            <div className="mt-2.5 text-sm text-muted-foreground">
               <div>Secondary</div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 {secondaryMuscles.map((m) => (
                   <span key={m} className={pill}>
                     {m}
@@ -267,27 +295,35 @@ export default function ExerciseInfo() {
         </Card>
 
         <Card className="rounded-2xl overflow-hidden">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-white">Your Records</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1 sm:pt-2">
-            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
+          <CardContent className="grid grid-cols-1 gap-3 px-[18px] py-5">
+            <div className="rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-[14px] space-y-2">
               <p className="text-xs text-muted-foreground">Heaviest Weight</p>
-              <p className="text-lg font-semibold text-white">{records.heaviestWeight || 0} {records.heaviestUnit}</p>
+              <p className="text-lg font-semibold text-white">
+                {records.heaviestWeight || 0} {records.heaviestUnit}
+              </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
+            <div className="rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-[14px] space-y-2">
               <p className="text-xs text-muted-foreground">Best Set</p>
-              <p className="text-lg font-semibold text-white">{records.bestSet}</p>
+              <p className="text-lg font-semibold text-white">
+                {records.bestSet}
+              </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
+            <div className="rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-[14px] space-y-2">
               <p className="text-xs text-muted-foreground">Estimated 1RM</p>
-              <p className="text-lg font-semibold text-white">{Math.round(records.estimated1RM || 0)} {records.heaviestUnit}</p>
+              <p className="text-lg font-semibold text-white">
+                {Math.round(records.estimated1RM || 0)} {records.heaviestUnit}
+              </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
+            <div className="rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-[14px] space-y-2">
               <p className="text-xs text-muted-foreground">Total Workouts</p>
-              <p className="text-lg font-semibold text-white">{records.totalWorkouts}</p>
+              <p className="text-lg font-semibold text-white">
+                {records.totalWorkouts}
+              </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
+            <div className="rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-[14px] space-y-2">
               <p className="text-xs text-muted-foreground">Last Performed</p>
               <p className="text-lg font-semibold text-white">
                 {lastPerformed ? format(lastPerformed, "MMM d") : "-"}
@@ -297,13 +333,17 @@ export default function ExerciseInfo() {
         </Card>
 
         <Card className="rounded-2xl overflow-hidden">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-white">Progress Graph</CardTitle>
           </CardHeader>
-          <CardContent className="pt-1 sm:pt-2">
+          <CardContent className="px-[18px] pt-[18px] pb-[18px]">
             {progressionPoints.length >= 2 ? (
-              <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-4">
-                <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-28">
+              <div className="mt-2.5 rounded-xl border border-white/10 bg-zinc-900/60 p-4">
+                <svg
+                  viewBox="0 0 100 40"
+                  preserveAspectRatio="none"
+                  className="w-full h-28"
+                >
                   <polyline
                     fill="none"
                     stroke="currentColor"
@@ -314,7 +354,7 @@ export default function ExerciseInfo() {
                 </svg>
               </div>
             ) : (
-              <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 text-sm text-muted-foreground">
+              <div className="mt-2.5 rounded-xl border border-white/10 bg-zinc-900/60 p-4 text-sm text-muted-foreground text-center flex items-center justify-center min-h-[112px]">
                 Not enough data yet to draw progression.
               </div>
             )}
@@ -322,52 +362,69 @@ export default function ExerciseInfo() {
         </Card>
 
         <Card className="rounded-2xl overflow-hidden">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-white">History</CardTitle>
           </CardHeader>
-          <CardContent className="pt-1 sm:pt-2">
+          <CardContent className="px-[18px] py-5">
             {groupedHistory.length === 0 ? (
               <div className="flex items-center justify-center">
                 <Card className="w-full max-w-2xl rounded-2xl overflow-hidden">
-                  <CardContent className="px-2 py-4 sm:p-4 overflow-hidden">
+                  <CardContent className="px-[18px] py-5 overflow-hidden">
                     <div className="flex flex-col items-center text-center gap-4 py-6">
                       <div className="h-16 w-16 rounded-md bg-zinc-800 border border-white/10 flex items-center justify-center">
                         <PlusCircle className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h2 className="text-lg font-semibold text-white">No history yet</h2>
+                      <h2 className="text-lg font-semibold text-white">
+                        No history yet
+                      </h2>
                       <p className="text-sm text-muted-foreground max-w-xl">
                         We couldn't find any logged sets for this exercise. Try
                         logging a workout that includes this exercise, or browse
                         the exercise library for alternatives.
                       </p>
                       <div className="flex gap-3 mt-2">
-                        <Button onClick={() => navigate("/workouts/new")} className="bg-primary">
+                        <Button
+                          onClick={() => navigate("/workouts/new")}
+                          className="bg-primary"
+                        >
                           Log a workout
                         </Button>
-                        <Button variant="outline" onClick={() => navigate("/exercises")}>Browse exercises</Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate("/exercises")}
+                        >
+                          Browse exercises
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {groupedHistory.map((g) => (
-                  <Card key={`h-${g.workoutId}`} className="w-full rounded-2xl overflow-hidden">
-                    <CardContent className="px-2 py-4 sm:p-4 overflow-hidden">
+                  <Card
+                    key={`h-${g.workoutId}`}
+                    className="w-full rounded-2xl overflow-hidden"
+                  >
+                    <CardContent className="px-[18px] py-5 overflow-hidden">
                       <div className="flex items-center justify-between">
                         <div>
                           <div>
                             <button
                               type="button"
-                              onClick={() => navigate(`/workouts/${g.workoutId}/view`)}
-                              className="pt-2 text-lg font-semibold text-white text-left hover:underline"
+                              onClick={() =>
+                                navigate(`/workouts/${g.workoutId}/view`)
+                              }
+                              className="pt-1 text-lg font-semibold text-white text-left hover:underline"
                             >
                               {g.workoutName}
                             </button>
                           </div>
                           <div className="text-sm text-muted-foreground mt-1">
-                            {g.date ? format(new Date(g.date), "dd LLL yyyy, HH:mm") : "-"}
+                            {g.date
+                              ? format(new Date(g.date), "dd LLL yyyy, HH:mm")
+                              : "-"}
                           </div>
                         </div>
                       </div>
@@ -377,8 +434,14 @@ export default function ExerciseInfo() {
                           className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                           style={{
                             gridTemplateColumns: ((): string => {
-                              const isHiit = isHiitExerciseName(selectedExercise.name || "");
-                              if (g.sets && g.sets.length > 0 && g.sets[0].cardioMode) {
+                              const isHiit = isHiitExerciseName(
+                                selectedExercise.name || "",
+                              );
+                              if (
+                                g.sets &&
+                                g.sets.length > 0 &&
+                                g.sets[0].cardioMode
+                              ) {
                                 return isHiit
                                   ? GRID_TEMPLATE_HIIT_NO_CHECK
                                   : GRID_TEMPLATE_CARDIO_NO_CHECK;
@@ -389,34 +452,60 @@ export default function ExerciseInfo() {
                         >
                           {g.sets && g.sets[0] && g.sets[0].cardioMode ? (
                             (() => {
-                              const isHiit = isHiitExerciseName(selectedExercise.name || "");
+                              const isHiit = isHiitExerciseName(
+                                selectedExercise.name || "",
+                              );
 
                               if (isHiit) {
                                 return (
                                   <>
-                                    <span className="flex justify-center">SET</span>
-                                    <span className="flex justify-center">DURATION</span>
-                                    <span className="flex justify-center">REPS</span>
-                                    <span className="flex justify-center">RPE</span>
-                                    <span className="flex justify-center">PR</span>
+                                    <span className="flex justify-center">
+                                      SET
+                                    </span>
+                                    <span className="flex justify-center">
+                                      DURATION
+                                    </span>
+                                    <span className="flex justify-center">
+                                      REPS
+                                    </span>
+                                    <span className="flex justify-center">
+                                      RPE
+                                    </span>
+                                    <span className="flex justify-center">
+                                      PR
+                                    </span>
                                   </>
                                 );
                               }
 
                               return (
                                 <>
-                                  <span className="flex justify-center">SET</span>
-                                  <span className="flex justify-center">DURATION</span>
-                                  <span className="flex justify-center">DISTANCE</span>
-                                  <span className="flex justify-center">LEVEL</span>
-                                  <span className="flex justify-center">PR</span>
+                                  <span className="flex justify-center">
+                                    SET
+                                  </span>
+                                  <span className="flex justify-center">
+                                    DURATION
+                                  </span>
+                                  <span className="flex justify-center">
+                                    DISTANCE
+                                  </span>
+                                  <span className="flex justify-center">
+                                    LEVEL
+                                  </span>
+                                  <span className="flex justify-center">
+                                    PR
+                                  </span>
                                 </>
                               );
                             })()
                           ) : (
                             <>
-                              <span className="flex justify-center translate-x-[2px]">SET</span>
-                              <span className="flex justify-center">WEIGHT</span>
+                              <span className="flex justify-center translate-x-[2px]">
+                                SET
+                              </span>
+                              <span className="flex justify-center">
+                                WEIGHT
+                              </span>
                               <span />
                               <span className="flex justify-center">REPS</span>
                               <span className="flex justify-center">RPE</span>
