@@ -68,10 +68,29 @@ export default function ExerciseInfo() {
     queryFn: getExercises,
   });
 
+  const resolvedExerciseId = useMemo(() => {
+    if (!id) return "";
+
+    const routeId = String(id);
+    const byExactId = exercises.find((e) => String(e.id) === routeId);
+    if (byExactId) return String(byExactId.id);
+
+    if (exerciseNameFromState) {
+      const byName = exercises.find(
+        (e) =>
+          String(e.name || "").toLowerCase() ===
+          String(exerciseNameFromState || "").toLowerCase(),
+      );
+      if (byName) return String(byName.id);
+    }
+
+    return routeId;
+  }, [id, exercises, exerciseNameFromState]);
+
   const { data: sets = [] } = useQuery({
-    queryKey: ["exercise-sets", id],
-    queryFn: () => getSetsForExercise(String(id || "")),
-    enabled: !!id,
+    queryKey: ["exercise-sets", resolvedExerciseId],
+    queryFn: () => getSetsForExercise(String(resolvedExerciseId || "")),
+    enabled: !!resolvedExerciseId && /^\d+$/.test(String(resolvedExerciseId)),
   });
 
   const { data: workouts = [] } = useQuery({
@@ -80,7 +99,9 @@ export default function ExerciseInfo() {
   });
 
   const selectedExercise = useMemo(() => {
-    const byId = exercises.find((e) => String(e.id) === String(id));
+    const byId = exercises.find(
+      (e) => String(e.id) === String(resolvedExerciseId || id),
+    );
     if (byId) return byId;
     return {
       id: String(id || ""),
@@ -88,7 +109,13 @@ export default function ExerciseInfo() {
       muscleGroup: muscleFromState,
       createdAt: new Date(),
     };
-  }, [exercises, id, exerciseNameFromState, muscleFromState]);
+  }, [
+    exercises,
+    id,
+    resolvedExerciseId,
+    exerciseNameFromState,
+    muscleFromState,
+  ]);
 
   const completedWorkoutIds = useMemo(
     () =>
@@ -362,10 +389,10 @@ export default function ExerciseInfo() {
         </Card>
 
         <Card className="rounded-2xl overflow-hidden">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-1">
             <CardTitle className="text-white">History</CardTitle>
           </CardHeader>
-          <CardContent className="px-[18px] py-5">
+          <CardContent className="px-3 py-[6px]">
             {groupedHistory.length === 0 ? (
               <div className="flex items-center justify-center">
                 <Card className="w-full max-w-2xl rounded-2xl overflow-hidden">
@@ -407,7 +434,7 @@ export default function ExerciseInfo() {
                     key={`h-${g.workoutId}`}
                     className="w-full rounded-2xl overflow-hidden"
                   >
-                    <CardContent className="px-[18px] py-5 overflow-hidden">
+                    <CardContent className="px-3 py-[6px] overflow-hidden">
                       <div className="flex items-center justify-between">
                         <div>
                           <div>
@@ -429,7 +456,7 @@ export default function ExerciseInfo() {
                         </div>
                       </div>
 
-                      <div className="mt-4">
+                      <div className="mt-1">
                         <div
                           className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                           style={{
