@@ -598,7 +598,12 @@ export function SetRow({
               }
               disabled={readOnly}
               /* Added [appearance:textfield] and [&::-webkit-outer-spin-button]:appearance-none to remove arrows */
-              className="h-8 flex-1 px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] sm:text-[12.5px] rounded-r-none focus-visible:ring-1 focus-visible:ring-offset-0 border-border"
+              className={cn(
+                "h-8 flex-1 px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] sm:text-[12.5px] rounded-r-none focus-visible:ring-1 focus-visible:ring-offset-0 border-border",
+                readOnly
+                  ? "text-white placeholder:text-muted-foreground/60 disabled:opacity-100 disabled:text-white disabled:[-webkit-text-fill-color:#fff]"
+                  : "text-white disabled:text-white disabled:[-webkit-text-fill-color:#fff]",
+              )}
             />
             {!readOnly || unitInteractiveWhenReadOnly ? (
               <DropdownMenu>
@@ -614,13 +619,13 @@ export function SetRow({
                 <DropdownMenuContent className="w-20 p-1">
                   <DropdownMenuItem
                     className="text-white text-xs justify-center"
-                    onClick={() => onUnitChange?.("lbs")}
+                    onSelect={() => onUnitChange?.("lbs")}
                   >
                     lbs
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-white text-xs justify-center"
-                    onClick={() => onUnitChange?.("kg")}
+                    onSelect={() => onUnitChange?.("kg")}
                   >
                     kg
                   </DropdownMenuItem>
@@ -1019,7 +1024,12 @@ export function SetRow({
                 !readOnly && onUpdate({ reps: Number(e.target.value) })
               }
               disabled={readOnly}
-              className="h-8 w-full px-1 pr-8 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
+              className={cn(
+                "h-8 w-full px-1 pr-8 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0",
+                readOnly
+                  ? "text-white placeholder:text-muted-foreground/60 disabled:opacity-100 disabled:text-white disabled:[-webkit-text-fill-color:#fff]"
+                  : "text-white disabled:text-white disabled:[-webkit-text-fill-color:#fff]",
+              )}
             />
             {/* Half-reps button: editable increments when not readOnly; when readOnly
                 and there are partials, open a dialog to show the count. */}
@@ -1061,7 +1071,7 @@ export function SetRow({
                 </DialogTrigger>
 
                 {/* Dialog content: read-only shows a simple message; editable shows a slider (1-5) */}
-                <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-xs -translate-x-1/2 -translate-y-1/2">
+                <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-xs -translate-x-1/2 -translate-y-1/2 border-none">
                   {readOnly ? (
                     <>
                       <DialogHeader>
@@ -1397,23 +1407,24 @@ export function SetRow({
                 <Trophy className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-neutral-900 p-5 shadow-lg">
+            <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg bg-neutral-900 p-5 shadow-lg">
               <DialogHeader className="px-0 pt-0">
-                <DialogTitle className="font-heading text-xl font-semibold text-white">
-                  Personal Record
+                <DialogTitle className="font-heading text-xl font-semibold text-white flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-orange-500" />
+                  <span>Personal Record</span>
                 </DialogTitle>
                 {exerciseName && (
-                  <DialogDescription className="mt-1 text-sm text-muted-foreground">
+                  <DialogDescription className="mt-1 text-base font-medium text-white">
                     {exerciseName}
                   </DialogDescription>
                 )}
-                <p className="mt-3 text-sm text-muted-foreground">
+                <p className="mt-4 mb-2 text-sm text-muted-foreground">
                   This set hit the following PR type(s):
                 </p>
               </DialogHeader>
 
               {prLines.length > 0 ? (
-                <div className="mt-4 space-y-3">
+                <div className="bg-zinc-900/60 border border-white/5 rounded-xl p-4 space-y-3">
                   {prLines.map((line) => (
                     <div
                       key={line.label}
@@ -1422,7 +1433,7 @@ export function SetRow({
                       <div className="text-sm text-muted-foreground">
                         {line.label}
                       </div>
-                      <div className="ml-4 text-base font-semibold text-white">
+                      <div className="ml-4 text-base font-semibold text-white tabular-nums">
                         {line.value}
                       </div>
                     </div>
@@ -1485,16 +1496,16 @@ function PartialRepsEditor({
   useEffect(() => setValue(initialValue || 1), [initialValue]);
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-neutral-900/80 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.6)]">
+    <div className="rounded-2xl bg-neutral-900/80 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.6)]">
       <DialogHeader className="text-center">
         <DialogTitle className="mx-auto">Adjust Partial Reps</DialogTitle>
       </DialogHeader>
 
-      <div className="py-2">
-        <div className="text-5xl sm:text-6xl font-heading font-extrabold text-white text-center">
+      <div className="pt-1">
+        <div className="text-center text-6xl font-bold text-white my-3">
           {value}
         </div>
-        <div className="text-sm text-center text-muted-foreground mb-3 font-medium">
+        <div className="text-sm text-center text-muted-foreground mb-2 font-medium">
           Partial reps (1–5)
         </div>
 
@@ -1506,35 +1517,37 @@ function PartialRepsEditor({
               step={1}
               value={[value]}
               onValueChange={(vals) => setValue(vals[0] ?? value)}
-              className="h-1.5"
+              className="h-1.5 my-3 [&>span]:bg-zinc-800/70 [&>span>span]:bg-orange-500 [&_[role=slider]]:border-orange-500 [&_[role=slider]]:bg-orange-500"
             />
           </div>
         </div>
       </div>
 
-      <div className="flex gap-3 pt-4">
-        <Button
-          variant="ghost"
-          className="flex-1 px-4 py-2 text-xs"
-          onClick={onCancel}
-        >
-          Cancel
-        </Button>
-
-        <Button
-          variant="ghost"
-          className="flex-1 px-4 py-2 text-xs"
+      <div className="flex justify-between items-center w-full mt-4">
+        <button
+          type="button"
+          className="text-sm text-muted-foreground hover:text-white transition-colors"
           onClick={onClear}
         >
           Clear
-        </Button>
+        </button>
 
-        <Button
-          className="flex-1 px-4 py-2 text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white"
-          onClick={() => onSave(value)}
-        >
-          Done
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            variant="ghost"
+            className="px-3 py-2 text-xs text-muted-foreground hover:text-white"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            className="px-4 py-2 text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white"
+            onClick={() => onSave(value)}
+          >
+            Done
+          </Button>
+        </div>
       </div>
     </div>
   );

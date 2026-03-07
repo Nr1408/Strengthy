@@ -135,13 +135,13 @@ export default function Routines() {
               saved
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="text-white"
+          <button
+            type="button"
             onClick={() => navigate("/routines/explore")}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/15 text-orange-400 text-sm font-semibold border border-orange-500/25 hover:bg-orange-500/25 transition-colors"
           >
-            Explore
-          </Button>
+            Explore Templates →
+          </button>
         </div>
 
         {/* My Routines */}
@@ -175,20 +175,19 @@ export default function Routines() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-20 text-center">
+              <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
                 <FolderOpen className="h-5 w-5 text-muted-foreground" />
               </div>
-              <h3 className="mt-4 font-heading font-semibold text-white">
-                No routines yet
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Create your first routine to save time
-              </p>
-              <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Create Routine
-              </Button>
+              <p className="text-white font-semibold">No routines yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Create your first routine to save time</p>
+              <button
+                type="button"
+                onClick={() => setIsDialogOpen(true)}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/15 text-orange-400 text-sm font-semibold border border-orange-500/25 hover:bg-orange-500/25 transition-colors"
+              >
+                <Plus className="h-4 w-4" /> Create Routine
+              </button>
             </div>
           )}
         </div>

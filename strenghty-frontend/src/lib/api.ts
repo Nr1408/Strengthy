@@ -622,6 +622,15 @@ try {
                 try {
                   await Prefs.remove({ key: "google:credential" });
                 } catch (e) {}
+                try {
+                  await Prefs.remove({ key: "user:profile" });
+                } catch (e) {}
+                try {
+                  await Prefs.remove({ key: "user:onboarding" });
+                } catch (e) {}
+                try {
+                  await Prefs.remove({ key: "user:monthlyGoal" });
+                } catch (e) {}
 
                 try {
                   clearToken();
@@ -629,7 +638,22 @@ try {
                 try {
                   localStorage.removeItem("google:credential");
                 } catch (e) {}
-
+                try {
+                  localStorage.removeItem("user:profile");
+                  localStorage.removeItem("user:onboarding");
+                  localStorage.removeItem("user:monthlyGoal");
+                  localStorage.removeItem("supabase.auth.token");
+                  const allKeys: string[] = [];
+                  for (let i = 0; i < localStorage.length; i += 1) {
+                    const key = localStorage.key(i);
+                    if (key) allKeys.push(key);
+                  }
+                  for (const key of allKeys) {
+                    if (/^sb-[^-]+-auth-token$/i.test(key)) {
+                      localStorage.removeItem(key);
+                    }
+                  }
+                } catch (e) {}
                 // Do not mirror anything into localStorage on first launch.
                 return;
               }
@@ -803,6 +827,7 @@ function mapWorkout(api: ApiWorkout): UiWorkout {
   const createdAt = new Date(api.created_at);
   const endedAt = api.ended_at ? new Date(api.ended_at) : null;
   let duration = endedAt ? Math.max(1, Math.round((endedAt.getTime() - createdAt.getTime()) / 60000)) : undefined;
+  const displayDate = new Date(`${api.date}T00:00:00`);
   // Allow a client-side override (stored in localStorage) so user-edited
   // start times are reflected in the UI even if the backend timestamps
   // are server-controlled and not editable.
@@ -812,13 +837,24 @@ function mapWorkout(api: ApiWorkout): UiWorkout {
       const parsed = Number(override);
       if (!isNaN(parsed) && parsed > 0) duration = parsed;
     }
+
+    const timeOverride = localStorage.getItem(`workout:startTimeOverride:${api.id}`);
+    if (timeOverride) {
+      const parsedTime = new Date(timeOverride);
+      if (!isNaN(parsedTime.getTime())) {
+        displayDate.setHours(parsedTime.getHours(), parsedTime.getMinutes(), 0, 0);
+      }
+    } else if (!isNaN(createdAt.getTime())) {
+      // Fallback: keep backend calendar date, but show a meaningful time.
+      displayDate.setHours(createdAt.getHours(), createdAt.getMinutes(), 0, 0);
+    }
   } catch (e) {
     // ignore localStorage errors
   }
   return {
     id: String(api.id),
     name: api.name,
-    date: new Date(`${api.date}T00:00:00`),
+    date: displayDate,
     notes: api.notes || "",
     createdAt,
     updatedAt: new Date(api.updated_at),
@@ -1334,9 +1370,12 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
   if (shouldUseSupabaseApi()) {
     const userId = await resolveSupabaseUserId();
     if (!userId) throw new Error("Session expired. Please log in again.");
-    const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/exercises`, {
+    const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/exercises?on_conflict=owner_id,name`, {
       method: "POST",
-      headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+      headers: {
+        ...supabaseHeaders(true),
+        Prefer: "resolution=ignore-duplicates,return=representation",
+      },
       body: JSON.stringify({
         owner_id: userId,
         name,
@@ -1366,7 +1405,37 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
       throw new Error(`Create exercise failed: ${res.status}${detail ? ` ${detail}` : ""}`);
     }
     const rows = (await res.json()) as ApiExercise[];
-    return mapExercise(rows[0]);
+    if (rows.length > 0) {
+      return mapExercise(rows[0]);
+    }
+
+    // `resolution=ignore-duplicates` can return an empty array when a
+    // duplicate already exists. Resolve and return the existing exercise.
+    try {
+      const eqName = encodeURIComponent(name.trim());
+      const existingRes = await fetchWithTimeout(
+        `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at&name=eq.${eqName}&limit=1`,
+        { headers: supabaseHeaders() },
+      );
+      if (existingRes.ok) {
+        const existingRows = (await existingRes.json()) as ApiExercise[];
+        if (existingRows.length > 0) {
+          return mapExercise(existingRows[0]);
+        }
+      }
+    } catch (e) {
+      // fall through to normalized lookup below
+    }
+
+    const candidates = await getExercises();
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    const match = candidates.find((c) => norm(c.name) === norm(name));
+    if (match) return match;
+    throw new Error("Create exercise conflict: could not resolve existing exercise");
   }
 
   const res = await fetch(`${API_BASE}/exercises/`, {
@@ -1566,7 +1635,10 @@ export async function getSets(workoutId: string): Promise<UiWorkoutSet[]> {
   return data.map(mapWorkoutSet);
 }
 
-export async function getSetsForExercise(exerciseId: string): Promise<UiWorkoutSet[]> {
+export async function getSetsForExercise(
+  exerciseId: string,
+  excludeWorkoutId?: string,
+): Promise<UiWorkoutSet[]> {
   if (shouldUseSupabaseApi()) {
     const exerciseNum = Number(exerciseId);
     if (!Number.isFinite(exerciseNum) || exerciseNum <= 0) {
@@ -1578,12 +1650,18 @@ export async function getSetsForExercise(exerciseId: string): Promise<UiWorkoutS
     );
     if (!res.ok) throw new Error(`Load sets for exercise failed: ${res.status}`);
     const data = (await res.json()) as any[];
-    return data.map((row) => mapWorkoutSet(normalizeWorkoutSetRow(row)));
+    const mapped = data.map((row) => mapWorkoutSet(normalizeWorkoutSetRow(row)));
+    if (!excludeWorkoutId) return mapped;
+    const excluded = String(excludeWorkoutId);
+    return mapped.filter((s) => String(s.workout) !== excluded);
   }
   const res = await fetchWithTimeout(`${API_BASE}/sets/?exercise=${exerciseId}`, { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error(`Load sets for exercise failed: ${res.status}`);
   const data = (await res.json()) as ApiWorkoutSet[];
-  return data.map(mapWorkoutSet);
+  const mapped = data.map(mapWorkoutSet);
+  if (!excludeWorkoutId) return mapped;
+  const excluded = String(excludeWorkoutId);
+  return mapped.filter((s) => String(s.workout) !== excluded);
 }
 
 export async function createSet(params: { workoutId: string; exerciseId: string; setNumber?: number; reps: number; halfReps?: number; weight?: number; isPR?: boolean; unit?: 'lbs' | 'kg'; type?: 'W' | 'S' | 'F' | 'D'; rpe?: number }): Promise<UiWorkoutSet> {
@@ -1631,7 +1709,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     }
 
     const histRes = await fetchWithTimeout(
-      `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${exerciseNum}`,
+      `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${exerciseNum}&workout_id=neq.${workoutNum}`,
       { headers: supabaseHeaders() },
     );
     if (histRes.status === 401) {
@@ -1807,11 +1885,12 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
 
   if (shouldUseSupabaseApi()) {
     const currentRes = await fetchWithTimeout(
-      `${SUPABASE_REST_BASE}/workout_sets?select=id,exercise_id,reps,half_reps,weight,unit&id=eq.${encodeURIComponent(id)}&limit=1`,
+      `${SUPABASE_REST_BASE}/workout_sets?select=id,workout_id,exercise_id,reps,half_reps,weight,unit&id=eq.${encodeURIComponent(id)}&limit=1`,
       { headers: supabaseHeaders() },
     );
     if (!currentRes.ok) throw new Error(`Update set failed: ${currentRes.status}`);
     const currentRows = (await currentRes.json()) as Array<{
+      workout_id?: number | string | null;
       exercise_id?: number | string | null;
       reps?: number | string | null;
       half_reps?: number | string | null;
@@ -1853,9 +1932,13 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
         typeof data.unit !== "undefined"
           ? data.unit
           : ((current.unit as "lbs" | "kg" | null | undefined) ?? null);
+      const currentWorkoutId = Number(current.workout_id);
+      const workoutFilter = Number.isFinite(currentWorkoutId)
+        ? `&workout_id=neq.${currentWorkoutId}`
+        : "";
 
       const histRes = await fetchWithTimeout(
-        `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${Number(current.exercise_id)}&id=neq.${encodeURIComponent(id)}`,
+        `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${Number(current.exercise_id)}&id=neq.${encodeURIComponent(id)}${workoutFilter}`,
         { headers: supabaseHeaders() },
       );
       if (!histRes.ok) throw new Error(`Update set failed: ${histRes.status}`);

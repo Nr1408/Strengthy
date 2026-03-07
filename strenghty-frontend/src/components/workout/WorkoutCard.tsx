@@ -180,7 +180,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
           <div className="space-y-1">
             <h3 className="font-heading font-semibold">{workout.name}</h3>
             <p className="text-sm text-muted-foreground">
-              {format(workout.date, "EEEE, MMM d")}
+              {format(workout.date, "EEEE, MMM d, h:mm a")}
             </p>
           </div>
           <ChevronRight className="h-5 w-5 text-muted-foreground" />

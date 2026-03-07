@@ -7,17 +7,14 @@ import {
   Target,
   TrendingUp,
   Award,
-  LogOut,
-  Settings,
   Camera,
   Image,
+  Pencil,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -54,6 +51,8 @@ type OnboardingInfo = {
   goalWeight: string;
   experience: string;
   monthlyWorkouts: string;
+  equipment: string;
+  weightUnit: "kg" | "lbs";
 };
 
 const DEFAULT_ONBOARDING: OnboardingInfo = {
@@ -65,6 +64,8 @@ const DEFAULT_ONBOARDING: OnboardingInfo = {
   goalWeight: "",
   experience: "",
   monthlyWorkouts: "",
+  equipment: "",
+  weightUnit: "kg",
 };
 
 const EXPERIENCE_LABELS: Record<string, string> = {
@@ -82,6 +83,12 @@ const FITNESS_GOAL_OPTIONS: { id: string; label: string }[] = [
   { id: "get-stronger", label: "Get Stronger" },
   { id: "stay-healthy", label: "Stay Healthy" },
   { id: "improve-endurance", label: "Improve Endurance" },
+];
+
+const TRAINING_GOAL_OPTIONS: { id: string; label: string }[] = [
+  { id: "hypertrophy", label: "Build Muscle" },
+  { id: "calorie-burn", label: "Burn Fat" },
+  { id: "powerlifting", label: "Get Stronger" },
 ];
 
 function normalizeOnboardingInfo(raw: any): OnboardingInfo {
@@ -129,6 +136,8 @@ function normalizeOnboardingInfo(raw: any): OnboardingInfo {
           : "",
     experience: raw?.experience ? String(raw.experience) : "",
     monthlyWorkouts: monthly != null ? String(monthly) : "",
+    equipment: raw?.equipment ? String(raw.equipment) : "",
+    weightUnit: (raw?.weightUnit === "lbs" ? "lbs" : "kg") as "kg" | "lbs",
   };
 }
 
@@ -252,11 +261,11 @@ export default function Profile() {
     null,
   );
   const [monthlyGoal, setMonthlyGoal] = useState<number>(getInitialMonthlyGoal);
-  const [dialogOpen, setDialogOpen] = useState(false);
-
   // local editing state separated from display
   const [editing, setEditing] = useState(false);
+  const [editingGoals, setEditingGoals] = useState(false);
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const [tempAvatar, setTempAvatar] = useState<string | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -308,14 +317,22 @@ export default function Profile() {
   };
 
   const handleSaveDetails = () => {
-    if (!onboardingInfo) return;
     try {
-      localStorage.setItem("user:onboarding", JSON.stringify(onboardingInfo));
+      const payload = onboardingInfo ?? DEFAULT_ONBOARDING;
+      localStorage.setItem("user:onboarding", JSON.stringify(payload));
+      setOnboardingInfo(payload);
       toast({
         title: "Details saved",
         description: "Your profile details were updated.",
       });
     } catch {}
+  };
+
+  const updateOnboardingInfo = (patch: Partial<OnboardingInfo>) => {
+    setOnboardingInfo((prev) => ({
+      ...(prev ?? DEFAULT_ONBOARDING),
+      ...patch,
+    }));
   };
 
   const handleSignOut = async () => {
@@ -370,273 +387,290 @@ export default function Profile() {
 
   return (
     <AppLayout>
-      <main className="w-full max-w-3xl mx-auto px-4 pb-32">
-        {/* Compact header with avatar, info and actions */}
-        <header className="pt-6 pb-4 flex flex-col md:flex-row items-start md:items-center gap-4">
-          <div className="flex items-start gap-4 w-full">
-            <div className="flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setTempAvatar(profileInfo.avatar || null);
-                  setAvatarDialogOpen(true);
-                }}
-                className="relative h-14 w-14 rounded-full bg-primary/12 flex items-center justify-center overflow-hidden"
-                aria-label="Change avatar"
-              >
-                {profileInfo.avatar ? (
-                  <img
-                    src={profileInfo.avatar}
-                    alt="avatar"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center">
-                    <div className="h-full w-full flex items-center justify-center bg-primary/15">
-                      <span className="text-xl font-bold text-primary select-none">
-                        S
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </button>
-            </div>
-            <div className="flex flex-col items-start w-full min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-white truncate">
+      <main className="w-full max-w-4xl mx-auto px-4 pb-32">
+        {/* ── Hero ── */}
+        <section className="pt-10 pb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            {/* Avatar */}
+            <button
+              type="button"
+              onClick={() => {
+                setTempAvatar(profileInfo.avatar || null);
+                setAvatarDialogOpen(true);
+              }}
+              className="relative flex-shrink-0 h-20 w-20 rounded-full bg-orange-500/10 border-2 border-orange-500/25 flex items-center justify-center overflow-hidden transition-all duration-200 hover:border-orange-500/60"
+              aria-label="Change avatar"
+            >
+              {profileInfo.avatar ? (
+                <img
+                  src={profileInfo.avatar}
+                  alt="avatar"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-3xl font-bold text-orange-400 select-none">
+                  {profileInfo.name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </button>
+
+            {/* Name, badge, since, actions */}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold text-white truncate">
                   {profileInfo.name}
+                </h1>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/20">
+                  {onboardingInfo?.experience
+                    ? EXPERIENCE_LABELS[onboardingInfo.experience] || "Member"
+                    : "Member"}
                 </span>
               </div>
-              <div className="mt-1 text-sm text-muted-foreground truncate">
-                {onboardingInfo?.experience
-                  ? EXPERIENCE_LABELS[onboardingInfo.experience] || "Member"
-                  : "Member"}
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Member since {memberSinceLabel}
-              </div>
-              {/* Desktop actions inline with header (hidden on mobile) */}
-              <div className="mt-3 hidden md:flex md:flex-row items-start gap-2 md:gap-4 w-full">
-                <div className="w-full md:w-auto">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setEditing(true)}
-                    className="w-full md:w-auto min-w-0 md:min-w-[120px]"
-                  >
-                    Edit Profile
-                  </Button>
-                </div>
-
-                <div className="flex gap-2 w-full md:w-auto mt-1 md:mt-0">
-                  <div className="flex-1 md:flex-none md:w-auto">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate("/profile/account")}
-                      className="w-full md:w-auto min-w-0 md:min-w-[120px]"
-                    >
-                      Account Settings
-                    </Button>
-                  </div>
-
-                  <div className="flex-1 md:flex-none md:w-auto">
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={handleSignOut}
-                      className="w-full md:w-auto min-w-0 md:min-w-[120px]"
-                    >
-                      Sign Out
-                    </Button>
-                  </div>
-                </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {completedWorkouts.length > 0
+                  ? `Member since ${memberSinceLabel}`
+                  : "New member 🎉"}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing(true)}
+                >
+                  Edit Profile
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate("/profile/account")}
+                >
+                  Account Settings
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setSignOutConfirmOpen(true)}
+                >
+                  Sign Out
+                </Button>
               </div>
             </div>
           </div>
-        </header>
+        </section>
 
-        {/* Mobile actions below header */}
-        <div className="mt-2 space-y-2 md:hidden">
-          <div className="w-full">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setEditing(true)}
-              className="w-full"
-            >
-              Edit Profile
-            </Button>
-          </div>
-
-          <div className="flex gap-2 w-full">
-            <div className="flex-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => navigate("/profile/account")}
-                className="w-full"
-              >
-                Account Settings
-              </Button>
-            </div>
-
-            <div className="flex-1">
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleSignOut}
-                className="w-full"
-              >
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 2 — Performance Bento Grid (2x2 square cards) */}
-        <section className="mt-6">
-          <div className="grid grid-cols-2 gap-3">
-            <MetricCard
+        {/* ── Stats row ── */}
+        <section className="mt-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <StatCard
               label="Total Workouts"
               value={String(totalWorkouts)}
-              icon={<Calendar className="h-5 w-5 text-primary" />}
+              icon={<Calendar className="h-5 w-5 text-orange-400" />}
             />
-            <MetricCard
-              label="Current Streak"
+            <StatCard
+              label="Day Streak"
               value={`${streak}d`}
-              icon={<TrendingUp className="h-5 w-5 text-primary" />}
+              icon={<TrendingUp className="h-5 w-5 text-orange-400" />}
             />
-            <MetricCard
+            <StatCard
               label="This Month"
               value={String(workoutsThisMonth)}
-              icon={<Calendar className="h-5 w-5 text-primary" />}
+              icon={<Target className="h-5 w-5 text-orange-400" />}
             />
-            <MetricCard
-              label="PRs"
+            <StatCard
+              label="Total PRs"
               value={String(totalPRs)}
-              icon={<Award className="h-5 w-5 text-primary" />}
+              icon={<Award className="h-5 w-5 text-orange-400" />}
             />
           </div>
         </section>
 
-        {/* Section 3 — Goals + Physical Stats */}
-        <section className="mt-6">
-          <div className="rounded-2xl bg-surface/5 p-4">
-            <h2 className="text-sm font-medium text-white">Goals & Physical</h2>
-            <div className="mt-3">
-              <div className="flex flex-wrap gap-2">
-                {onboardingInfo?.goals && onboardingInfo.goals.length ? (
+        {/* ── Monthly Progress ── */}
+        <section className="mt-5 sm:mt-7">
+          <div className="rounded-2xl bg-card border border-border p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              Monthly Progress
+            </h2>
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">
+                    Workouts this month
+                  </span>
+                  <span className="text-sm font-bold text-white">
+                    {workoutsThisMonth} / {monthlyGoal}
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-orange-500 transition-all duration-500"
+                    style={{
+                      width: `${Math.min((workoutsThisMonth / Math.max(monthlyGoal, 1)) * 100, 100)}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {monthlyGoal - workoutsThisMonth > 0
+                    ? `${monthlyGoal - workoutsThisMonth} more to hit your goal`
+                    : "🎉 Monthly goal achieved!"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Goals & Physical ── */}
+        <section className="mt-5 sm:mt-7">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Physical stats card */}
+            <div className="rounded-2xl bg-card border border-border p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Physical
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground border border-white/10 bg-zinc-800/50 hover:text-white hover:border-white/25 transition-colors"
+                >
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-6">
+                <PhysicalStat
+                  label="Height"
+                  value={
+                    onboardingInfo?.height
+                      ? `${onboardingInfo.height} ${onboardingInfo.heightUnit || ""}`.trim()
+                      : null
+                  }
+                />
+                <PhysicalStat
+                  label="Weight"
+                  value={
+                    onboardingInfo?.currentWeight
+                      ? `${onboardingInfo.currentWeight} ${onboardingInfo.weightUnit || "kg"}`
+                      : null
+                  }
+                />
+                <PhysicalStat label="Age" value={onboardingInfo?.age || null} />
+              </div>
+            </div>
+
+            {/* Goals & training card */}
+            <div className="rounded-2xl bg-card border border-border p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Goals & Training
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setEditingGoals(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground border border-white/10 bg-zinc-800/50 hover:text-white hover:border-white/25 transition-colors"
+                >
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4 min-h-[28px]">
+                {onboardingInfo?.goals?.length ? (
                   onboardingInfo.goals.map((g) => (
                     <span
                       key={g}
-                      className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-sm text-white"
+                      className="inline-flex items-center px-3 py-1 rounded-full bg-orange-500/10 text-xs font-medium text-orange-400 border border-orange-500/20"
                     >
                       {FITNESS_GOAL_OPTIONS.find((opt) => opt.id === g)
                         ?.label || g.replace(/-/g, " ")}
                     </span>
                   ))
                 ) : (
-                  <div className="text-sm text-muted-foreground">—</div>
+                  <span className="text-sm text-muted-foreground flex flex-wrap items-center gap-2">
+                    No goals set
+                    <button
+                      type="button"
+                      onClick={() => setEditingGoals(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-500/15 text-orange-400 text-xs font-semibold border border-orange-500/25 hover:bg-orange-500/25 transition-colors"
+                    >
+                      + Add Goal
+                    </button>
+                  </span>
                 )}
               </div>
-
-              <div className="mt-4 flex items-center justify-between gap-6">
-                <div className="flex-1 text-center">
-                  <div className="text-sm text-muted-foreground">Height</div>
-                  <div className="text-lg font-semibold text-white">
-                    {onboardingInfo?.height || "—"}{" "}
-                    {onboardingInfo?.heightUnit || ""}
-                  </div>
+              <div className="space-y-3 border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Experience
+                  </span>
+                  {onboardingInfo?.experience ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-card border border-border text-white">
+                      {EXPERIENCE_LABELS[onboardingInfo.experience] ||
+                        onboardingInfo.experience}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setEditingGoals(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-500/15 text-orange-400 text-xs font-semibold border border-orange-500/25 hover:bg-orange-500/25 transition-colors"
+                    >
+                      + Add
+                    </button>
+                  )}
                 </div>
-                <div className="flex-1 text-center">
-                  <div className="text-sm text-muted-foreground">Weight</div>
-                  <div className="text-lg font-semibold text-white">
-                    {onboardingInfo?.currentWeight || "—"}
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Monthly Target
+                  </span>
+                  <span className="text-sm font-semibold text-white">
+                    {monthlyGoal} workouts
+                  </span>
                 </div>
-                <div className="flex-1 text-center">
-                  <div className="text-sm text-muted-foreground">Age</div>
-                  <div className="text-lg font-semibold text-white">
-                    {onboardingInfo?.age || "—"}
+                {onboardingInfo?.equipment && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Equipment
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-card border border-border text-white capitalize">
+                      {onboardingInfo.equipment.replace(/-/g, " ")}
+                    </span>
                   </div>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <ProfileRow
-                  label="Experience"
-                  value={
-                    onboardingInfo?.experience
-                      ? EXPERIENCE_LABELS[onboardingInfo.experience]
-                      : "—"
-                  }
-                />
-                <ProfileRow
-                  label="Monthly Target"
-                  value={`${monthlyGoal} workouts`}
-                />
+                )}
               </div>
             </div>
           </div>
         </section>
 
-        {/* Section 4 — Personal Summary (read-only) */}
-        <section className="mt-6">
-          <div className="rounded-2xl bg-surface/6 p-4">
-            <h2 className="text-sm font-medium text-white">Personal</h2>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="col-span-1">
-                <div className="text-sm text-muted-foreground">Full name</div>
-                <div className="text-sm font-medium text-white">
+        {/* ── Personal ── */}
+        <section className="mt-5 sm:mt-7">
+          <div className="rounded-2xl bg-card border border-border p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              Personal
+            </h2>
+            <div className="divide-y divide-border sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-3">
+              <div className="py-3 sm:py-0 sm:px-4 first:pt-0 first:sm:pl-0 last:sm:pr-0">
+                <p className="text-xs text-muted-foreground mb-1">Full Name</p>
+                <p className="text-sm font-semibold text-white">
                   {profileInfo.name}
-                </div>
+                </p>
               </div>
-              <div>
-                {/* Section 2 — Performance Bento Grid (2x2 square cards) */}
-                <div className="text-sm font-medium text-white">
+              <div className="py-3 sm:py-0 sm:px-4 first:pt-0 first:sm:pl-0 last:sm:pr-0">
+                <p className="text-xs text-muted-foreground mb-1">Email</p>
+                <p className="text-sm font-semibold text-white truncate">
                   {profileInfo.email || "—"}
-                </div>
+                </p>
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground">
-                  Member since
-                </div>
-                <div className="text-sm font-medium text-white">
-                  {memberSinceLabel}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="text-sm text-muted-foreground">Physical</div>
-              <div className="mt-2 flex gap-4">
-                <div className="text-sm">
-                  <div className="text-muted-foreground">Height</div>
-                  <div className="font-medium text-white">
-                    {onboardingInfo?.height || "—"}{" "}
-                    {onboardingInfo?.heightUnit || ""}
-                  </div>
-                </div>
-                <div className="text-sm">
-                  <div className="text-muted-foreground">Weight</div>
-                  <div className="font-medium text-white">
-                    {onboardingInfo?.currentWeight || "—"}
-                  </div>
-                </div>
-                <div className="text-sm">
-                  <div className="text-muted-foreground">Age</div>
-                  <div className="font-medium text-white">
-                    {onboardingInfo?.age || "—"}
-                  </div>
-                </div>
+              <div className="py-3 sm:py-0 sm:px-4 first:pt-0 first:sm:pl-0 last:sm:pr-0">
+                <p className="text-xs text-muted-foreground mb-1">
+                  Member Since
+                </p>
+                <p className="text-sm font-semibold text-white">
+                  {completedWorkouts.length > 0
+                    ? memberSinceLabel
+                    : "New member 🎉"}
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* small spacer */}
-        <div className="h-3" />
+        <div className="h-6" />
 
         {/* Edit dialog (small) */}
         <Dialog open={editing} onOpenChange={setEditing}>
@@ -683,37 +717,83 @@ export default function Profile() {
                     id="edit-age"
                     value={onboardingInfo?.age || ""}
                     onChange={(e) =>
-                      setOnboardingInfo((prev) =>
-                        prev ? { ...prev, age: e.target.value } : prev,
-                      )
+                      updateOnboardingInfo({ age: e.target.value })
                     }
                   />
                 </div>
                 <div>
                   <Label htmlFor="edit-height">Height</Label>
-                  <Input
-                    id="edit-height"
-                    value={onboardingInfo?.height || ""}
-                    onChange={(e) =>
-                      setOnboardingInfo((prev) =>
-                        prev ? { ...prev, height: e.target.value } : prev,
-                      )
-                    }
-                  />
+                  <div className="flex gap-2 mt-1">
+                    <div className="relative flex-1">
+                      <Input
+                        id="edit-height"
+                        type="number"
+                        value={onboardingInfo?.height || ""}
+                        onChange={(e) =>
+                          updateOnboardingInfo({ height: e.target.value })
+                        }
+                        placeholder={
+                          onboardingInfo?.heightUnit === "ft" ? "5.9" : "175"
+                        }
+                      />
+                    </div>
+                    <div className="flex rounded-lg bg-zinc-900 border border-white/10 p-1 shrink-0">
+                      {(["cm", "ft"] as const).map((unit) => (
+                        <button
+                          key={unit}
+                          type="button"
+                          onClick={() =>
+                            updateOnboardingInfo({ heightUnit: unit })
+                          }
+                          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                            onboardingInfo?.heightUnit === unit
+                              ? "bg-orange-500 text-white shadow-sm"
+                              : "text-zinc-400 hover:text-white"
+                          }`}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="edit-weight">Current Weight</Label>
-                  <Input
-                    id="edit-weight"
-                    value={onboardingInfo?.currentWeight || ""}
-                    onChange={(e) =>
-                      setOnboardingInfo((prev) =>
-                        prev
-                          ? { ...prev, currentWeight: e.target.value }
-                          : prev,
-                      )
-                    }
-                  />
+                  <div className="flex gap-2 mt-1">
+                    <div className="relative flex-1">
+                      <Input
+                        id="edit-weight"
+                        type="number"
+                        value={onboardingInfo?.currentWeight || ""}
+                        onChange={(e) =>
+                          updateOnboardingInfo({
+                            currentWeight: e.target.value,
+                          })
+                        }
+                        placeholder={
+                          onboardingInfo?.weightUnit === "lbs" ? "165" : "75"
+                        }
+                      />
+                    </div>
+                    <div className="flex rounded-lg bg-zinc-900 border border-white/10 p-1 shrink-0">
+                      {(["kg", "lbs"] as const).map((unit) => (
+                        <button
+                          key={unit}
+                          type="button"
+                          onClick={() =>
+                            updateOnboardingInfo({ weightUnit: unit })
+                          }
+                          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                            onboardingInfo?.weightUnit === unit
+                              ? "bg-orange-500 text-white shadow-sm"
+                              : "text-zinc-400 hover:text-white"
+                          }`}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -728,6 +808,152 @@ export default function Profile() {
                     handleSaveProfile();
                     handleSaveDetails();
                     setEditing(false);
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Goals & Training dialog */}
+        <Dialog open={editingGoals} onOpenChange={setEditingGoals}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Goals & Training</DialogTitle>
+              <DialogDescription>
+                Update your fitness goals and experience level.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-5 pt-2">
+              {/* Goals */}
+              <div>
+                <Label className="text-sm font-medium text-white mb-3 block">
+                  Fitness Goals
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {TRAINING_GOAL_OPTIONS.map((opt) => {
+                    const isSelected = onboardingInfo?.goals?.includes(opt.id);
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          const current = onboardingInfo?.goals || [];
+                          const next = isSelected
+                            ? current.filter((g) => g !== opt.id)
+                            : [...current, opt.id];
+                          updateOnboardingInfo({ goals: next });
+                        }}
+                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                          isSelected
+                            ? "bg-orange-500/20 text-orange-400 border-orange-500/40"
+                            : "bg-zinc-800 text-muted-foreground border-white/10 hover:border-white/25"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Experience */}
+              <div>
+                <Label className="text-sm font-medium text-white mb-3 block">
+                  Experience Level
+                </Label>
+                <div className="flex gap-2">
+                  {["beginner", "intermediate", "advanced"].map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() =>
+                        updateOnboardingInfo({ experience: level })
+                      }
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all capitalize ${
+                        onboardingInfo?.experience === level
+                          ? "bg-orange-500/20 text-orange-400 border-orange-500/40"
+                          : "bg-zinc-800 text-muted-foreground border-white/10 hover:border-white/25"
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Equipment */}
+              <div>
+                <Label className="text-sm font-medium text-white mb-3 block">
+                  Equipment
+                </Label>
+                <div className="flex gap-2">
+                  {[
+                    { id: "full-gym", label: "Full Gym" },
+                    { id: "home-gym", label: "Home Gym" },
+                    { id: "bodyweight", label: "Bodyweight" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() =>
+                        updateOnboardingInfo({ equipment: opt.id })
+                      }
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                        onboardingInfo?.equipment === opt.id
+                          ? "bg-orange-500/20 text-orange-400 border-orange-500/40"
+                          : "bg-zinc-800 text-muted-foreground border-white/10 hover:border-white/25"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Monthly Target */}
+              <div>
+                <Label className="text-sm font-medium text-white mb-3 block">
+                  Monthly Target:{" "}
+                  <span className="text-orange-400">
+                    {monthlyGoal} workouts
+                  </span>
+                </Label>
+                <input
+                  type="range"
+                  min={4}
+                  max={30}
+                  step={1}
+                  value={monthlyGoal}
+                  onChange={(e) =>
+                    setMonthlyGoal(
+                      Math.min(Math.max(Number(e.target.value), 4), 30),
+                    )
+                  }
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                  <span>4</span>
+                  <span>30</span>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <div className="flex w-full justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingGoals(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleSaveDetails();
+                    setEditingGoals(false);
                   }}
                 >
                   Save
@@ -847,14 +1073,43 @@ export default function Profile() {
           </DialogContent>
         </Dialog>
 
-        {/* Floating control removed — actions moved to header and dialog */}
+        <Dialog open={signOutConfirmOpen} onOpenChange={setSignOutConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Sign out?</DialogTitle>
+              <DialogDescription>
+                You will need to sign in again to access your account.
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter>
+              <div className="flex w-full justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setSignOutConfirmOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setSignOutConfirmOpen(false);
+                    handleSignOut();
+                  }}
+                >
+                  Sign Out
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </AppLayout>
   );
 }
 
 /* Helper subcomponents */
-function MetricCard({
+function StatCard({
   label,
   value,
   icon,
@@ -864,24 +1119,30 @@ function MetricCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="relative w-full h-36 rounded-2xl bg-surface/6 p-4 flex items-center justify-center border border-surface/8">
-      <div className="absolute left-4 top-1 p-2 rounded-md bg-primary/8 z-10">
-        {icon}
-      </div>
-      <div className="text-center">
-        <div className="text-3xl font-extrabold text-white">{value}</div>
-        <div className="mt-1 text-sm text-muted-foreground">{label}</div>
+    <div className="rounded-2xl bg-card border border-border p-5 flex flex-col gap-3 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 min-h-[120px] sm:min-h-[130px]">
+      <div className="p-2 rounded-xl bg-orange-500/10 w-fit">{icon}</div>
+      <div>
+        <div className="text-4xl font-black text-white tracking-tight">
+          {value}
+        </div>
+        <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
       </div>
     </div>
   );
 }
 
-function ProfileRow({ label, value }: { label: string; value: string }) {
+function PhysicalStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null;
+}) {
   return (
-    <div className="py-3 flex items-center justify-between gap-4">
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="text-sm font-medium text-white text-right max-w-xs break-words">
-        {value}
+    <div className="flex flex-col">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-2xl font-black text-white mt-0.5">
+        {value || "—"}
       </div>
     </div>
   );

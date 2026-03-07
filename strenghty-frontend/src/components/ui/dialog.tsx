@@ -41,6 +41,11 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         (() => {
+          const isFullscreen =
+            typeof className === "string" && /\bdialog-fullscreen\b/.test(className);
+          if (isFullscreen) {
+            return "dialog-content fixed inset-0 z-[220] m-0 grid h-screen w-screen max-h-none max-w-none gap-0 rounded-none border-none bg-neutral-950 text-white p-0 shadow-none duration-300 ease-in-out overflow-y-auto overflow-x-hidden";
+          }
           const isSheet =
             typeof className === "string" &&
             /\bbottom-/.test(className) &&

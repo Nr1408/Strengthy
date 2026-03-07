@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +27,17 @@ import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog"
 // (removed static list so we only show groups actually present in data)
 
 export default function Exercises() {
+  const location = useLocation() as any;
   const [search, setSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | "all">(
     "all",
   );
   const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
-  // default to user's exercises view when opening the page
-  const [showLibrary, setShowLibrary] = useState(false);
+  // default to user's exercises view when opening the page,
+  // but allow explicit tab restore via navigation state.
+  const [showLibrary, setShowLibrary] = useState(
+    Boolean(location?.state?.showLibrary),
+  );
   const { toast } = useToast();
   const navigate = useNavigate();
   const [newExerciseName, setNewExerciseName] = useState("");
@@ -206,6 +210,12 @@ export default function Exercises() {
     return Array.from(set);
   }, [exercises]);
 
+  useEffect(() => {
+    if (typeof location?.state?.showLibrary === "boolean") {
+      setShowLibrary(Boolean(location.state.showLibrary));
+    }
+  }, [location?.state?.showLibrary]);
+
   const handleCreateExercise = () => {
     const missing: string[] = [];
     if (!newExerciseName.trim()) missing.push("a name");
@@ -232,6 +242,8 @@ export default function Exercises() {
               try {
                 navigate(`/exercises/${exercise.id}/info`, {
                   state: {
+                    fromExercises: true,
+                    returnShowLibrary: showLibrary,
                     exerciseName: exercise.name,
                     muscleGroup: exercise.muscleGroup,
                   },
@@ -242,11 +254,12 @@ export default function Exercises() {
         ))}
       </div>
     ) : (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
-        <p className="text-muted-foreground">No library exercises found</p>
-        <p className="text-sm text-muted-foreground">
-          Try adjusting your search or filters
-        </p>
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-20 text-center">
+        <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
+          <Search className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <p className="text-white font-semibold">No library exercises found</p>
+        <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters</p>
       </div>
     )
   ) : filteredExercises.length > 0 ? (
@@ -260,6 +273,8 @@ export default function Exercises() {
             try {
               navigate(`/exercises/${exercise.id}/info`, {
                 state: {
+                  fromExercises: true,
+                  returnShowLibrary: showLibrary,
                   exerciseName: exercise.name,
                   muscleGroup: exercise.muscleGroup,
                 },
@@ -270,11 +285,12 @@ export default function Exercises() {
       ))}
     </div>
   ) : (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
-      <p className="text-muted-foreground">No exercises found</p>
-      <p className="text-sm text-muted-foreground">
-        Try adjusting your search or filters
-      </p>
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-20 text-center">
+      <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
+        <Search className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <p className="text-white font-semibold">No exercises found</p>
+      <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters</p>
     </div>
   );
 
@@ -299,18 +315,34 @@ export default function Exercises() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant={showLibrary ? "default" : "outline"}
-              onClick={() => setShowLibrary((s) => !s)}
-            >
-              Browse Library
-            </Button>
-
+            <div className="flex rounded-xl bg-zinc-900 border border-white/10 p-1">
+              <button
+                type="button"
+                onClick={() => setShowLibrary(false)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  !showLibrary
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Your Library
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLibrary(true)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  showLibrary
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Browse Library
+              </button>
+            </div>
             <Button onClick={() => setIsCreateExerciseOpen(true)}>
-              <Plus className="h-4 w-4" />
-              New Exercise
+              <Plus className="h-4 w-4 mr-1" />
+              New
             </Button>
-
             <CreateExerciseDialog
               isOpen={isCreateExerciseOpen}
               onOpenChange={setIsCreateExerciseOpen}
@@ -353,27 +385,59 @@ export default function Exercises() {
         </div>
 
         {/* Muscle Group Filter Pills */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedMuscle === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedMuscle("all")}
-          >
-            All
-          </Button>
-          {availableMuscles.map((muscle) => (
-            <Button
-              key={muscle}
-              variant={selectedMuscle === muscle ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedMuscle(muscle)}
-              className={`${muscleGroupColors[muscle]} ${
-                selectedMuscle === muscle ? "ring-2 ring-primary" : ""
-              }`}
-            >
-              {muscle.charAt(0).toUpperCase() + muscle.slice(1)}
-            </Button>
-          ))}
+        <div className="flex flex-wrap gap-1.5">
+          {(["all", ...availableMuscles] as const).map((muscle) => {
+            const colorMap: Record<string, string> = {
+              all: "bg-orange-500 border-orange-500 text-white",
+              chest: "bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30",
+              back: "bg-blue-500/20 border-blue-500/40 text-blue-400 hover:bg-blue-500/30",
+              shoulders: "bg-purple-500/20 border-purple-500/40 text-purple-400 hover:bg-purple-500/30",
+              biceps: "bg-cyan-500/20 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/30",
+              triceps: "bg-indigo-500/20 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30",
+              forearms: "bg-teal-500/20 border-teal-500/40 text-teal-400 hover:bg-teal-500/30",
+              quads: "bg-orange-500/20 border-orange-500/40 text-orange-400 hover:bg-orange-500/30",
+              hamstrings: "bg-amber-500/20 border-amber-500/40 text-amber-400 hover:bg-amber-500/30",
+              calves: "bg-yellow-500/20 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/30",
+              core: "bg-green-500/20 border-green-500/40 text-green-400 hover:bg-green-500/30",
+              cardio: "bg-pink-500/20 border-pink-500/40 text-pink-400 hover:bg-pink-500/30",
+              other: "bg-zinc-500/20 border-zinc-500/40 text-zinc-400 hover:bg-zinc-500/30",
+            };
+
+            const isSelected = selectedMuscle === muscle;
+            const activeColorMap: Record<string, string> = {
+              chest: "bg-red-500 border-red-500 text-white",
+              back: "bg-blue-500 border-blue-500 text-white",
+              shoulders: "bg-purple-500 border-purple-500 text-white",
+              biceps: "bg-cyan-500 border-cyan-500 text-white",
+              triceps: "bg-indigo-500 border-indigo-500 text-white",
+              forearms: "bg-teal-500 border-teal-500 text-white",
+              quads: "bg-orange-500 border-orange-500 text-white",
+              hamstrings: "bg-amber-500 border-amber-500 text-white",
+              calves: "bg-yellow-500 border-yellow-500 text-white",
+              core: "bg-green-500 border-green-500 text-white",
+              cardio: "bg-pink-500 border-pink-500 text-white",
+              other: "bg-zinc-500 border-zinc-500 text-white",
+            };
+
+            const baseClass = isSelected
+              ? muscle === "all"
+                ? "bg-orange-500 border-orange-500 text-white"
+                : activeColorMap[muscle] || "bg-zinc-500 border-zinc-500 text-white"
+              : muscle === "all"
+                ? "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white hover:border-white/25"
+                : colorMap[muscle] || "bg-zinc-900 border-white/10 text-zinc-400";
+
+            return (
+              <button
+                key={muscle}
+                type="button"
+                onClick={() => setSelectedMuscle(muscle as MuscleGroup | "all")}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all capitalize ${baseClass}`}
+              >
+                {muscle === "all" ? "All" : muscle.charAt(0).toUpperCase() + muscle.slice(1)}
+              </button>
+            );
+          })}
         </div>
 
         {/* Exercise Grid */}

@@ -4,7 +4,7 @@
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
-    "androidScheme": "http",
+    "androidScheme": "https",
     "hostname": "localhost",
     "cleartext": true
   },
@@ -14,11 +14,12 @@
       "overlaysWebView": false,
       "backgroundColor": "#0f0f0f",
       "style": "LIGHT"
-    }
-    ,
+    },
     "GoogleAuth": {
-      "androidClientId": "REPLACE_WITH_ANDROID_CLIENT_ID",
-      "serverClientId": "REPLACE_WITH_WEB_CLIENT_ID"
+      "scopes": ["profile", "email"],
+      "androidClientId": "682920475586-donl8vohortm58eqb2ulbcg48tf2uhnp.apps.googleusercontent.com",
+      "serverClientId": "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
     }
   }
 }

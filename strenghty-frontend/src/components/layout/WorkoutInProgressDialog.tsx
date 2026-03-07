@@ -43,6 +43,10 @@ export default function WorkoutInProgressDialog({
           <Button
             className="flex-1 rounded-xl"
             onClick={() => {
+              try {
+                localStorage.setItem("workout:resumeRequested", "1");
+                localStorage.removeItem("workout:paused");
+              } catch (e) {}
               onOpenChange(false);
               onResume();
             }}

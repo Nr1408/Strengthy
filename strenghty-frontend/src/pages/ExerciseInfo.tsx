@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -57,6 +57,14 @@ export default function ExerciseInfo() {
   const { id } = useParams();
   const location = useLocation() as any;
   const navigate = useNavigate();
+  const openedFromExercises = location?.state?.fromExercises === true;
+  const returnShowLibrary = location?.state?.returnShowLibrary === true;
+  const openedFromPicker = location?.state?.fromPicker === true;
+  const returnRoute = (location as any)?.state?.returnRoute as
+    | string
+    | undefined;
+  const exerciseToReplaceFromState = (location as any)?.state
+    ?.exerciseToReplace;
 
   const exerciseNameFromState =
     (location?.state?.exerciseName as string | undefined) || "";
@@ -101,6 +109,28 @@ export default function ExerciseInfo() {
   const [graphMetric, setGraphMetric] = useState<"heaviest" | "orm" | "volume">(
     "heaviest",
   );
+  const [activePointIndex, setActivePointIndex] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const chartViewportRef = useRef<HTMLDivElement | null>(null);
+  const [chartViewportWidth, setChartViewportWidth] = useState(0);
+
+  useEffect(() => {
+    const el = chartViewportRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const next = Math.round(el.getBoundingClientRect().width);
+      setChartViewportWidth((prev) => (prev !== next ? next : prev));
+    };
+
+    update();
+    const observer = new ResizeObserver(() => update());
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   const selectedExercise = useMemo(() => {
     const byId = exercises.find(
@@ -235,10 +265,18 @@ export default function ExerciseInfo() {
   ];
 
   const progressionPoints = useMemo(() => {
-    const points = groupedHistory
+    const dailyMap = new Map<
+      string,
+      {
+        date: Date;
+        value: number;
+      }
+    >();
+
+    groupedHistory
       .slice()
       .reverse()
-      .map((group) => {
+      .forEach((group) => {
         let metricValue = 0;
         (group.sets || []).forEach((s: any) => {
           const w = Number(s.weight || 0);
@@ -263,16 +301,60 @@ export default function ExerciseInfo() {
             }
           }
         });
-        return {
-          workoutId: group.workoutId,
-          value: metricValue,
-          date: group.date,
-        };
-      })
-      .filter((p) => p.value > 0);
 
-    return points;
+        const parsedDate = group.date ? new Date(group.date) : null;
+        if (!parsedDate || Number.isNaN(parsedDate.getTime())) return;
+
+        const value = Number(metricValue);
+        if (!Number.isFinite(value) || value <= 0) return;
+
+        const dateKey = format(parsedDate, "yyyy-MM-dd");
+        const existing = dailyMap.get(dateKey);
+
+        if (!existing) {
+          dailyMap.set(dateKey, {
+            date: new Date(dateKey),
+            value,
+          });
+          return;
+        }
+
+        if (graphMetric === "volume") {
+          existing.value += value;
+        } else {
+          existing.value = Math.max(existing.value, value);
+        }
+      });
+
+    return Array.from(dailyMap.entries())
+      .map(([dateKey, entry]) => ({
+        workoutId: dateKey,
+        value: entry.value,
+        date: entry.date,
+      }))
+      .sort((a, b) => {
+        const at = a.date ? new Date(a.date).getTime() : 0;
+        const bt = b.date ? new Date(b.date).getTime() : 0;
+        return at - bt;
+      });
   }, [groupedHistory, graphMetric]);
+
+  const pointSpacing = 70;
+  const dynamicChartWidth = useMemo(
+    () =>
+      Math.max(
+        chartViewportWidth || 0,
+        progressionPoints.length * pointSpacing,
+        260,
+      ),
+    [chartViewportWidth, progressionPoints.length],
+  );
+
+  useEffect(() => {
+    const el = chartViewportRef.current;
+    if (!el) return;
+    el.scrollLeft = el.scrollWidth;
+  }, [dynamicChartWidth, progressionPoints.length]);
 
   const progressPolyline = useMemo(() => {
     if (progressionPoints.length < 2) return "";
@@ -299,45 +381,73 @@ export default function ExerciseInfo() {
         yAxisTicks: [] as Array<{ value: number; y: number }>,
         baselineY: 0,
         latestIndex: -1,
+        viewWidth: dynamicChartWidth,
       };
     }
 
-    const viewWidth = 300;
-    const viewHeight = 120;
-    const horizontalPadding = 8;
-    const topPadding = 6;
-    const bottomPadding = 8;
+    const viewWidth = dynamicChartWidth;
+    const viewHeight = 40;
+    const topPadding = 4;
+    const bottomPadding = 4;
+    const horizontalPadding = 4;
     const chartWidth = viewWidth - horizontalPadding * 2;
     const chartHeight = viewHeight - topPadding - bottomPadding;
     const baselineY = topPadding + chartHeight;
+    const timestamps = progressionPoints.map((p) =>
+      p.date ? new Date(p.date).getTime() : 0,
+    );
+    const minTime = Math.min(...timestamps);
+    const maxTime = Math.max(...timestamps);
+    const timeRange = Math.max(maxTime - minTime, 1);
 
     const values = progressionPoints.map((p) => p.value);
-    const maxValue = Math.max(...values, 1);
-    const minValue = Math.min(...values, maxValue);
-    const valuePadding = Math.max((maxValue - minValue) * 0.1, 2);
-    const top = Math.ceil((maxValue + valuePadding) / 2) * 2;
-    const bottom = Math.floor((minValue - valuePadding) / 2) * 2;
-    const domainRange = Math.max(top - bottom, 1);
-    const steps = 3;
-    const stepSize = domainRange / steps;
+    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values);
+    const rawRange = Math.max(maxValue - minValue, 0);
+    const domainPadding = Math.max(rawRange * 0.2, 1);
 
-    const yAxisTicks = Array.from({ length: steps + 1 }, (_, idx) => {
-      const value = Math.round((top - idx * stepSize) * 10) / 10;
-      const ratio = idx / steps;
+    let yMin = minValue - domainPadding;
+    let yMax = maxValue + domainPadding;
+
+    // Keep the graph visually expressive when values are very close.
+    const minVisualSpan = graphMetric === "volume" ? 10 : 4;
+    const visualSpan = yMax - yMin;
+    if (visualSpan < minVisualSpan) {
+      const center = (yMax + yMin) / 2;
+      yMin = center - minVisualSpan / 2;
+      yMax = center + minVisualSpan / 2;
+    }
+
+    // Rounded, evenly spaced axis ticks.
+    const tickCount = 4;
+    const roughStep = Math.max((yMax - yMin) / tickCount, 1);
+    const tickStep =
+      graphMetric === "volume"
+        ? Math.max(1, Math.ceil(roughStep / 5) * 5)
+        : Math.max(1, Math.ceil(roughStep));
+
+    const domainMin = Math.floor(yMin / tickStep) * tickStep;
+    const domainMax = Math.ceil(yMax / tickStep) * tickStep;
+    const domainRange = Math.max(domainMax - domainMin, tickStep);
+
+    const yAxisTicks = Array.from({ length: tickCount + 1 }, (_, idx) => {
+      const value = domainMax - idx * tickStep;
+      const ratio = idx / tickCount;
       const y = topPadding + ratio * chartHeight;
       return { value, y };
     });
 
-    const points = progressionPoints.map((p, idx) => {
+    const points = progressionPoints.map((p) => {
+      const timestamp = p.date ? new Date(p.date).getTime() : minTime;
       const x =
         progressionPoints.length === 1
           ? viewWidth / 2
           : horizontalPadding +
-            (idx / (progressionPoints.length - 1)) * chartWidth;
+            ((timestamp - minTime) / timeRange) * chartWidth;
       const y =
         topPadding +
         chartHeight -
-        ((p.value - bottom) / domainRange) * chartHeight;
+        ((p.value - domainMin) / domainRange) * chartHeight;
       return { x, y, value: p.value };
     });
 
@@ -355,8 +465,9 @@ export default function ExerciseInfo() {
       yAxisTicks,
       baselineY,
       latestIndex: points.length - 1,
+      viewWidth,
     };
-  }, [progressionPoints]);
+  }, [dynamicChartWidth, graphMetric, progressionPoints]);
 
   const latestProgressPoint =
     progressionPoints.length > 0
@@ -373,8 +484,12 @@ export default function ExerciseInfo() {
   const graphMetricUnit = graphMetric === "volume" ? "kg" : "kg";
   const yAxisLabelFormatter = (value: number) => {
     if (graphMetric === "volume") return formatVolumeCompact(value);
-    if (Number.isInteger(value)) return String(value);
-    return value.toFixed(1);
+    return String(Math.round(value));
+  };
+
+  const formatMetricValue = (value: number) => {
+    if (graphMetric === "volume") return formatVolumeCompact(value);
+    return String(Math.round(value));
   };
 
   const xAxisDateLabels = useMemo(() => {
@@ -403,19 +518,132 @@ export default function ExerciseInfo() {
     };
   }, [progressionPoints]);
 
+  const xAxisTicks = useMemo(() => {
+    if (progressionPoints.length === 0)
+      return [] as Array<{
+        key: string;
+        label: string;
+        x: number;
+        align: "left" | "center" | "right";
+      }>;
+
+    const desiredTickCount = 4;
+    const total = progressionPoints.length;
+
+    let indexes: number[] = [];
+    if (total <= desiredTickCount) {
+      indexes = Array.from({ length: total }, (_, i) => i);
+    } else {
+      const step = (total - 1) / (desiredTickCount - 1);
+      const unique = new Set<number>();
+      for (let i = 0; i < desiredTickCount; i += 1) {
+        unique.add(Math.round(i * step));
+      }
+      unique.add(0);
+      unique.add(total - 1);
+      indexes = Array.from(unique).sort((a, b) => a - b);
+    }
+
+    const horizontalPadding = 4;
+    const viewWidth = dynamicChartWidth;
+    const chartWidth = viewWidth - horizontalPadding * 2;
+    const timestamps = progressionPoints.map((p) =>
+      p.date ? new Date(p.date).getTime() : 0,
+    );
+    const minTime = Math.min(...timestamps);
+    const maxTime = Math.max(...timestamps);
+    const timeRange = Math.max(maxTime - minTime, 1);
+
+    return indexes.map((idx, i) => {
+      const point = progressionPoints[idx];
+      const timestamp = point.date ? new Date(point.date).getTime() : minTime;
+      const x =
+        total === 1
+          ? viewWidth / 2
+          : horizontalPadding +
+            ((timestamp - minTime) / timeRange) * chartWidth;
+      const align: "left" | "center" | "right" = "center";
+      return {
+        key: `${point.workoutId}-${idx}`,
+        label: point.date ? format(new Date(point.date), "MMM d") : "-",
+        x,
+        align,
+      };
+    });
+  }, [dynamicChartWidth, progressionPoints]);
+
+  const chartHorizontalPadding = 4;
+
   const pill =
     "inline-flex items-center rounded-full border border-white/10 bg-zinc-800 px-3 py-1 text-xs font-semibold text-white uppercase tracking-wide";
+
+  const handleBack = () => {
+    if (openedFromPicker) {
+      // navigate back to the originating route and request reopening of the picker dialog
+      navigate(returnRoute || -1, {
+        state: {
+          reopenExerciseDialog: true,
+          exerciseToReplace: exerciseToReplaceFromState || null,
+        },
+      });
+      return;
+    }
+
+    if (openedFromExercises) {
+      navigate("/exercises", {
+        state: { showLibrary: returnShowLibrary },
+      });
+      return;
+    }
+
+    navigate(-1);
+  };
+
+  const handleAddFromInfo = () => {
+    // When adding from the standalone ExerciseInfo page, navigate back to returnRoute
+    // and include payload instructing the caller to add/replace the exercise.
+    const payload = {
+      id: String(selectedExercise.id),
+      name: selectedExercise.name,
+      muscleGroup: selectedExercise.muscleGroup,
+    };
+
+    navigate(returnRoute || -1, {
+      state: {
+        addExerciseFromInfo: true,
+        exercisePayload: payload,
+        exerciseToReplace: exerciseToReplaceFromState || null,
+      },
+    });
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6 mt-1 px-1 sm:px-0 max-w-3xl mx-auto">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="h-9 w-9 flex items-center justify-center rounded-full text-white bg-neutral-900/50 border border-neutral-800/60 shadow-sm hover:bg-neutral-900/70"
-        >
-          ◀
-        </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="h-9 w-9 flex items-center justify-center rounded-full text-white bg-neutral-900/50 border border-neutral-800/60 shadow-sm hover:bg-neutral-900/70"
+            >
+              ◀
+            </button>
+          </div>
+
+          {openedFromPicker ? (
+            <div>
+              <Button
+                variant="ghost"
+                onClick={handleAddFromInfo}
+                className="text-white"
+              >
+                <PlusCircle className="h-5 w-5 mr-2" />
+                Add
+              </Button>
+            </div>
+          ) : null}
+        </div>
 
         <Card className="rounded-2xl overflow-hidden">
           <CardContent className="px-[18px] py-5">
@@ -497,9 +725,6 @@ export default function ExerciseInfo() {
 
         <Card className="rounded-2xl overflow-hidden">
           <CardHeader className="pb-3">
-            <p className="text-xs text-muted-foreground mb-1">
-              Progress over time
-            </p>
             <CardTitle className="text-white">
               {graphMetric === "volume"
                 ? "Volume Progress (kg)"
@@ -508,12 +733,12 @@ export default function ExerciseInfo() {
           </CardHeader>
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
             {progressionPoints.length >= 2 ? (
-              <div className="mt-2.5 rounded-xl border border-white/5 bg-zinc-900/60 px-4 py-3">
+              <div className="mt-3.5 rounded-xl border border-white/5 bg-zinc-900/60 px-4 pt-10 pb-6">
                 <div className="mb-3 text-sm text-muted-foreground">
                   {latestProgressPoint
                     ? graphMetric === "volume"
-                      ? `Latest Volume: ${formatVolumeCompact(latestProgressPoint.value)} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
-                      : `Latest: ${Math.round(latestProgressPoint.value)} ${graphMetricUnit} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
+                      ? `Latest Volume: ${formatMetricValue(latestProgressPoint.value)} kg • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
+                      : `Latest: ${formatMetricValue(latestProgressPoint.value)} ${graphMetricUnit} • ${latestProgressPoint.date ? format(new Date(latestProgressPoint.date), "MMM d") : "-"}`
                     : graphMetric === "volume"
                       ? "Latest Volume: -"
                       : `Latest: - ${graphMetricUnit}`}
@@ -555,95 +780,197 @@ export default function ExerciseInfo() {
                   </button>
                 </div>
 
-                <div className="flex items-stretch gap-2">
-                  <div className="w-[48px] shrink-0 flex h-24 flex-col justify-between pr-2 text-xs text-muted-foreground text-right">
+                <div
+                  className="flex items-stretch gap-2 w-full"
+                  style={{ position: "relative" }}
+                >
+                  <div className="w-[42px] shrink-0 relative h-24 sm:h-28 lg:h-32 xl:h-36 pr-1 text-xs text-muted-foreground text-right">
                     {graphRenderData.yAxisTicks.map((tick, idx) => (
                       <span
                         key={`y-tick-label-${idx}`}
-                        className="leading-none whitespace-nowrap"
+                        className="absolute right-0 -translate-y-1/2 whitespace-nowrap"
+                        style={{ top: `${(tick.y / 40) * 100}%` }}
                       >
                         {`${yAxisLabelFormatter(tick.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
                       </span>
                     ))}
                   </div>
 
-                  <svg
-                    viewBox="0 0 300 120"
-                    preserveAspectRatio="none"
-                    className="h-24 flex-1"
+                  <div
+                    ref={chartViewportRef}
+                    className="w-full min-w-0 overflow-x-auto scrollbar-thin"
                   >
-                    <defs>
-                      <linearGradient
-                        id="progressGradient"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
+                    <div style={{ minWidth: `${dynamicChartWidth + 20}px` }}>
+                      <div
+                        style={{
+                          width: `${dynamicChartWidth}px`,
+                          marginLeft: "10px",
+                          marginRight: "10px",
+                        }}
                       >
-                        <stop offset="0%" stopColor="rgba(249,115,22,0.28)" />
-                        <stop offset="50%" stopColor="rgba(249,115,22,0.10)" />
-                        <stop offset="100%" stopColor="rgba(249,115,22,0)" />
-                      </linearGradient>
-                    </defs>
-
-                    {graphRenderData.yAxisTicks.map((tick, idx) => (
-                      <line
-                        key={`grid-line-${idx}`}
-                        x1="0"
-                        y1={tick.y}
-                        x2="300"
-                        y2={tick.y}
-                        stroke="rgba(255,255,255,0.04)"
-                        strokeWidth="1"
-                      />
-                    ))}
-
-                    <line
-                      x1="0"
-                      y1={graphRenderData.baselineY}
-                      x2="300"
-                      y2={graphRenderData.baselineY}
-                      stroke="rgba(255,255,255,0.05)"
-                      strokeWidth="1"
-                    />
-
-                    <polygon
-                      points={graphRenderData.areaPoints}
-                      fill="url(#progressGradient)"
-                    />
-
-                    <polyline
-                      fill="none"
-                      stroke="#f97316"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      points={graphRenderData.linePoints}
-                    />
-
-                    {graphRenderData.points.map((point, idx) => {
-                      const isLatest = idx === graphRenderData.latestIndex;
-                      return (
-                        <circle
-                          key={`progress-point-${idx}`}
-                          cx={point.x}
-                          cy={point.y}
-                          r={isLatest ? 4 : 3.5}
-                          fill="#f97316"
-                          stroke={isLatest ? "#ffffff" : "#0b0f14"}
-                          strokeWidth="2"
+                        <svg
+                          ref={svgRef}
+                          viewBox={`0 0 ${dynamicChartWidth} 40`}
+                          preserveAspectRatio="none"
+                          className="w-full h-24 sm:h-28 lg:h-32 xl:h-36"
                         >
-                          <title>{`${point.value} kg`}</title>
-                        </circle>
-                      );
-                    })}
-                  </svg>
-                </div>
+                          <defs>
+                            <linearGradient
+                              id="progressGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="0%"
+                                stopColor="rgba(249,115,22,0.18)"
+                              />
+                              <stop
+                                offset="50%"
+                                stopColor="rgba(249,115,22,0.05)"
+                              />
+                              <stop
+                                offset="100%"
+                                stopColor="rgba(249,115,22,0)"
+                              />
+                            </linearGradient>
+                          </defs>
 
-                <div className="mt-2 grid grid-cols-3 text-[11px] text-muted-foreground">
-                  <span className="text-left">{xAxisDateLabels.first}</span>
-                  <span className="text-center">{xAxisDateLabels.middle}</span>
-                  <span className="text-right">{xAxisDateLabels.last}</span>
+                          {graphRenderData.yAxisTicks.map((tick, idx) => (
+                            <line
+                              key={`grid-line-${idx}`}
+                              x1={chartHorizontalPadding}
+                              y1={tick.y}
+                              x2={
+                                graphRenderData.viewWidth -
+                                chartHorizontalPadding
+                              }
+                              y2={tick.y}
+                              stroke="rgba(255,255,255,0.06)"
+                              strokeWidth="1"
+                            />
+                          ))}
+
+                          <line
+                            x1={chartHorizontalPadding}
+                            y1={graphRenderData.baselineY}
+                            x2={
+                              graphRenderData.viewWidth - chartHorizontalPadding
+                            }
+                            y2={graphRenderData.baselineY}
+                            stroke="rgba(255,255,255,0.05)"
+                            strokeWidth="1"
+                          />
+
+                          <polygon
+                            points={graphRenderData.areaPoints}
+                            fill="url(#progressGradient)"
+                            opacity="0.65"
+                          />
+
+                          <polyline
+                            fill="none"
+                            stroke="#f97316"
+                            strokeWidth="1.3"
+                            strokeOpacity="0.9"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            points={graphRenderData.linePoints}
+                          />
+
+                          {graphRenderData.points.map((point, idx) => {
+                            const isLatest =
+                              idx === graphRenderData.latestIndex;
+                            return (
+                              <ellipse
+                                key={`progress-point-${idx}`}
+                                cx={point.x}
+                                cy={point.y}
+                                rx={isLatest ? 4 : 4}
+                                ry={isLatest ? 1.5 : 1.3}
+                                fill="#f97316"
+                                stroke="rgba(0,0,0,0.4)"
+                                strokeWidth="0.9"
+                                onClick={() => setActivePointIndex(idx)}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <title>{`${formatMetricValue(point.value)} ${graphMetricUnit}`}</title>
+                              </ellipse>
+                            );
+                          })}
+
+                          {activePointIndex !== null &&
+                            (() => {
+                              const p =
+                                graphRenderData.points[activePointIndex];
+                              const valueLabel = `${formatMetricValue(p.value)} ${graphMetricUnit}`;
+                              const svgH = 40;
+                              const renderedW =
+                                chartViewportWidth || dynamicChartWidth;
+                              const renderedH = 96;
+                              const scaleX = dynamicChartWidth / renderedW;
+                              const scaleY = svgH / renderedH;
+                              const boxW = 44;
+                              const boxH = 20;
+                              const bx = Math.min(
+                                Math.max(p.x - (boxW * scaleX) / 2, 4),
+                                dynamicChartWidth - boxW * scaleX - 4,
+                              );
+                              const by = Math.max(
+                                p.y - boxH * scaleY - 2 * scaleY,
+                                0,
+                              );
+                              return (
+                                <g
+                                  transform={`translate(${bx},${by}) scale(${scaleX},${scaleY})`}
+                                  pointerEvents="none"
+                                >
+                                  <rect
+                                    x={0}
+                                    y={0}
+                                    width={boxW}
+                                    height={boxH}
+                                    rx="3"
+                                    fill="rgba(0,0,0,0.88)"
+                                  />
+                                  <text
+                                    x={boxW / 2}
+                                    y={12.5}
+                                    textAnchor="middle"
+                                    fontSize="9"
+                                    fill="white"
+                                    fontWeight="600"
+                                  >
+                                    {valueLabel}
+                                  </text>
+                                </g>
+                              );
+                            })()}
+                        </svg>
+
+                        <div className="mt-2 relative h-4 text-[11px] text-muted-foreground">
+                          {xAxisTicks.map((tick) => (
+                            <span
+                              key={tick.key}
+                              className={
+                                tick.align === "left"
+                                  ? "absolute translate-x-0 whitespace-nowrap"
+                                  : tick.align === "right"
+                                    ? "absolute -translate-x-full whitespace-nowrap"
+                                    : "absolute -translate-x-1/2 whitespace-nowrap"
+                              }
+                              style={{
+                                left: `${(tick.x / dynamicChartWidth) * 100}%`,
+                              }}
+                            >
+                              {tick.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (

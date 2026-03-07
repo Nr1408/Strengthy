@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "682920475586",
+    "project_id": "strenghty",
+    "storage_bucket": "strenghty.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:682920475586:android:0b68fac28284b96e5cf45b",
+        "android_client_info": {
+          "package_name": "com.strengthy.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "682920475586-donl8vohortm58eqb2ulbcg48tf2uhnp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.strengthy.app",
+            "certificate_hash": "e5efbdebe411547a3d4535e89c05d59326daedb9"
+          }
+        },
+        {
+          "client_id": "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZmu_6nB4RcZZSeJJIdA7GFqrwMnpoeK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

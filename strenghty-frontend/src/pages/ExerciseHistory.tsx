@@ -230,11 +230,11 @@ export default function ExerciseHistory() {
     const arr = localHistory
       .filter((h: any) => completedWorkoutIds.has(String(h.workoutId)))
       .map((h) => ({
-      workoutId: h.workoutId,
-      workoutName: h.workoutName,
-      date: h.date,
-      sets: h.sets,
-    }));
+        workoutId: h.workoutId,
+        workoutName: h.workoutName,
+        date: h.date,
+        sets: h.sets,
+      }));
     arr.sort((a: any, b: any) => {
       const ad = a.date ? new Date(a.date).getTime() : 0;
       const bd = b.date ? new Date(b.date).getTime() : 0;

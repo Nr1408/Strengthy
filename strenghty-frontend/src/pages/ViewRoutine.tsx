@@ -1,20 +1,20 @@
-const GRID_TEMPLATE =
+const GRID_TEMPLATE_STRENGTH =
   "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 
 // Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
 const GRID_TEMPLATE_CARDIO =
-  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
 
 // HIIT / bodyweight cardio header layout: Set | Duration | Reps | RPE | PR | Check
 const GRID_TEMPLATE_HIIT =
-  "minmax(18px, 0.35fr) minmax(56px, 0.5fr) minmax(40px,0.4fr) minmax(80px,0.6fr) minmax(28px,0.25fr) 30px";
-const GRID_TEMPLATE_HIIT_NO_CHECK =
-  "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(40px,0.5fr) minmax(80px,0.8fr) minmax(28px,0.25fr)";
+  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Trophy, ArrowLeft } from "lucide-react";
+import { Trophy, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SetRow } from "@/components/workout/SetRow";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +30,16 @@ export default function ViewRoutine() {
   const { toast } = useToast();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const getCardioModeForExercise = (exercise: any) => {
+    const name = String(exercise?.name || "").toLowerCase();
+    if (name.includes("treadmill")) return "treadmill";
+    if (name.includes("bike") || name.includes("cycle")) return "bike";
+    if (name.includes("elliptical")) return "elliptical";
+    if (name.includes("stair") || name.includes("step")) return "stairs";
+    if (name.includes("row")) return "row";
+    return "treadmill";
+  };
 
   const routine =
     location.state?.routine ||
@@ -182,7 +192,7 @@ export default function ViewRoutine() {
 
                     return (
                       <div
-                        className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
+                        className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
                         style={{
                           gridTemplateColumns: isHiit
                             ? GRID_TEMPLATE_HIIT
@@ -190,36 +200,44 @@ export default function ViewRoutine() {
                         }}
                       >
                         <>
-                          <span className="flex justify-center translate-x-[2px]">
+                          <span className="flex items-center justify-center text-center translate-x-[2px]">
                             SET
                           </span>
-                          <span className="flex justify-center">DURATION</span>
+                          <span className="flex items-center justify-center text-center">
+                            DURATION
+                          </span>
 
                           {isHiit ? (
-                            <span className="flex justify-center">REPS</span>
+                            <span className="flex items-center justify-center text-center">
+                              REPS
+                            </span>
                           ) : (
-                            <span className="flex justify-center">
-                              {we.exercise.name.toLowerCase().includes("stair")
-                                ? "FLOORS"
+                            <span className="flex items-center justify-center text-center">
+                              {getCardioModeForExercise(we.exercise) ===
+                              "stairs"
+                                ? "CLIMB"
                                 : "DISTANCE"}
                             </span>
                           )}
 
                           {isHiit ? (
-                            <span className="flex justify-center">RPE</span>
+                            <span className="flex items-center justify-center text-center">
+                              RPE
+                            </span>
                           ) : (
-                            <span className="flex justify-center">
-                              {we.exercise.name
-                                .toLowerCase()
-                                .includes("treadmill")
-                                ? "INCLINE"
-                                : we.exercise.name.toLowerCase().includes("row")
-                                  ? "SPLIT"
-                                  : "LEVEL"}
+                            <span className="flex items-center justify-center text-center">
+                              {(() => {
+                                const mode = getCardioModeForExercise(
+                                  we.exercise,
+                                );
+                                if (mode === "treadmill") return "INCLINE";
+                                if (mode === "row") return "SPLIT TIME";
+                                return "LEVEL";
+                              })()}
                             </span>
                           )}
 
-                          <span className="flex justify-center">
+                          <span className="flex items-center justify-center text-center">
                             <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
                           </span>
 
@@ -230,18 +248,24 @@ export default function ViewRoutine() {
                   })()
                 ) : (
                   <div
-                    className="mb-2 px-2 text-[10px] font-medium text-muted-foreground grid items-center gap-2"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE }}
+                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
+                    style={{ gridTemplateColumns: GRID_TEMPLATE_STRENGTH }}
                   >
                     <>
-                      <span className="flex justify-center translate-x-[2px]">
+                      <span className="flex items-center justify-center text-center translate-x-[2px]">
                         SET
                       </span>
-                      <span className="flex justify-center">WEIGHT</span>
+                      <span className="flex items-center justify-center text-center">
+                        WEIGHT
+                      </span>
                       <span />
-                      <span className="flex justify-center">REPS</span>
-                      <span className="flex justify-center">RPE</span>
-                      <span className="flex justify-center">
+                      <span className="flex items-center justify-center text-center">
+                        REPS
+                      </span>
+                      <span className="flex items-center justify-center text-center">
+                        RPE
+                      </span>
+                      <span className="flex items-center justify-center text-center">
                         <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
                       </span>
                       <div />
@@ -269,19 +293,23 @@ export default function ViewRoutine() {
           ))}
         </div>
       </div>
-      {showDeleteConfirm && (
-        <div className="fixed left-1/2 top-1/3 z-[9999] -translate-x-1/2 w-[min(520px,90%)]">
-          <div className="rounded-lg border border-border bg-neutral-900 p-6 shadow-lg">
-            <div className="mb-4 text-center text-lg font-semibold text-white">
-              Delete Routine?
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogPortal>
+          <DialogOverlay className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-none [backdrop-filter:none]" />
+          <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-[10000] -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[92vw] rounded-[18px] border border-white/10 bg-neutral-900/95 p-7 shadow-2xl">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
             </div>
-            <div className="text-sm text-muted-foreground mb-4 text-center">
+            <DialogPrimitive.Title className="mb-3 text-center text-lg font-semibold text-white">
+              Delete Routine?
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Description className="text-sm text-muted-foreground mb-6 text-center">
               Are you sure you want to delete this routine? This cannot be
               undone.
-            </div>
-            <div className="flex items-center justify-center gap-6">
+            </DialogPrimitive.Description>
+            <div className="flex items-center justify-center gap-3">
               <button
-                className="px-4 py-2 rounded bg-red-600 text-white"
+                className="px-5 py-2.5 rounded-lg bg-red-600 text-white shadow-md shadow-red-600/20 hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
                 onClick={() => {
                   try {
                     if (routine?.id) {
@@ -315,15 +343,15 @@ export default function ViewRoutine() {
                 Delete
               </button>
               <button
-                className="px-4 py-2 rounded border border-border text-white bg-transparent"
+                className="px-5 py-2.5 rounded-lg border border-white/10 text-white/90 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
                 onClick={() => setShowDeleteConfirm(false)}
               >
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
     </AppLayout>
   );
 }

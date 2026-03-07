@@ -2,10 +2,10 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { RoutineCard } from "@/components/workout/RoutineCard";
 import { mockRoutines } from "@/data/mockData";
 import type { Routine } from "@/types/workout";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import WorkoutInProgressDialog from "@/components/layout/WorkoutInProgressDialog";
 
 export default function ExploreRoutines() {
@@ -41,30 +41,32 @@ export default function ExploreRoutines() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <div>
-              <h1 className="font-heading text-3xl font-bold text-white">
-                Explore Routines
-              </h1>
-              <p className="text-muted-foreground">
-                Starter templates like Push, Pull, Legs, Upper and Lower body.
-              </p>
-            </div>
-            <Input
-              placeholder="Search routines (name, focus, or exercises)"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 max-w-md bg-neutral-900/60 border-neutral-700 text-sm text-white placeholder:text-muted-foreground"
-            />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="font-heading text-3xl font-bold text-white">
+              Explore Routines
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Starter templates like Push, Pull, Legs, Upper and Lower body.
+            </p>
           </div>
-          <Button
-            variant="outline"
-            className="text-white"
+          <button
+            type="button"
             onClick={() => navigate("/routines")}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors shrink-0 mt-1"
           >
-            Back to My Routines
-          </Button>
+            ← My Routines
+          </button>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search routines by name, focus, or exercise..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 w-full"
+          />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -81,6 +83,15 @@ export default function ExploreRoutines() {
             />
           ))}
         </div>
+        {filteredRoutines.length === 0 && (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-20 text-center">
+            <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
+              <Search className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="text-white font-semibold">No routines found</p>
+            <p className="text-sm text-muted-foreground mt-1">Try a different search term</p>
+          </div>
+        )}
       </div>
 
       <WorkoutInProgressDialog

@@ -11,7 +11,7 @@ const GRID_TEMPLATE_HIIT =
   "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -72,7 +72,7 @@ import {
   deleteSet,
 } from "@/lib/api";
 import { recommendNextRoutine } from "@/lib/onboarding";
-import { getUnit, formatMinutes } from "@/lib/utils";
+import { getUnit, setUnit, formatMinutes } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog";
@@ -81,6 +81,7 @@ export default function EditWorkout() {
   const navigate = useNavigate();
   const params = useParams();
   const workoutId = (params as any)?.id;
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   // create exercise state for inline creation
@@ -223,6 +224,9 @@ export default function EditWorkout() {
   const [workoutName, setWorkoutName] = useState<string>("Workout");
   const [notes, setNotes] = useState("");
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
+  // Capture location.state at mount so the async data loader can read it
+  // after setExercises(grouped) without needing it as a dependency.
+  const locationStateRef = useRef<any>((location as any).state);
   const [unusualSet, setUnusualSet] = useState<UnusualSetState | null>(null);
   const recentForced = useRef<Set<string>>(new Set());
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
@@ -258,7 +262,8 @@ export default function EditWorkout() {
   const [adjustMinutes, setAdjustMinutes] = useState(0);
   const [startTimeInput, setStartTimeInput] = useState("");
   const [showDurationPicker, setShowDurationPicker] = useState(false);
-  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [paused, setPaused] = useState<boolean>(() => {
     try {
       return !!localStorage.getItem("workout:paused");
@@ -268,6 +273,24 @@ export default function EditWorkout() {
   });
   const [filterMuscle, setFilterMuscle] = useState<"all" | string>("all");
   const [filterEquipment, setFilterEquipment] = useState<"all" | string>("all");
+
+  // Handle returning from ExerciseInfo page (opened via fromPicker flow).
+  // For addExerciseFromInfo: we only clear the nav state here; the actual
+  // exercise addition happens inside the async data loader (below) after
+  // setExercises(grouped), so the new exercise isn't overwritten by the load.
+  useEffect(() => {
+    const state = (location as any).state;
+    if (!state) return;
+    if (state.addExerciseFromInfo && state.exercisePayload) {
+      navigate(location.pathname, { replace: true, state: null });
+    } else if (state.reopenExerciseDialog) {
+      const toReplace = state.exerciseToReplace ?? null;
+      setReplaceTarget(toReplace);
+      setIsExerciseDialogOpen(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // Disable background scroll while Create Exercise modal is open
   useEffect(() => {
@@ -657,6 +680,23 @@ export default function EditWorkout() {
           } as WorkoutExercise;
         });
         setExercises(grouped as WorkoutExercise[]);
+        // Apply exercise added from the ExerciseInfo picker (if any).
+        // Must happen right after setExercises(grouped) so the functional
+        // updater chains on top of the loaded exercises, not an empty array.
+        const pendingState = locationStateRef.current;
+        if (
+          pendingState?.addExerciseFromInfo &&
+          pendingState?.exercisePayload
+        ) {
+          const payload = pendingState.exercisePayload;
+          const toReplace = pendingState.exerciseToReplace;
+          locationStateRef.current = null;
+          if (toReplace) {
+            replaceExercise(toReplace, payload);
+          } else {
+            addExercise(payload);
+          }
+        }
       } catch (err: any) {
         toast({
           title: "Failed to load workout",
@@ -742,6 +782,50 @@ export default function EditWorkout() {
     dt.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
     setStartTime(dt);
   };
+
+  const setStartClockTime = (hours: number, minutes: number) => {
+    const dt = new Date(startTime);
+    dt.setHours(hours, minutes, 0, 0);
+    setStartTime(dt);
+  };
+
+  const formatTimeLabel = (d: Date) =>
+    d.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const startHour12Options = Array.from({ length: 12 }, (_, i) => i + 1);
+  const startMinuteOptions = Array.from({ length: 61 }, (_, i) => i);
+  const meridiemOptions = ["AM", "PM"] as const;
+  const currentHour24 = startTime.getHours();
+  const currentHour12 = currentHour24 % 12 === 0 ? 12 : currentHour24 % 12;
+  const currentMinute = startTime.getMinutes();
+  const currentMeridiem: "AM" | "PM" = currentHour24 >= 12 ? "PM" : "AM";
+
+  const setStartClockTime12 = (
+    hour12: number,
+    minute: number,
+    meridiem: "AM" | "PM",
+  ) => {
+    let hour24 = hour12 % 12;
+    if (meridiem === "PM") hour24 += 12;
+
+    let minuteValue = minute;
+    if (minuteValue >= 60) {
+      minuteValue = 0;
+      hour24 = (hour24 + 1) % 24;
+    }
+
+    setStartClockTime(hour24, minuteValue);
+  };
+
+  const startDateOptions = Array.from({ length: 5 }, (_, idx) => {
+    const offset = idx - 2;
+    const d = new Date(startTime);
+    d.setDate(d.getDate() + offset);
+    return d;
+  });
 
   const addExercise = (exercise: Exercise) => {
     const isCardio = exercise.muscleGroup === "cardio";
@@ -855,8 +939,8 @@ export default function EditWorkout() {
     setId: string,
     updates: Partial<WorkoutSet>,
   ) => {
-    setExercises(
-      exercises.map((ex) => {
+    setExercises((prev) =>
+      prev.map((ex) => {
         if (ex.id === exerciseId) {
           return {
             ...ex,
@@ -1205,6 +1289,29 @@ export default function EditWorkout() {
                   );
                 if (typeof pacePerKm === "number" && pacePerKm > 0) {
                   paceValue = `${formatMmSs(pacePerKm)} /km`;
+                }
+              } else if (
+                saved.mode === "treadmill" ||
+                saved.mode === "bike" ||
+                saved.mode === "elliptical"
+              ) {
+                if (
+                  typeof saved.durationSeconds === "number" &&
+                  saved.durationSeconds > 0 &&
+                  typeof saved.distance === "number" &&
+                  saved.distance > 0
+                ) {
+                  if (distanceUnit === "mile") {
+                    const distanceMi = saved.distance / 1609.34;
+                    const pacePerMi = saved.durationSeconds / distanceMi;
+                    if (pacePerMi >= 20)
+                      paceValue = `${formatMmSs(pacePerMi)} /mi`;
+                  } else {
+                    const distanceKm = saved.distance / 1000;
+                    const pacePerKm = saved.durationSeconds / distanceKm;
+                    if (pacePerKm >= 20)
+                      paceValue = `${formatMmSs(pacePerKm)} /km`;
+                  }
                 }
               }
               banners.push({
@@ -1762,6 +1869,13 @@ export default function EditWorkout() {
         notes,
         date: workoutDate,
       });
+
+      try {
+        localStorage.setItem(
+          `workout:startTimeOverride:${workoutId}`,
+          startTime.toISOString(),
+        );
+      } catch (e) {}
 
       // delete existing strength and cardio sets then recreate
       const original = await getSets(workoutId);
@@ -2460,9 +2574,10 @@ export default function EditWorkout() {
                       onUpdate={(updates) =>
                         updateSetLocal(workoutExercise.id, set.id, updates)
                       }
-                      onUnitChange={(u) =>
-                        updateSetLocal(workoutExercise.id, set.id, { unit: u })
-                      }
+                      onUnitChange={(u) => {
+                        updateSetLocal(workoutExercise.id, set.id, { unit: u });
+                        setUnit(u);
+                      }}
                       onComplete={() =>
                         handleSetComplete(workoutExercise.id, set.id)
                       }
@@ -2886,37 +3001,64 @@ export default function EditWorkout() {
                 ) : (
                   <div className="flex flex-col">
                     {filteredExercises.map((exercise) => (
-                      <button
+                      <div
                         key={exercise.id}
-                        onClick={() =>
-                          replaceTarget
-                            ? replaceExercise(replaceTarget, exercise)
-                            : addExercise(exercise)
-                        }
-                        className="flex w-full items-center gap-4 py-4 text-left transition-colors border-b border-white/5 hover:bg-white/2"
+                        className="flex w-full items-center border-b border-white/5"
                       >
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
-                          <img
-                            src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
-                            alt={exercise.name}
-                            className="h-10 w-10 object-contain"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-white truncate">
-                            {exercise.name}
-                          </p>
-                          {(() => {
-                            const normalizedGroup =
-                              exercise.muscleGroup === "other" &&
-                              exercise.name.toLowerCase().includes("calf")
-                                ? "calves"
-                                : exercise.muscleGroup;
-                            return <MuscleTag muscle={normalizedGroup} />;
-                          })()}
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsExerciseDialogOpen(false);
+                            setExerciseSearch("");
+                            navigate(`/exercises/${exercise.id}/info`, {
+                              state: {
+                                fromPicker: true,
+                                returnRoute: `/workouts/${workoutId}/edit`,
+                                exerciseName: exercise.name,
+                                muscleGroup: exercise.muscleGroup,
+                                exerciseToReplace: replaceTarget || null,
+                              },
+                            });
+                          }}
+                          className="flex flex-1 items-center gap-4 py-4 text-left transition-colors hover:bg-white/2"
+                        >
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
+                            <img
+                              src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+                              alt={exercise.name}
+                              className="h-10 w-10 object-contain"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-white truncate">
+                              {exercise.name}
+                            </p>
+                            {(() => {
+                              const normalizedGroup =
+                                exercise.muscleGroup === "other" &&
+                                exercise.name.toLowerCase().includes("calf")
+                                  ? "calves"
+                                  : exercise.muscleGroup;
+                              return <MuscleTag muscle={normalizedGroup} />;
+                            })()}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={
+                            replaceTarget ? "Replace exercise" : "Add exercise"
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (replaceTarget)
+                              replaceExercise(replaceTarget, exercise);
+                            else addExercise(exercise);
+                          }}
+                          className="flex items-center justify-center px-4 py-4 text-muted-foreground hover:text-white transition-colors"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -2953,7 +3095,15 @@ export default function EditWorkout() {
         {/* Edit duration dialog */}
         <Dialog
           open={isDurationDialogOpen}
-          onOpenChange={setIsDurationDialogOpen}
+          onOpenChange={(open) => {
+            setIsDurationDialogOpen(open);
+            if (!open) {
+              try {
+                localStorage.removeItem("workout:paused");
+              } catch (e) {}
+              setPaused(false);
+            }
+          }}
         >
           <DialogContent className="max-w-[360px] rounded-[28px] bg-neutral-950 border border-neutral-800/40 text-white pb-4 pt-2">
             {/* Drag handle */}
@@ -3044,35 +3194,44 @@ export default function EditWorkout() {
                 </div>
               )}
 
-              {/* Start time (with scrollable date selector, mirroring NewWorkout) */}
+              {/* Start date/time pickers */}
               <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setShowStartPicker((v) => !v)}
-                  className="flex w-full items-center justify-between rounded-xl bg-neutral-900/60 px-3 py-2 text-left"
-                >
-                  <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
-                    Start time
-                  </span>
-                  <span className="text-sm font-semibold text-white">
-                    {startTime.toLocaleString(undefined, {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </button>
-                {showStartPicker && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowStartDatePicker((v) => !v);
+                      setShowStartTimePicker(false);
+                    }}
+                    className="flex w-full items-center justify-between rounded-xl bg-neutral-900/60 px-3 py-2 text-left"
+                  >
+                    <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                      Date
+                    </span>
+                    <span className="text-sm font-semibold text-white">
+                      {formatDateLabel(startTime)}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowStartTimePicker((v) => !v);
+                      setShowStartDatePicker(false);
+                    }}
+                    className="flex w-full items-center justify-between rounded-xl bg-neutral-900/60 px-3 py-2 text-left"
+                  >
+                    <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                      Time
+                    </span>
+                    <span className="text-sm font-semibold text-white">
+                      {formatTimeLabel(startTime)}
+                    </span>
+                  </button>
+                </div>
+                {showStartDatePicker && (
                   <div className="relative mt-2 overflow-hidden rounded-2xl bg-white/[0.02]">
                     <div className="relative max-h-40 overflow-y-auto py-2 scrollbar-hide">
-                      {Array.from({ length: 5 }, (_, idx) => {
-                        const offset = idx - 2;
-                        const d = new Date(startTime);
-                        d.setDate(d.getDate() + offset);
-                        return d;
-                      }).map((date) => (
+                      {startDateOptions.map((date) => (
                         <button
                           key={date.toISOString()}
                           type="button"
@@ -3089,12 +3248,105 @@ export default function EditWorkout() {
                     </div>
                   </div>
                 )}
+                {showStartTimePicker && (
+                  <div className="relative mt-2 overflow-hidden rounded-2xl bg-white/[0.02]">
+                    <div className="relative grid grid-cols-3 items-center gap-3 px-2 py-3">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                          Hr
+                        </span>
+                        <div className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide">
+                          {startHour12Options.map((h) => (
+                            <button
+                              key={`start-hour-${h}`}
+                              type="button"
+                              onClick={() =>
+                                setStartClockTime12(
+                                  h,
+                                  currentMinute,
+                                  currentMeridiem,
+                                )
+                              }
+                              className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${
+                                h === currentHour12
+                                  ? "font-semibold text-white bg-neutral-800/80"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {h}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                          Min
+                        </span>
+                        <div className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide">
+                          {startMinuteOptions.map((m) => (
+                            <button
+                              key={`start-minute-${m}`}
+                              type="button"
+                              onClick={() =>
+                                setStartClockTime12(
+                                  currentHour12,
+                                  m,
+                                  currentMeridiem,
+                                )
+                              }
+                              className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${
+                                m === currentMinute
+                                  ? "font-semibold text-white bg-neutral-800/80"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {String(m).padStart(2, "0")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                          AM/PM
+                        </span>
+                        <div className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide">
+                          {meridiemOptions.map((mer) => (
+                            <button
+                              key={`start-meridiem-${mer}`}
+                              type="button"
+                              onClick={() =>
+                                setStartClockTime12(
+                                  currentHour12,
+                                  currentMinute,
+                                  mer,
+                                )
+                              }
+                              className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${
+                                mer === currentMeridiem
+                                  ? "font-semibold text-white bg-neutral-800/80"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {mer}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2 pt-1">
                 <Button
                   variant="ghost"
                   className="flex-1 text-xs font-medium text-muted-foreground hover:text-white"
-                  onClick={() => setIsDurationDialogOpen(false)}
+                  onClick={() => {
+                    try {
+                      localStorage.removeItem("workout:paused");
+                    } catch (e) {}
+                    setPaused(false);
+                    setIsDurationDialogOpen(false);
+                  }}
                 >
                   Cancel
                 </Button>

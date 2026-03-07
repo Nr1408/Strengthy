@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { clearToken, deleteAccount, updateAccount } from "@/lib/api";
 
@@ -25,6 +26,8 @@ export default function AccountSettings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     try {
@@ -98,10 +101,7 @@ export default function AccountSettings() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "This will permanently delete your account and all associated data in Strengthy. This action cannot be undone. Do you want to continue?",
-    );
-    if (!confirmed) return;
+    setIsDeletingAccount(true);
 
     try {
       await deleteAccount();
@@ -118,6 +118,7 @@ export default function AccountSettings() {
         description: "Your account has been permanently removed.",
       });
 
+      setDeleteConfirmOpen(false);
       navigate("/auth");
     } catch (e: any) {
       toast({
@@ -125,49 +126,39 @@ export default function AccountSettings() {
         description: e?.message || "Unable to delete your account.",
         variant: "destructive",
       });
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
   return (
     <AppLayout>
-      <div className="space-y-6 w-full px-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/profile")}
-              aria-label="Back to profile"
-            >
-              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">
-                Account Settings
-              </h1>
-              <p className="text-muted-foreground">
-                Manage your login email, password, and account deletion.
-              </p>
-            </div>
-          </div>
-          <div className="text-sm text-muted-foreground">&nbsp;</div>
+      <div className="w-full max-w-2xl mx-auto px-4 pb-32 space-y-6">
+        {/* Header */}
+        <div className="pt-6 pb-2">
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mb-4"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Profile
+          </button>
+          <h1 className="text-2xl font-bold text-white">Account Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your login email, password, and account deletion.
+          </p>
         </div>
 
-        <Card className="rounded-2xl overflow-hidden">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Login & Security
-            </CardTitle>
-            <CardDescription>Manage your credentials</CardDescription>
-          </CardHeader>
-
-          <CardContent className="p-6 sm:p-8">
+        {/* Login & Security */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+            Login & Security
+          </h2>
+          <div className="rounded-2xl bg-card border border-border p-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label
-                  className="text-muted-foreground"
-                  htmlFor="account-email"
-                >
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground" htmlFor="account-email">
                   Login Email
                 </Label>
                 <Input
@@ -177,11 +168,8 @@ export default function AccountSettings() {
                   onChange={(e) => setAccountEmail(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label
-                  className="text-muted-foreground"
-                  htmlFor="current-password"
-                >
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground" htmlFor="current-password">
                   Current Password
                 </Label>
                 <Input
@@ -191,8 +179,8 @@ export default function AccountSettings() {
                   onChange={(e) => setCurrentPassword(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground" htmlFor="new-password">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground" htmlFor="new-password">
                   New Password
                 </Label>
                 <Input
@@ -203,11 +191,8 @@ export default function AccountSettings() {
                   minLength={6}
                 />
               </div>
-              <div className="space-y-2">
-                <Label
-                  className="text-muted-foreground"
-                  htmlFor="confirm-password"
-                >
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground" htmlFor="confirm-password">
                   Confirm New Password
                 </Label>
                 <Input
@@ -219,31 +204,75 @@ export default function AccountSettings() {
                 />
               </div>
             </div>
-          </CardContent>
-
-          <CardFooter>
-            <div className="w-full flex justify-end">
+            <div className="flex justify-end pt-2 border-t border-border">
               <Button onClick={handleUpdateAccount}>Update Account</Button>
             </div>
-          </CardFooter>
-        </Card>
+          </div>
+        </section>
 
         {/* Danger Zone */}
-        <div className="rounded-2xl border border-destructive/50 bg-destructive/10 p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Danger Zone</h2>
-              <p className="text-sm text-muted-foreground">
-                Permanent account actions. Use with caution.
-              </p>
-            </div>
-            <div>
-              <Button variant="destructive" onClick={handleDeleteAccount}>
-                Delete Account
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+            Danger Zone
+          </h2>
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-white">Delete Account</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Permanently delete your account and all associated data. This cannot be undone.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="shrink-0"
+                onClick={() => setDeleteConfirmOpen(true)}
+              >
+                Delete
               </Button>
             </div>
           </div>
-        </div>
+        </section>
+
+        <AlertDialog
+          open={deleteConfirmOpen}
+          onOpenChange={(open) => {
+            if (!isDeletingAccount) setDeleteConfirmOpen(open);
+          }}
+        >
+          <AlertDialogContent className="w-[92vw] max-w-md rounded-2xl border border-destructive/35 bg-neutral-950 text-white p-5">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-left text-xl font-bold text-white">
+                Delete Account?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-left text-sm leading-relaxed text-zinc-300">
+                This will permanently delete your account and all associated
+                data in Strengthy. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-2 flex-row justify-end gap-2 sm:space-x-0">
+              <AlertDialogCancel
+                className="mt-0 border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800"
+                disabled={isDeletingAccount}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 text-white hover:bg-red-700"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!isDeletingAccount) {
+                    void handleDeleteAccount();
+                  }
+                }}
+                disabled={isDeletingAccount}
+              >
+                {isDeletingAccount ? "Deleting..." : "Delete Account"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );

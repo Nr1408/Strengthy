@@ -34,7 +34,9 @@ export default function ExerciseInfo({
         </DialogHeader>
 
         <div className="pt-2">
-          <div className="text-sm text-muted-foreground mb-2">Primary muscle</div>
+          <div className="text-sm text-muted-foreground mb-2">
+            Primary muscle
+          </div>
           <MuscleTag muscle={String(muscleGroup || "other")} />
         </div>
       </DialogContent>

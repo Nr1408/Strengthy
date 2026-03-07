@@ -37,24 +37,26 @@ const queryClient = new QueryClient();
 const PageTransition = ({
   children,
   noVerticalShift,
+  fadeOnly,
 }: {
   children: React.ReactNode;
   noVerticalShift?: boolean;
+  fadeOnly?: boolean;
 }) => (
   <motion.div
     className="h-full"
     initial={{
       opacity: 0,
-      y: noVerticalShift ? 0 : 20,
-      scale: noVerticalShift ? 1 : 0.98,
+      y: fadeOnly || noVerticalShift ? 0 : 20,
+      scale: fadeOnly || noVerticalShift ? 1 : 0.98,
     }}
     animate={{ opacity: 1, y: 0, scale: 1 }}
     exit={{
       opacity: 0,
-      y: noVerticalShift ? 0 : -20,
-      scale: noVerticalShift ? 1 : 0.96,
+      y: fadeOnly || noVerticalShift ? 0 : -20,
+      scale: fadeOnly || noVerticalShift ? 1 : 0.96,
     }}
-    transition={{ duration: 0.25, ease: "easeOut" }}
+    transition={{ duration: fadeOnly ? 0.15 : 0.25, ease: "easeOut" }}
   >
     {children}
   </motion.div>
@@ -231,7 +233,7 @@ const AnimatedRoutes = () => {
         <Route
           path="/exercises"
           element={
-            <PageTransition>
+            <PageTransition noVerticalShift>
               <Exercises />
             </PageTransition>
           }
@@ -287,7 +289,7 @@ const AnimatedRoutes = () => {
         <Route
           path="/exercises/:id/info"
           element={
-            <PageTransition>
+            <PageTransition noVerticalShift fadeOnly={!!(location.state as any)?.fromPicker}>
               <ExerciseInfo />
             </PageTransition>
           }

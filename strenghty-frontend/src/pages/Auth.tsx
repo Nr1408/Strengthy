@@ -13,17 +13,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import {
-  API_BASE,
-  login,
-  register,
-  loginWithGoogle,
-  setToken,
-} from "@/lib/api";
+import { API_BASE, login, register, setToken } from "@/lib/api";
 import ConfirmEmailDialog from "@/components/ConfirmEmailDialog";
 import InvalidCredentialsDialog from "@/components/InvalidCredentialsDialog";
 import { createClient } from "@supabase/supabase-js";
-import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
+import { Browser } from "@capacitor/browser";
 
 type AuthFormData = {
   name: string;
@@ -66,6 +60,13 @@ const GOOGLE_CLIENT_ID_ANDROID_ENV = (
 )
   .toString()
   .trim();
+const API_BASE_ENV = (
+  import.meta.env.VITE_API_BASE ??
+  import.meta.env.VITE_API_URL ??
+  ""
+)
+  .toString()
+  .trim();
 const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "")
   .toString()
   .trim();
@@ -74,6 +75,7 @@ const SUPABASE_ANON_KEY_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "")
   .trim();
 const REDIRECT_ORIGIN = "https://strengthy-strengthy-frontend.vercel.app";
 const GOOGLE_REDIRECT_TO = `${REDIRECT_ORIGIN}/auth`;
+const GOOGLE_REDIRECT_TO_NATIVE = "com.strengthy.app://auth";
 
 const sanitizeGoogleClientId = (value: unknown): string => {
   const normalized = String(value ?? "").trim();
@@ -81,6 +83,14 @@ const sanitizeGoogleClientId = (value: unknown): string => {
   if (normalized.toLowerCase().includes("replace_with")) return "";
   if (normalized.includes("<") || normalized.includes(">")) return "";
   return normalized;
+};
+
+const normalizeApiRoot = (raw: string): string => {
+  const trimmed = String(raw || "")
+    .trim()
+    .replace(/\/+$/g, "");
+  if (!trimmed) return "";
+  return trimmed.endsWith("/api") ? trimmed.slice(0, -4) : trimmed;
 };
 
 const supabase =
@@ -100,7 +110,6 @@ export default function Auth({
   defaultSignup,
 }: AuthProps = {}) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleSelecting, setIsGoogleSelecting] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | {
     kind: "login" | "signup" | "google";
     title: string;
@@ -114,28 +123,6 @@ export default function Auth({
   );
   const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
 
-  const getCapacitorGoogleClientId = useCallback((): string => {
-    try {
-      const plugins = (window as any)?.Capacitor?.config?.plugins;
-      const google = plugins?.GoogleAuth || {};
-      return (
-        sanitizeGoogleClientId(google.androidClientId) ||
-        sanitizeGoogleClientId(google.clientId) ||
-        sanitizeGoogleClientId(google.serverClientId)
-      );
-    } catch {
-      return "";
-    }
-  }, []);
-
-  const [googleClientIdAndroid, setGoogleClientIdAndroid] = useState<
-    string | null
-  >(
-    GOOGLE_CLIENT_ID_ANDROID_ENV ||
-      GOOGLE_CLIENT_ID_WEB_ENV ||
-      getCapacitorGoogleClientId() ||
-      null,
-  );
   const [formData, setFormData] = useState<AuthFormData>({
     name: "",
     email: "",
@@ -245,31 +232,42 @@ export default function Auth({
         return;
       }
 
-      setToken(accessToken);
+      setPendingAction({
+        kind: "google",
+        title: "Signing you in",
+        detail: "Syncing your account…",
+      });
+      setIsLoading(true);
       try {
-        if (idToken) {
-          const payload = JSON.parse(
-            atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
-          );
-          const profile = {
-            name: payload?.name || null,
-            email: payload?.email || null,
-          };
-          if (profile.name || profile.email) {
-            localStorage.setItem("user:profile", JSON.stringify(profile));
-          }
-        }
-      } catch {}
-      const goOnboarding = await shouldRouteToOnboarding(accessToken);
-      if (goOnboarding) {
+        setToken(accessToken);
         try {
-          localStorage.removeItem("user:onboarding");
-          localStorage.removeItem("user:monthlyGoal");
+          if (idToken) {
+            const payload = JSON.parse(
+              atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+            );
+            const profile = {
+              name: payload?.name || null,
+              email: payload?.email || null,
+            };
+            if (profile.name || profile.email) {
+              localStorage.setItem("user:profile", JSON.stringify(profile));
+            }
+          }
         } catch {}
-      }
+        const goOnboarding = await shouldRouteToOnboarding(accessToken);
+        if (goOnboarding) {
+          try {
+            localStorage.removeItem("user:onboarding");
+            localStorage.removeItem("user:monthlyGoal");
+          } catch {}
+        }
 
-      toast({ title: "Welcome!", description: "Signed in with Google." });
-      navigate(goOnboarding ? "/onboarding" : "/dashboard");
+        toast({ title: "Welcome!", description: "Signed in with Google." });
+        navigate(goOnboarding ? "/onboarding" : "/dashboard");
+      } finally {
+        setPendingAction(null);
+        setIsLoading(false);
+      }
     },
     [navigate, shouldRouteToOnboarding, toast],
   );
@@ -319,39 +317,6 @@ export default function Auth({
   }, [location.search]);
 
   useEffect(() => {
-    // Resolve Android Google client id from env first; legacy backend config as fallback.
-    (async () => {
-      const fromCapacitor = getCapacitorGoogleClientId();
-      if (fromCapacitor) {
-        setGoogleClientIdAndroid(fromCapacitor);
-      }
-
-      if (
-        GOOGLE_CLIENT_ID_ANDROID_ENV ||
-        GOOGLE_CLIENT_ID_WEB_ENV ||
-        fromCapacitor
-      )
-        return;
-
-      if (API_BASE.includes("supabase.co")) {
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API_BASE}/public-config/`);
-        if (res.ok) {
-          const data = await res.json();
-
-          // Android client fallback for native builds
-          if (data?.google_client_id_android) {
-            setGoogleClientIdAndroid(String(data.google_client_id_android));
-          }
-        }
-      } catch (e) {}
-    })();
-  }, [getCapacitorGoogleClientId]);
-
-  useEffect(() => {
     // Supabase OAuth full-page callback handling
     try {
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -371,6 +336,15 @@ export default function Auth({
       const idToken = (hash.get("id_token") || "").trim() || null;
       const refreshToken = (hash.get("refresh_token") || "").trim();
 
+      // Immediately switch to signing state so the auth form does not flash
+      // after account selection and redirect back.
+      setPendingAction({
+        kind: "google",
+        title: "Signing you in",
+        detail: "Syncing your account...",
+      });
+      setIsLoading(true);
+
       if (refreshToken && supabase) {
         void supabase.auth.setSession({
           access_token: accessToken,
@@ -386,7 +360,103 @@ export default function Auth({
     }
   }, [completeWebGoogleLogin]);
 
+  useEffect(() => {
+    const isNative =
+      typeof window !== "undefined" &&
+      (window as any).Capacitor?.isNativePlatform?.() === true;
+    if (!isNative) return;
+
+    let removeListener: (() => void) | null = null;
+
+    (async () => {
+      try {
+        const appMod = await import("@capacitor/app");
+        const listener = await appMod.App.addListener(
+          "appUrlOpen",
+          async (event) => {
+            const incomingUrl = String(event?.url || "");
+            if (!incomingUrl) return;
+            if (!incomingUrl.startsWith(GOOGLE_REDIRECT_TO_NATIVE)) return;
+
+            setPendingAction({
+              kind: "google",
+              title: "Signing you in",
+              detail: "Syncing your account...",
+            });
+            setIsLoading(true);
+
+            try {
+              const parsed = new URL(incomingUrl);
+              const hash = new URLSearchParams(
+                String(parsed.hash || "").replace(/^#/, ""),
+              );
+              const error = hash.get("error_description") || hash.get("error");
+              if (error) {
+                toast({
+                  title: "Google sign-in failed",
+                  description: String(error),
+                  variant: "destructive",
+                });
+                setPendingAction(null);
+                setIsLoading(false);
+                return;
+              }
+
+              const accessToken = (hash.get("access_token") || "").trim();
+              if (!accessToken) {
+                setPendingAction(null);
+                setIsLoading(false);
+                return;
+              }
+
+              const idToken = (hash.get("id_token") || "").trim() || null;
+              const refreshToken = (hash.get("refresh_token") || "").trim();
+
+              if (refreshToken && supabase) {
+                void supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                });
+              }
+
+              try {
+                await Browser.close();
+              } catch {}
+              void completeWebGoogleLogin(accessToken, idToken);
+            } catch {
+              setPendingAction(null);
+              setIsLoading(false);
+            }
+          },
+        );
+
+        removeListener = () => {
+          try {
+            listener.remove();
+          } catch {
+            // no-op
+          }
+        };
+      } catch {
+        // no-op
+      }
+    })();
+
+    return () => {
+      if (removeListener) removeListener();
+    };
+  }, [completeWebGoogleLogin, toast]);
+
   const handleGoogleLogin = async () => {
+    const isNative =
+      typeof window !== "undefined" &&
+      (window as any).Capacitor?.isNativePlatform?.() === true;
+
+    if (isNative) {
+      // Native should never reach here — use Capacitor GoogleAuth instead
+      return;
+    }
+
     try {
       setAuthError(null);
       setInvalidCredsOpen(false);
@@ -424,12 +494,6 @@ export default function Auth({
     }
   };
 
-  // POST the Google credential to the backend, store token and profile
-  const handleGoogleSuccess = async (credential: string) => {
-    // Supabase-only exchange of Google ID token (native flow)
-    return await loginWithGoogle(credential);
-  };
-
   const onClickContinueWithGoogle = async () => {
     const isNative =
       typeof window !== "undefined" &&
@@ -443,138 +507,30 @@ export default function Auth({
       return;
     }
 
-    // --- NATIVE FLOW (Keep existing) ---
-    try {
-      const nativeClientId = (
-        googleClientIdAndroid ||
-        GOOGLE_CLIENT_ID_ANDROID_ENV ||
-        GOOGLE_CLIENT_ID_WEB_ENV ||
-        getCapacitorGoogleClientId() ||
-        ""
-      )
-        .toString()
-        .trim();
-
-      if (!nativeClientId) {
-        const msg = `Google sign-in isn't ready (missing Android/Web Google client id).`;
-        toast({
-          title: "Google sign-in failed",
-          description: msg,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // On native, let the user pick the account first. Only show the
-      // pending screen after we have an idToken to exchange.
-      setIsGoogleSelecting(true);
-
-      let initialized = false;
-
-      // ✅ USE THIS NEW UPDATED BLOCK:
-      try {
-        await GoogleAuth.initialize({
-          clientId: nativeClientId,
-          scopes: ["profile", "email"],
-          grantOfflineAccess: true,
-          // 🔥 NEW: These two settings break the auto-login cache
-          forceCodeForRefreshToken: true,
-          authentication: {
-            enableAutoSignIn: false,
-          },
-        });
-        initialized = true;
-      } catch (e) {
-        console.warn("GoogleAuth initialize failed:", e);
-      }
-
-      if (!initialized) {
-        toast({
-          title: "Google sign-in failed",
-          description: "Failed to initialize Google sign-in. Try again.",
-          variant: "destructive",
-        });
-        setIsGoogleSelecting(false);
-        return;
-      }
-
-      // 🔥 Force clear the current session before showing the list
-      await GoogleAuth.signOut();
-      // Tiny delay to ensure the OS processes the sign-out
-      await new Promise((r) => setTimeout(r, 200));
-
-      const res = await GoogleAuth.signIn();
-      setIsGoogleSelecting(false);
-      console.log("GoogleAuth.signIn response:", res);
-
-      if (!res) {
-        toast({
-          title: "Google sign-in failed",
-          description: "Google sign-in was cancelled or failed to start.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const idToken = res?.authentication?.idToken || res?.idToken;
-
-      if (!idToken) {
-        toast({
-          title: "Google sign-in failed",
-          description: "Google did not return an ID token.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setIsGoogleSelecting(false);
-
-      setPendingAction({
-        kind: "google",
-        title: "Signing you in",
-        detail: "Syncing your account…",
-      });
-      setIsLoading(true);
-
-      try {
-        const data = await loginWithGoogle(idToken);
-        toast({ title: "Welcome!", description: "Signed in with Google" });
-        const target = data?.created ? "/onboarding" : "/dashboard";
-        navigate(target);
-        return;
-      } finally {
-        setPendingAction(null);
-        setIsLoading(false);
-      }
-    } catch (e) {
-      setIsGoogleSelecting(false);
-      const msg = String(
-        (e as any)?.message || e || "Native Google sign-in failed",
-      );
-      let extra = "";
-      try {
-        const anyErr: any = e as any;
-        const safe: any = {
-          message: anyErr?.message,
-          code: anyErr?.code,
-          details: anyErr?.details,
-        };
-        extra = JSON.stringify(safe);
-      } catch {}
-      try {
-        console.warn("Native GoogleAuth failed", e);
-      } catch {}
-
-      const hint =
-        "If this keeps happening on Android, it's usually an OAuth config issue (missing SHA-1/SHA-256 for the debug keystore, wrong package name, or Google Play Services).";
-
+    // --- NATIVE FLOW ---
+    if (!supabase) {
       toast({
         title: "Google sign-in failed",
-        description:
-          `Google sign-in failed: ${msg}` +
-          (extra ? `\n\nDetails: ${extra}` : "") +
-          `\n\nAPI: ${API_BASE}` +
-          `\n\nHint: ${hint}`,
+        description: "Supabase is not configured.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: GOOGLE_REDIRECT_TO_NATIVE,
+          skipBrowserRedirect: true,
+          queryParams: { prompt: "select_account" },
+        },
+      });
+      if (error) throw error;
+      if (data?.url) await Browser.open({ url: data.url });
+    } catch (e: any) {
+      toast({
+        title: "Google sign-in failed",
+        description: String(e?.message || e || "Google sign-in failed"),
         variant: "destructive",
       });
     }
@@ -742,7 +698,7 @@ export default function Auth({
                       <button
                         type="button"
                         onClick={onClickContinueWithGoogle}
-                        disabled={isLoading || isGoogleSelecting}
+                        disabled={isLoading}
                         className="inline-flex w-full sm:w-auto justify-center items-center rounded-md border border-white/40 px-3 sm:px-4 py-2.5 sm:py-2 text-sm text-white hover:bg-white/5"
                       >
                         <img
@@ -750,9 +706,7 @@ export default function Auth({
                           alt="Google"
                           className="mr-2 h-4 w-4"
                         />
-                        {isGoogleSelecting
-                          ? "Choose an account…"
-                          : "Continue with Google"}
+                        Continue with Google
                       </button>
                     </div>
                     <div className="relative mb-4">

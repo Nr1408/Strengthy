@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import {
   loadSettings,
   saveSettings,
@@ -36,111 +34,101 @@ export default function Settings() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-heading font-semibold text-white mb-1">
-            Settings
-          </h1>
-          <p className="text-sm text-muted-foreground">
+      <main className="w-full max-w-2xl mx-auto px-4 pb-32">
+        {/* Header */}
+        <div className="pt-6 pb-2">
+          <h1 className="text-2xl font-bold text-white">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Adjust notifications, haptics, and measurement units.
           </p>
         </div>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Preferences</h2>
-          <div className="flex items-center justify-between rounded-xl border border-border bg-neutral-900/60 px-4 py-3">
-            <div>
-              <Label className="text-base text-white">Notifications</Label>
-              <p className="text-xs text-muted-foreground">
-                Show reminders and important updates.
-              </p>
+        <div className="space-y-6 mt-6">
+          {/* Preferences */}
+          <section className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+              Preferences
+            </h2>
+            <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
+              <div className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-white">Notifications</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Show reminders and important updates.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.notifications}
+                  onCheckedChange={() => toggle("notifications")}
+                />
+              </div>
+              <div className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-white">Vibration</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Use haptic feedback for timers and actions.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.vibrations}
+                  onCheckedChange={() => toggle("vibrations")}
+                />
+              </div>
             </div>
-            <Switch
-              checked={settings.notifications}
-              onCheckedChange={() => toggle("notifications")}
-            />
-          </div>
+          </section>
 
-          <div className="flex items-center justify-between rounded-xl border border-border bg-neutral-900/60 px-4 py-3">
-            <div>
-              <Label className="text-base text-white">Vibration</Label>
-              <p className="text-xs text-muted-foreground">
-                Use haptic feedback for timers and actions.
-              </p>
-            </div>
-            <Switch
-              checked={settings.vibrations}
-              onCheckedChange={() => toggle("vibrations")}
-            />
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Units</h2>
-
-          <div className="space-y-3">
-            <Label className="text-sm text-muted-foreground">Weight</Label>
-            <div className="flex rounded-2xl border border-border bg-black/40 overflow-hidden">
-              {(["kg", "lbs"] as const).map((u) => (
-                <Button
-                  key={u}
-                  variant={settings.units.weight === u ? "default" : "ghost"}
-                  className={`flex-1 rounded-none py-4 text-base ${
-                    settings.units.weight === u
-                      ? "bg-primary text-white"
-                      : "text-muted-foreground"
-                  }`}
-                  onClick={() => setUnit("weight", u)}
-                >
-                  {u}
-                </Button>
+          {/* Units */}
+          <section className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+              Units
+            </h2>
+            <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
+              {[
+                { label: "Weight", field: "weight" as const, options: ["kg", "lbs"] as const },
+                { label: "Distance", field: "distance" as const, options: ["kilometers", "miles"] as const },
+                { label: "Body measurements", field: "body" as const, options: ["cm", "in"] as const },
+              ].map(({ label, field, options }) => (
+                <div key={field} className="flex items-center justify-between px-5 py-4">
+                  <p className="text-sm font-semibold text-white">{label}</p>
+                  <div className="flex rounded-lg bg-zinc-900 border border-white/10 p-1">
+                    {options.map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => setUnit(field, u)}
+                        className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                          settings.units[field] === u
+                            ? "bg-orange-500 text-white shadow-sm"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-3">
-            <Label className="text-sm text-muted-foreground">Distance</Label>
-            <div className="flex rounded-2xl border border-border bg-black/40 overflow-hidden">
-              {(["kilometers", "miles"] as const).map((u) => (
-                <Button
-                  key={u}
-                  variant={settings.units.distance === u ? "default" : "ghost"}
-                  className={`flex-1 rounded-none py-4 text-base ${
-                    settings.units.distance === u
-                      ? "bg-primary text-white"
-                      : "text-muted-foreground"
-                  }`}
-                  onClick={() => setUnit("distance", u)}
-                >
-                  {u}
-                </Button>
-              ))}
+          {/* About */}
+          <section className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+              About
+            </h2>
+            <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
+              <div className="flex items-center justify-between px-5 py-4">
+                <p className="text-sm font-semibold text-white">App Version</p>
+                <p className="text-sm text-muted-foreground">1.0.0</p>
+              </div>
+              <div className="flex items-center justify-between px-5 py-4">
+                <p className="text-sm font-semibold text-white">Built by</p>
+                <p className="text-sm text-muted-foreground">Strengthy Team</p>
+              </div>
             </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-sm text-muted-foreground">
-              Body measurements
-            </Label>
-            <div className="flex rounded-2xl border border-border bg-black/40 overflow-hidden">
-              {(["cm", "in"] as const).map((u) => (
-                <Button
-                  key={u}
-                  variant={settings.units.body === u ? "default" : "ghost"}
-                  className={`flex-1 rounded-none py-4 text-base ${
-                    settings.units.body === u
-                      ? "bg-primary text-white"
-                      : "text-muted-foreground"
-                  }`}
-                  onClick={() => setUnit("body", u)}
-                >
-                  {u}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
+      </main>
     </AppLayout>
   );
 }

@@ -4,5 +4,5 @@
     <string name="title_activity_main">Strengthy</string>
     <string name="package_name">com.strengthy.app</string>
     <string name="custom_url_scheme">com.strengthy.app</string>
-    <string name="server_client_id">REPLACE_WITH_WEB_CLIENT_ID</string>
+    <string name="server_client_id">682920475586-h98muldc2oqab094un02au2k8c5cj9i1.apps.googleusercontent.com</string>
 </resources>

@@ -251,12 +251,34 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-heading text-3xl font-bold text-white">
-              Dashboard
-            </h1>
-            <p className="text-muted-foreground">
-              Track your progress and recent workouts
-            </p>
+            {(() => {
+              const hour = new Date().getHours();
+              const greeting =
+                hour < 12
+                  ? "Good morning"
+                  : hour < 17
+                    ? "Good afternoon"
+                    : "Good evening";
+              let name = "Athlete";
+              try {
+                const raw = localStorage.getItem("user:profile");
+                if (raw) {
+                  const parsed = JSON.parse(raw);
+                  const first = (parsed.name || "").split(" ")[0];
+                  if (first) name = first;
+                }
+              } catch {}
+              return (
+                <>
+                  <h1 className="font-heading text-3xl font-bold text-white">
+                    {greeting}, {name} 👋
+                  </h1>
+                  <p className="text-muted-foreground mt-1">
+                    Track your progress and recent workouts
+                  </p>
+                </>
+              );
+            })()}
           </div>
           <Button
             onClick={() => {
@@ -330,31 +352,36 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            label="This Week"
-            value={isLoading ? "--" : `${thisWeekCount} workouts`}
-            icon={<Calendar className="h-5 w-5" />}
-            trend={undefined}
-          />
-          <StatsCard
-            label="Personal Records"
-            value={isLoading ? "--" : prsThisWeek}
-            icon={<Trophy className="h-5 w-5" />}
-            trend={{ value: prTrendPercent, isPositive: prTrendPositive }}
-          />
-          <StatsCard
-            label="Total Sets"
-            value={isLoading ? "--" : setsThisWeek}
-            icon={<Dumbbell className="h-5 w-5" />}
-            trend={{ value: setsTrendPercent, isPositive: setsTrendPositive }}
-          />
-          <StatsCard
-            label="Avg. Duration"
-            value={isLoading ? "--" : `${avgDuration} min`}
-            icon={<TrendingUp className="h-5 w-5" />}
-          />
-        </div>
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+            This Week
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatsCard
+              label="This Week"
+              value={isLoading ? "--" : `${thisWeekCount} workouts`}
+              icon={<Calendar className="h-5 w-5" />}
+              trend={undefined}
+            />
+            <StatsCard
+              label="Personal Records"
+              value={isLoading ? "--" : prsThisWeek}
+              icon={<Trophy className="h-5 w-5" />}
+              trend={{ value: prTrendPercent, isPositive: prTrendPositive }}
+            />
+            <StatsCard
+              label="Total Sets"
+              value={isLoading ? "--" : setsThisWeek}
+              icon={<Dumbbell className="h-5 w-5" />}
+              trend={{ value: setsTrendPercent, isPositive: setsTrendPositive }}
+            />
+            <StatsCard
+              label="Avg. Duration"
+              value={isLoading ? "--" : `${avgDuration} min`}
+              icon={<TrendingUp className="h-5 w-5" />}
+            />
+          </div>
+        </section>
 
         {/* Recent Workouts */}
         <div>
@@ -377,46 +404,66 @@ export default function Dashboard() {
               />
             ))}
           </div>
+          {recentWorkouts.length === 0 && !isLoading && (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-16 text-center">
+              <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
+                <Dumbbell className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <p className="text-white font-semibold">No workouts yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Start your first workout to see it here
+              </p>
+              <Button
+                className="mt-4"
+                onClick={() =>
+                  navigate("/workouts/new", { state: { forceNew: true } })
+                }
+              >
+                <Plus className="h-4 w-4 mr-1" /> Start Workout
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-heading text-lg font-semibold text-white">
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
             Quick Actions
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Jump right into your workout
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Button
-              variant="outline"
-              className="text-white"
-              onClick={() => {
-                try {
-                  const inProg = localStorage.getItem("workout:inProgress");
-                  if (inProg) {
-                    setShowInProgressDialog(true);
-                    return;
-                  }
-                } catch {}
-                navigate("/workouts/new", { state: { forceNew: true } });
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Empty Workout
-            </Button>
-            <Link to="/routines">
-              <Button variant="outline" className="text-white">
+          <div className="rounded-2xl bg-card border border-border p-5">
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    const inProg = localStorage.getItem("workout:inProgress");
+                    if (inProg) {
+                      setShowInProgressDialog(true);
+                      return;
+                    }
+                  } catch {}
+                  navigate("/workouts/new", { state: { forceNew: true } });
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500/15 text-orange-400 text-sm font-semibold border border-orange-500/25 hover:bg-orange-500/25 transition-colors"
+              >
+                <Plus className="h-4 w-4" /> Empty Workout
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/routines")}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 text-white text-sm font-semibold border border-white/10 hover:border-white/25 transition-colors"
+              >
                 Start from Routine
-              </Button>
-            </Link>
-            <Link to="/exercises">
-              <Button variant="outline" className="text-white">
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/exercises")}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 text-white text-sm font-semibold border border-white/10 hover:border-white/25 transition-colors"
+              >
                 Manage Exercises
-              </Button>
-            </Link>
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
 
       <WorkoutInProgressDialog

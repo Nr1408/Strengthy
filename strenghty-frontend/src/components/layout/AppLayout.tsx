@@ -73,22 +73,27 @@ export function AppLayout({ children }: AppLayoutProps) {
       const inProg = localStorage.getItem("workout:inProgress");
       const paused = localStorage.getItem("workout:paused");
       const isOnNewWorkout = location.pathname === "/workouts/new";
-      if (inProg && !isOnNewWorkout) {
+      // Suppress the dialog when on ExerciseInfo opened from the picker
+      const isPickerExerciseInfo =
+        location.pathname.includes("/exercises/") &&
+        location.pathname.endsWith("/info") &&
+        (location.state as any)?.fromPicker === true;
+      if (inProg && !isOnNewWorkout && !isPickerExerciseInfo) {
         // Ensure we persist a paused flag and show the paused dialog whenever
         // the user navigates away from the active workout page.
         try {
           localStorage.setItem("workout:paused", "1");
         } catch (e) {}
         setShowPausedDialog(true);
-      } else if (isOnNewWorkout) {
-        // clear paused dialog when on the new workout page
-        localStorage.removeItem("workout:paused");
+      } else if (isOnNewWorkout || isPickerExerciseInfo) {
+        // clear paused dialog when on the new workout page or picker exercise info
+        if (isOnNewWorkout) localStorage.removeItem("workout:paused");
         setShowPausedDialog(false);
       }
     } catch (e) {
       // ignore
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.state]);
 
   // When on the Dashboard route, if user wants notifications but permission
   // not granted, show a small prompt asking them to enable notifications.
@@ -132,6 +137,36 @@ export function AppLayout({ children }: AppLayoutProps) {
       mounted = false;
     };
   }, [location.pathname]);
+
+  // On fresh APK install, prompt for notification permission once immediately
+  // so users are always asked during first app run.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        if (!(Capacitor.isNativePlatform && Capacitor.isNativePlatform())) {
+          return;
+        }
+
+        const askedKey = "notifications:firstInstallAsked";
+        const alreadyAsked = localStorage.getItem(askedKey) === "1";
+        if (alreadyAsked) return;
+
+        localStorage.setItem(askedKey, "1");
+
+        const granted = await requestNativeNotificationPermission();
+        if (!granted && mounted) {
+          setShowNotifPrompt(true);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden isolate">
@@ -322,6 +357,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                       const raw = localStorage.getItem("workout:inProgress");
                       if (raw) {
                         const obj = JSON.parse(raw);
+                        localStorage.setItem("workout:resumeRequested", "1");
                         localStorage.removeItem("workout:paused");
                         setShowPausedDialog(false);
                         // Navigate to NewWorkout to restore state
