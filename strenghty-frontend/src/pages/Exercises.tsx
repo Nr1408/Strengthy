@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
@@ -259,7 +258,9 @@ export default function Exercises() {
           <Search className="h-5 w-5 text-muted-foreground" />
         </div>
         <p className="text-white font-semibold">No library exercises found</p>
-        <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Try adjusting your search or filters
+        </p>
       </div>
     )
   ) : filteredExercises.length > 0 ? (
@@ -290,7 +291,9 @@ export default function Exercises() {
         <Search className="h-5 w-5 text-muted-foreground" />
       </div>
       <p className="text-white font-semibold">No exercises found</p>
-      <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters</p>
+      <p className="text-sm text-muted-foreground mt-1">
+        Try adjusting your search or filters
+      </p>
     </div>
   );
 
@@ -298,12 +301,12 @@ export default function Exercises() {
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="font-heading text-3xl font-bold text-white">
               Exercise Library
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {isLoading
                 ? "Loading..."
                 : showLibrary
@@ -314,59 +317,63 @@ export default function Exercises() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-xl bg-zinc-900 border border-white/10 p-1">
-              <button
-                type="button"
-                onClick={() => setShowLibrary(false)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                  !showLibrary
-                    ? "bg-orange-500 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                Your Library
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowLibrary(true)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                  showLibrary
-                    ? "bg-orange-500 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                Browse Library
-              </button>
-            </div>
-            <Button onClick={() => setIsCreateExerciseOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              New
-            </Button>
-            <CreateExerciseDialog
-              isOpen={isCreateExerciseOpen}
-              onOpenChange={setIsCreateExerciseOpen}
-              newExerciseName={newExerciseName}
-              setNewExerciseName={setNewExerciseName}
-              newExerciseEquipment={newExerciseEquipment}
-              setNewExerciseEquipment={setNewExerciseEquipment}
-              availableEquipments={availableEquipments}
-              isEquipmentPickerOpen={isCreateEquipmentPickerOpen}
-              onEquipmentPickerOpenChange={setIsCreateEquipmentPickerOpen}
-              newExerciseMuscle={newExerciseMuscle}
-              setNewExerciseMuscle={setNewExerciseMuscle}
-              availableMuscles={createMuscleOptions}
-              isMusclePickerOpen={isCreateMusclePickerOpen}
-              onMusclePickerOpenChange={setIsCreateMusclePickerOpen}
-              newExerciseDescription={newExerciseDescription}
-              setNewExerciseDescription={setNewExerciseDescription}
-              onSubmit={handleCreateExercise}
-              isSubmitting={createExerciseMutation.isLoading}
-              isValidationOpen={isCreateValidationOpen}
-              onValidationOpenChange={setIsCreateValidationOpen}
-              validationMessage={createValidationMessage}
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsCreateExerciseOpen(true)}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            New
+          </button>
+          <CreateExerciseDialog
+            isOpen={isCreateExerciseOpen}
+            onOpenChange={setIsCreateExerciseOpen}
+            newExerciseName={newExerciseName}
+            setNewExerciseName={setNewExerciseName}
+            newExerciseEquipment={newExerciseEquipment}
+            setNewExerciseEquipment={setNewExerciseEquipment}
+            availableEquipments={availableEquipments}
+            isEquipmentPickerOpen={isCreateEquipmentPickerOpen}
+            onEquipmentPickerOpenChange={setIsCreateEquipmentPickerOpen}
+            newExerciseMuscle={newExerciseMuscle}
+            setNewExerciseMuscle={setNewExerciseMuscle}
+            availableMuscles={createMuscleOptions}
+            isMusclePickerOpen={isCreateMusclePickerOpen}
+            onMusclePickerOpenChange={setIsCreateMusclePickerOpen}
+            newExerciseDescription={newExerciseDescription}
+            setNewExerciseDescription={setNewExerciseDescription}
+            onSubmit={handleCreateExercise}
+            isSubmitting={createExerciseMutation.isLoading}
+            isValidationOpen={isCreateValidationOpen}
+            onValidationOpenChange={setIsCreateValidationOpen}
+            validationMessage={createValidationMessage}
+          />
+        </div>
+
+        {/* Tab switcher — full width */}
+        <div className="flex rounded-xl bg-zinc-900 border border-white/10 p-1 w-full">
+          <button
+            type="button"
+            onClick={() => setShowLibrary(false)}
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+              !showLibrary
+                ? "bg-orange-500 text-white shadow-sm"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Your Library
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowLibrary(true)}
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+              showLibrary
+                ? "bg-orange-500 text-white shadow-sm"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Browse Library
+          </button>
         </div>
 
         {/* Filters */}
@@ -388,44 +395,58 @@ export default function Exercises() {
         <div className="flex flex-wrap gap-1.5">
           {(["all", ...availableMuscles] as const).map((muscle) => {
             const colorMap: Record<string, string> = {
-              all: "bg-orange-500 border-orange-500 text-white",
-              chest: "bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30",
+              chest:
+                "bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30",
               back: "bg-blue-500/20 border-blue-500/40 text-blue-400 hover:bg-blue-500/30",
-              shoulders: "bg-purple-500/20 border-purple-500/40 text-purple-400 hover:bg-purple-500/30",
-              biceps: "bg-cyan-500/20 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/30",
-              triceps: "bg-indigo-500/20 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30",
-              forearms: "bg-teal-500/20 border-teal-500/40 text-teal-400 hover:bg-teal-500/30",
-              quads: "bg-orange-500/20 border-orange-500/40 text-orange-400 hover:bg-orange-500/30",
-              hamstrings: "bg-amber-500/20 border-amber-500/40 text-amber-400 hover:bg-amber-500/30",
-              calves: "bg-yellow-500/20 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/30",
-              core: "bg-green-500/20 border-green-500/40 text-green-400 hover:bg-green-500/30",
-              cardio: "bg-pink-500/20 border-pink-500/40 text-pink-400 hover:bg-pink-500/30",
-              other: "bg-zinc-500/20 border-zinc-500/40 text-zinc-400 hover:bg-zinc-500/30",
+              shoulders:
+                "bg-purple-600/20 border-purple-600/40 text-purple-500 hover:bg-purple-600/30",
+              biceps:
+                "bg-green-500/20 border-green-500/40 text-green-400 hover:bg-green-500/30",
+              triceps:
+                "bg-yellow-500/20 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/30",
+              forearms:
+                "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30",
+              quads:
+                "bg-orange-500/20 border-orange-500/40 text-orange-400 hover:bg-orange-500/30",
+              hamstrings:
+                "bg-violet-500/20 border-violet-500/40 text-violet-400 hover:bg-violet-500/30",
+              glutes:
+                "bg-rose-500/20 border-rose-500/40 text-rose-400 hover:bg-rose-500/30",
+              calves:
+                "bg-amber-500/20 border-amber-500/40 text-amber-400 hover:bg-amber-500/30",
+              core: "bg-pink-500/20 border-pink-500/40 text-pink-400 hover:bg-pink-500/30",
+              cardio:
+                "bg-cyan-500/20 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/30",
+              other:
+                "bg-slate-500/20 border-slate-500/40 text-slate-400 hover:bg-slate-500/30",
             };
 
             const isSelected = selectedMuscle === muscle;
             const activeColorMap: Record<string, string> = {
               chest: "bg-red-500 border-red-500 text-white",
               back: "bg-blue-500 border-blue-500 text-white",
-              shoulders: "bg-purple-500 border-purple-500 text-white",
-              biceps: "bg-cyan-500 border-cyan-500 text-white",
-              triceps: "bg-indigo-500 border-indigo-500 text-white",
-              forearms: "bg-teal-500 border-teal-500 text-white",
+              shoulders: "bg-purple-600 border-purple-600 text-white",
+              biceps: "bg-green-500 border-green-500 text-white",
+              triceps: "bg-yellow-500 border-yellow-500 text-white",
+              forearms: "bg-emerald-500 border-emerald-500 text-white",
               quads: "bg-orange-500 border-orange-500 text-white",
-              hamstrings: "bg-amber-500 border-amber-500 text-white",
-              calves: "bg-yellow-500 border-yellow-500 text-white",
-              core: "bg-green-500 border-green-500 text-white",
-              cardio: "bg-pink-500 border-pink-500 text-white",
-              other: "bg-zinc-500 border-zinc-500 text-white",
+              hamstrings: "bg-violet-500 border-violet-500 text-white",
+              glutes: "bg-rose-500 border-rose-500 text-white",
+              calves: "bg-amber-500 border-amber-500 text-white",
+              core: "bg-pink-500 border-pink-500 text-white",
+              cardio: "bg-cyan-500 border-cyan-500 text-white",
+              other: "bg-slate-500 border-slate-500 text-white",
             };
 
             const baseClass = isSelected
               ? muscle === "all"
                 ? "bg-orange-500 border-orange-500 text-white"
-                : activeColorMap[muscle] || "bg-zinc-500 border-zinc-500 text-white"
+                : activeColorMap[muscle] ||
+                  "bg-zinc-500 border-zinc-500 text-white"
               : muscle === "all"
                 ? "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white hover:border-white/25"
-                : colorMap[muscle] || "bg-zinc-900 border-white/10 text-zinc-400";
+                : colorMap[muscle] ||
+                  "bg-zinc-900 border-white/10 text-zinc-400";
 
             return (
               <button
@@ -434,7 +455,9 @@ export default function Exercises() {
                 onClick={() => setSelectedMuscle(muscle as MuscleGroup | "all")}
                 className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all capitalize ${baseClass}`}
               >
-                {muscle === "all" ? "All" : muscle.charAt(0).toUpperCase() + muscle.slice(1)}
+                {muscle === "all"
+                  ? "All"
+                  : muscle.charAt(0).toUpperCase() + muscle.slice(1)}
               </button>
             );
           })}

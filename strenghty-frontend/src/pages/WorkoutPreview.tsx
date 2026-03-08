@@ -47,7 +47,12 @@ export default function WorkoutPreview() {
     // Reuse existing NewWorkout flow: navigate to `/workouts/new` and request autostart.
     try {
       navigate("/workouts/new", {
-        state: { routine, forceNew: true, autostartAndView: true },
+        state: {
+          routine,
+          forceNew: true,
+          autostartAndView: true,
+          isFirstWorkout: !!location.state?.firstTime,
+        },
       });
     } catch (e) {
       navigate("/dashboard");

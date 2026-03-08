@@ -1,25 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-// Grid templates for strength vs cardio rows (tightened to reduce left/right gaps)
-const GRID_TEMPLATE_STRENGTH =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
-// same as above but without the final check column
-const GRID_TEMPLATE_STRENGTH_NO_CHECK =
-  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
-
-// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
-const GRID_TEMPLATE_CARDIO_NO_CHECK =
-  "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(56px, 0.8fr) minmax(28px, 0.25fr) 32px";
-
-// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
-const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
-
-const GRID_TEMPLATE_HIIT_NO_CHECK =
-  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
-
 import { Check, Trophy } from "lucide-react";
+import {
+  GRID_TEMPLATE_STRENGTH,
+  GRID_TEMPLATE_STRENGTH_NO_CHECK,
+  GRID_TEMPLATE_CARDIO,
+  GRID_TEMPLATE_CARDIO_NO_CHECK,
+  GRID_TEMPLATE_HIIT,
+  GRID_TEMPLATE_HIIT_NO_CHECK,
+  isHiitExerciseName,
+} from "@/components/workout/SetsHeader";
 import type { WorkoutSet } from "@/types/workout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -94,17 +83,7 @@ export function SetRow({
   // Detect HIIT/bodyweight names from the exercise name. Use this to
   // render HIIT-style columns even when the saved set is a strength
   // record (no cardioMode) — ensures headers and rows align.
-  const isHiitName = (n: string) =>
-    n.includes("hiit") ||
-    n.includes("burpee") ||
-    n.includes("mountain") ||
-    n.includes("climb") ||
-    n.includes("jump squat") ||
-    n.includes("plank jack") ||
-    n.includes("skater") ||
-    n.includes("jumping jack") ||
-    n.includes("high knee");
-  const isHiitBodyweight = isHiitName(name);
+  const isHiitBodyweight = isHiitExerciseName(name);
   const currentType = (set.type || "S") as "W" | "S" | "F" | "D";
   const typeClasses: Record<"W" | "S" | "F" | "D", string> = {
     W: "bg-muted/30 text-yellow-400 border-yellow-400/60",
@@ -798,7 +777,9 @@ export function SetRow({
             </div>
           )
         ) : (
-          <span>×</span>
+          <span className="text-[15px] text-muted-foreground/30 select-none">
+            ×
+          </span>
         )}
       </Cell>
 
@@ -1018,7 +999,7 @@ export function SetRow({
             <label className="sr-only">Reps</label>
             <Input
               type="number"
-              placeholder="reps"
+              placeholder="0"
               value={set.reps || ""}
               onChange={(e) =>
                 !readOnly && onUpdate({ reps: Number(e.target.value) })

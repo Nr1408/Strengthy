@@ -1,15 +1,3 @@
-// In EditWorkout.tsx (or ViewWorkout.tsx)
-const GRID_TEMPLATE =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
-
-// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
-
-// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
-const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
@@ -36,6 +24,10 @@ import ExerciseInfo from "@/components/workout/ExerciseInfo";
 import MuscleTag from "@/components/workout/MuscleTag";
 import ExerciseHeader from "@/components/workout/ExerciseHeader";
 import { SetRow } from "@/components/workout/SetRow";
+import {
+  SetsHeader,
+  isHiitExerciseName,
+} from "@/components/workout/SetsHeader";
 import { muscleGroupColors } from "@/data/mockData";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -747,28 +739,6 @@ export default function EditWorkout() {
       year: "numeric",
     });
 
-  const getCardioModeForExercise = (exercise: Exercise): CardioMode => {
-    const name = exercise.name.toLowerCase();
-    if (name.includes("treadmill")) return "treadmill";
-    if (name.includes("bike") || name.includes("cycle")) return "bike";
-    if (name.includes("elliptical")) return "elliptical";
-    if (name.includes("stair") || name.includes("step")) return "stairs";
-    if (name.includes("row")) return "row";
-    return "treadmill";
-  };
-
-  const isHiitCardioExercise = (name: string) => {
-    const n = (name || "").toLowerCase();
-    return (
-      n.includes("burpee") ||
-      n.includes("mountain") ||
-      n.includes("climb") ||
-      n.includes("jump squat") ||
-      n.includes("plank jack") ||
-      n.includes("skater")
-    );
-  };
-
   const setStartDateOnly = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1207,7 +1177,7 @@ export default function EditWorkout() {
         }
         if (allowPrForExercise && isCardioSet && saved.isPR) {
           const exerciseName = (ex.exercise as any).name;
-          const isHiitCardio = isHiitCardioExercise(exerciseName);
+          const isHiitCardio = isHiitExerciseName(exerciseName);
           const banners: any[] = [];
 
           if (isHiitCardio) {
@@ -1692,7 +1662,7 @@ export default function EditWorkout() {
         }
         if (allowPrForExercise && isCardioSet && created.isPR) {
           const exerciseName = (ex.exercise as any).name;
-          const isHiitCardio = isHiitCardioExercise(exerciseName);
+          const isHiitCardio = isHiitExerciseName(exerciseName);
           const banners: any[] = [];
 
           if (isHiitCardio) {
@@ -2477,90 +2447,10 @@ export default function EditWorkout() {
                   />
                 </div>
 
-                {workoutExercise.exercise.muscleGroup === "cardio" ? (
-                  (() => {
-                    const name = (
-                      workoutExercise.exercise.name || ""
-                    ).toLowerCase();
-                    const isHiit =
-                      name.includes("burpee") ||
-                      name.includes("mountain") ||
-                      name.includes("climb") ||
-                      name.includes("jump squat") ||
-                      name.includes("plank jack") ||
-                      name.includes("skater");
-
-                    return (
-                      <div
-                        className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                        style={{
-                          gridTemplateColumns: isHiit
-                            ? GRID_TEMPLATE_HIIT
-                            : GRID_TEMPLATE_CARDIO,
-                        }}
-                      >
-                        <span className="flex items-center justify-center translate-x-[2px]">
-                          SET
-                        </span>
-                        <span className="flex items-center justify-center">
-                          DURATION
-                        </span>
-
-                        {isHiit ? (
-                          <span className="flex items-center justify-center">
-                            REPS
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center">
-                            {getCardioModeForExercise(
-                              workoutExercise.exercise,
-                            ) === "stairs"
-                              ? "CLIMB"
-                              : "DISTANCE"}
-                          </span>
-                        )}
-
-                        {isHiit ? (
-                          <span className="flex items-center justify-center">
-                            RPE
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center">
-                            LEVEL
-                          </span>
-                        )}
-
-                        <span className="flex items-center justify-center">
-                          <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                        </span>
-                        <div />
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <div
-                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE }}
-                  >
-                    <span className="flex items-center justify-center translate-x-[2px]">
-                      SET
-                    </span>
-                    <span className="flex items-center justify-center">
-                      WEIGHT
-                    </span>
-                    <div />
-                    <span className="flex items-center justify-center">
-                      REPS
-                    </span>
-                    <span className="flex items-center justify-center">
-                      RPE
-                    </span>
-                    <span className="flex items-center justify-center">
-                      <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                    </span>
-                    <div />
-                  </div>
-                )}
+                <SetsHeader
+                  muscleGroup={workoutExercise.exercise.muscleGroup}
+                  exerciseName={workoutExercise.exercise.name}
+                />
 
                 <div className="space-y-2">
                   {workoutExercise.sets.map((set, index) => (

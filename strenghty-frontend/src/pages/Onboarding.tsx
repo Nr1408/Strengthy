@@ -156,7 +156,7 @@ export default function Onboarding() {
     weight: "" as string,
     weightUnit: "kg" as "kg" | "lbs",
     equipment: "" as "full-gym" | "home-gym" | "bodyweight" | "",
-    experience: "intermediate" as "beginner" | "intermediate" | "advanced" | "",
+    experience: "" as "beginner" | "intermediate" | "advanced" | "",
     monthlyWorkouts: 12,
   });
 
@@ -207,13 +207,39 @@ export default function Onboarding() {
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
+  const goalLabels: Record<string, string> = {
+    hypertrophy: "Build Muscle",
+    "calorie-burn": "Burn Fat",
+    powerlifting: "Get Stronger",
+    other: "General Fitness",
+  };
+
+  const equipmentLabels: Record<string, string> = {
+    "full-gym": "Full Gym",
+    "home-gym": "Home Gym",
+    bodyweight: "Bodyweight",
+    other: "Other",
+  };
+
   const steps = [
-    { title: "Goal" },
-    { title: "Personal" },
-    { title: "Equipment" },
-    { title: "Experience" },
-    { title: "Monthly" },
-    { title: "Summary" },
+    {
+      title: "What's your goal?",
+      subtitle: "We'll build your first workout around this.",
+    },
+    { title: "About You", subtitle: "Helps us personalise your experience." },
+    {
+      title: "Your Equipment",
+      subtitle: "We'll pick exercises you can actually do.",
+    },
+    {
+      title: "Experience Level",
+      subtitle: "Be honest — this shapes your plan.",
+    },
+    { title: "Monthly Target", subtitle: "How often do you want to train?" },
+    {
+      title: "Your Blueprint",
+      subtitle: "Chosen based on your goal, experience, and equipment.",
+    },
   ];
 
   const totalSteps = 6; // goal, personal, equipment, experience, monthly, summary
@@ -344,7 +370,7 @@ export default function Onboarding() {
               />
             </div>
             <span className="font-heading text-xl font-bold text-white">
-              Strenghty
+              Strengthy
             </span>
           </div>
 
@@ -438,15 +464,15 @@ export default function Onboarding() {
 
             {/* Step 1: Personal metrics (age / height / weight) */}
             {currentStep === 1 && (
-              <div className="mx-auto max-w-md space-y-6">
-                <div className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/50">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-500">
-                      <User className="h-5 w-5 text-white" />
+              <div className="mx-auto max-w-md space-y-3">
+                <div className="group rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:border-primary/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-500">
+                      <User className="h-4 w-4 text-white" />
                     </div>
                     <Label
                       htmlFor="age"
-                      className="text-lg font-medium text-white"
+                      className="text-base font-medium text-white"
                     >
                       Your Age
                     </Label>
@@ -460,7 +486,7 @@ export default function Onboarding() {
                       onChange={(e) =>
                         setUserData((p) => ({ ...p, age: e.target.value }))
                       }
-                      className="text-2xl font-heading h-14 pr-16"
+                      className="text-lg font-heading h-11 pr-16"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium">
                       years
@@ -468,20 +494,20 @@ export default function Onboarding() {
                   </div>
                 </div>
 
-                <div className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/50">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500">
-                        <Ruler className="h-5 w-5 text-white" />
-                      </div>
-                      <Label
-                        htmlFor="height"
-                        className="text-lg font-medium text-white"
-                      >
-                        Your Height
-                      </Label>
+                <div className="group rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:border-primary/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500">
+                      <Ruler className="h-4 w-4 text-white" />
                     </div>
-                    <div className="flex rounded-lg bg-secondary p-1">
+                    <Label
+                      htmlFor="height"
+                      className="text-base font-medium text-white"
+                    >
+                      Your Height
+                    </Label>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex gap-1 justify-end mb-2">
                       <button
                         type="button"
                         onClick={() =>
@@ -502,10 +528,10 @@ export default function Onboarding() {
                           })
                         }
                         className={cn(
-                          "px-3 py-1 rounded-md text-sm font-medium transition-all duration-200",
+                          "px-2.5 py-0.5 rounded-lg text-xs font-medium border transition-all",
                           userData.heightUnit === "cm"
-                            ? "bg-primary text-primary-foreground"
-                            : "text-white hover:text-foreground",
+                            ? "bg-orange-500 border-orange-500 text-white"
+                            : "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white",
                         )}
                       >
                         cm
@@ -530,57 +556,49 @@ export default function Onboarding() {
                           })
                         }
                         className={cn(
-                          "px-3 py-1 rounded-md text-sm font-medium transition-all duration-200",
+                          "px-2.5 py-0.5 rounded-lg text-xs font-medium border transition-all",
                           userData.heightUnit === "ft"
-                            ? "bg-primary text-primary-foreground"
-                            : "text-white hover:text-foreground",
+                            ? "bg-orange-500 border-orange-500 text-white"
+                            : "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white",
                         )}
                       >
                         ft
                       </button>
                     </div>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="height"
-                      type="number"
-                      placeholder={userData.heightUnit === "cm" ? "175" : "5.9"}
-                      value={userData.height}
-                      onChange={(e) =>
-                        setUserData((p) => ({ ...p, height: e.target.value }))
-                      }
-                      className="text-2xl font-heading h-14 pr-14"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium">
-                      {userData.heightUnit}
-                    </span>
+                    <div className="relative">
+                      <Input
+                        id="height"
+                        type="number"
+                        placeholder={
+                          userData.heightUnit === "cm" ? "175" : "5.9"
+                        }
+                        value={userData.height}
+                        onChange={(e) =>
+                          setUserData((p) => ({ ...p, height: e.target.value }))
+                        }
+                        className="text-lg font-heading h-11 pr-14"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium text-sm">
+                        {userData.heightUnit}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/50">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
-                      <Scale className="h-5 w-5 text-white" />
+                <div className="group rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:border-primary/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
+                      <Scale className="h-4 w-4 text-white" />
                     </div>
                     <Label
                       htmlFor="weight"
-                      className="text-lg font-medium text-white"
+                      className="text-base font-medium text-white"
                     >
                       Current Weight
                     </Label>
                   </div>
-                  <div className="relative">
-                    <Input
-                      id="weight"
-                      type="number"
-                      placeholder="75"
-                      value={userData.weight}
-                      onChange={(e) =>
-                        setUserData((p) => ({ ...p, weight: e.target.value }))
-                      }
-                      className="text-2xl font-heading h-14 pr-14"
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <div className="space-y-2">
+                    <div className="flex gap-1 justify-end mb-2">
                       <button
                         type="button"
                         onClick={() =>
@@ -601,10 +619,10 @@ export default function Onboarding() {
                           })
                         }
                         className={cn(
-                          "px-2 py-0.5 rounded-md text-sm",
+                          "px-2.5 py-0.5 rounded-lg text-xs font-medium border transition-all",
                           userData.weightUnit === "kg"
-                            ? "bg-primary text-primary-foreground"
-                            : "text-white",
+                            ? "bg-orange-500 border-orange-500 text-white"
+                            : "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white",
                         )}
                       >
                         kg
@@ -629,14 +647,29 @@ export default function Onboarding() {
                           })
                         }
                         className={cn(
-                          "px-2 py-0.5 rounded-md text-sm",
+                          "px-2.5 py-0.5 rounded-lg text-xs font-medium border transition-all",
                           userData.weightUnit === "lbs"
-                            ? "bg-primary text-primary-foreground"
-                            : "text-white",
+                            ? "bg-orange-500 border-orange-500 text-white"
+                            : "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white",
                         )}
                       >
                         lbs
                       </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="weight"
+                        type="number"
+                        placeholder="75"
+                        value={userData.weight}
+                        onChange={(e) =>
+                          setUserData((p) => ({ ...p, weight: e.target.value }))
+                        }
+                        className="text-lg font-heading h-11 pr-14"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium text-sm">
+                        {userData.weightUnit}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -722,7 +755,7 @@ export default function Onboarding() {
                     >
                       <div
                         className={cn(
-                          "flex h-14 w-14 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110",
+                          "flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110",
                           option.color,
                         )}
                       >
@@ -799,46 +832,54 @@ export default function Onboarding() {
             {currentStep === 5 && (
               <div className="w-full max-w-md mx-auto space-y-6">
                 <div className="text-center mb-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mx-auto mb-4">
-                    <CheckCircle2 className="h-8 w-8 text-primary" />
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-500 mx-auto mb-4 shadow-lg shadow-orange-500/30">
+                    <CheckCircle2 className="h-8 w-8 text-white" />
                   </div>
                   <h2 className="font-heading text-3xl font-bold mb-2 text-white">
                     Blueprint Ready!
                   </h2>
-                  <p className="text-white">
-                    Chosen based on your goal, experience, and equipment.
-                  </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-card p-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white">Goal</span>
-                    <span className="font-medium text-white">
-                      {capitalizeFirst(userData.goal) || "—"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white">Experience</span>
-                    <span className="font-medium text-white">
-                      {capitalizeFirst(userData.experience) || "—"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white">Equipment</span>
-                    <span className="font-medium text-white">
-                      {capitalizeFirst(userData.equipment) || "—"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white">Monthly Workouts</span>
-                    <span className="font-medium text-white">
-                      {userData.monthlyWorkouts} sessions
-                    </span>
-                  </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+                  {[
+                    {
+                      label: "Goal",
+                      value:
+                        goalLabels[userData.goal] ||
+                        capitalizeFirst(userData.goal) ||
+                        "—",
+                    },
+                    {
+                      label: "Experience",
+                      value: capitalizeFirst(userData.experience) || "—",
+                    },
+                    {
+                      label: "Equipment",
+                      value:
+                        equipmentLabels[userData.equipment] ||
+                        capitalizeFirst(userData.equipment) ||
+                        "—",
+                    },
+                    {
+                      label: "Monthly Workouts",
+                      value: `${userData.monthlyWorkouts} sessions`,
+                    },
+                  ].map((row, i, arr) => (
+                    <div
+                      key={row.label}
+                      className={`flex items-center justify-between px-5 py-3.5 ${
+                        i < arr.length - 1 ? "border-b border-white/[0.06]" : ""
+                      }`}
+                    >
+                      <span className="text-sm text-zinc-400">{row.label}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {row.value}
+                      </span>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
-                  {/* compute recommendation label on render so we show the outcome-oriented label */}
+                <div className="rounded-2xl bg-gradient-to-r from-orange-500/15 to-orange-600/5 border border-orange-500/25 p-4">
                   {(() => {
                     const norm: UserOnboardingData = {
                       goal: (userData.goal as any) || "other",
@@ -854,12 +895,19 @@ export default function Onboarding() {
                     };
                     const rec = recommendFirstWorkout(norm);
                     return (
-                      <p className="text-center text-sm">
-                        <span className="text-white">Your first workout: </span>
-                        <span className="font-semibold text-primary">
-                          {rec.label}
-                        </span>
-                      </p>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs text-zinc-400 mb-0.5">
+                            Your first workout
+                          </p>
+                          <p className="font-semibold text-white text-sm">
+                            {rec.label}
+                          </p>
+                        </div>
+                        <div className="shrink-0 h-9 w-9 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
+                          <Dumbbell className="h-4 w-4 text-orange-400" />
+                        </div>
+                      </div>
                     );
                   })()}
                 </div>
@@ -892,12 +940,12 @@ export default function Onboarding() {
               }}
               disabled={!canProceed()}
               size="md"
-              className="min-w-[120px] text-sm py-2 transition-all duration-300 hover:scale-103"
+              className="min-w-[120px] text-sm px-6 py-2.5 transition-all duration-300 hover:scale-103"
             >
               {currentStep === totalSteps - 1 ? (
                 <>
                   Start My First Workout
-                  <Dumbbell className="ml-2 h-4 w-4" />
+                  <Dumbbell className="ml-3 h-4 w-4 shrink-0" />
                 </>
               ) : (
                 <>

@@ -171,14 +171,13 @@ export default function Index() {
                     </div>
 
                     <div className="mt-6 flex justify-center">
-                      <Button
+                      <button
                         type="button"
-                        size="lg"
-                        variant="outline"
                         onClick={() => goToStep(3)}
+                        className="w-full py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-colors"
                       >
                         See how it works
-                      </Button>
+                      </button>
                     </div>
                   </div>
 

@@ -1,14 +1,3 @@
-const GRID_TEMPLATE_STRENGTH =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
-
-// Match cardio row layout from SetRow: Set | Duration | Distance/Floors | Level/Split | PR | Check
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
-
-// HIIT / bodyweight cardio header layout: Set | Duration | Reps | RPE | PR | Check
-const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
-
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,6 +6,7 @@ import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SetRow } from "@/components/workout/SetRow";
+import { SetsHeader, getCardioMode } from "@/components/workout/SetsHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { mockRoutines } from "@/data/mockData";
 import { getUnit } from "@/lib/utils";
@@ -30,16 +20,6 @@ export default function ViewRoutine() {
   const { toast } = useToast();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  const getCardioModeForExercise = (exercise: any) => {
-    const name = String(exercise?.name || "").toLowerCase();
-    if (name.includes("treadmill")) return "treadmill";
-    if (name.includes("bike") || name.includes("cycle")) return "bike";
-    if (name.includes("elliptical")) return "elliptical";
-    if (name.includes("stair") || name.includes("step")) return "stairs";
-    if (name.includes("row")) return "row";
-    return "treadmill";
-  };
 
   const routine =
     location.state?.routine ||
@@ -179,99 +159,10 @@ export default function ViewRoutine() {
                 </div>
 
                 {/* Sets Header */}
-                {we.exercise.muscleGroup === "cardio" ? (
-                  (() => {
-                    const name = (we.exercise.name || "").toLowerCase();
-                    const isHiit =
-                      name.includes("burpee") ||
-                      name.includes("mountain") ||
-                      name.includes("climb") ||
-                      name.includes("jump squat") ||
-                      name.includes("plank jack") ||
-                      name.includes("skater");
-
-                    return (
-                      <div
-                        className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                        style={{
-                          gridTemplateColumns: isHiit
-                            ? GRID_TEMPLATE_HIIT
-                            : GRID_TEMPLATE_CARDIO,
-                        }}
-                      >
-                        <>
-                          <span className="flex items-center justify-center text-center translate-x-[2px]">
-                            SET
-                          </span>
-                          <span className="flex items-center justify-center text-center">
-                            DURATION
-                          </span>
-
-                          {isHiit ? (
-                            <span className="flex items-center justify-center text-center">
-                              REPS
-                            </span>
-                          ) : (
-                            <span className="flex items-center justify-center text-center">
-                              {getCardioModeForExercise(we.exercise) ===
-                              "stairs"
-                                ? "CLIMB"
-                                : "DISTANCE"}
-                            </span>
-                          )}
-
-                          {isHiit ? (
-                            <span className="flex items-center justify-center text-center">
-                              RPE
-                            </span>
-                          ) : (
-                            <span className="flex items-center justify-center text-center">
-                              {(() => {
-                                const mode = getCardioModeForExercise(
-                                  we.exercise,
-                                );
-                                if (mode === "treadmill") return "INCLINE";
-                                if (mode === "row") return "SPLIT TIME";
-                                return "LEVEL";
-                              })()}
-                            </span>
-                          )}
-
-                          <span className="flex items-center justify-center text-center">
-                            <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                          </span>
-
-                          <div />
-                        </>
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <div
-                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE_STRENGTH }}
-                  >
-                    <>
-                      <span className="flex items-center justify-center text-center translate-x-[2px]">
-                        SET
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        WEIGHT
-                      </span>
-                      <span />
-                      <span className="flex items-center justify-center text-center">
-                        REPS
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        RPE
-                      </span>
-                      <span className="flex items-center justify-center text-center">
-                        <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                      </span>
-                      <div />
-                    </>
-                  </div>
-                )}
+                <SetsHeader
+                  muscleGroup={we.exercise.muscleGroup}
+                  exerciseName={we.exercise.name}
+                />
 
                 <div className="space-y-2">
                   {we.sets.map((s: any, idx: number) => (

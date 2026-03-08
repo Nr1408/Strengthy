@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { clearToken, deleteAccount, updateAccount } from "@/lib/api";
+import { clearToken, deleteAccount, getToken, updateAccount } from "@/lib/api";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
@@ -28,6 +28,24 @@ export default function AccountSettings() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isGoogleAccount, setIsGoogleAccount] = useState(false);
+
+  useEffect(() => {
+    try {
+      const token = getToken();
+      if (!token) return;
+      const parts = token.split(".");
+      if (parts.length !== 3) return;
+      const payload = JSON.parse(
+        atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+      );
+      const provider =
+        payload?.app_metadata?.provider ||
+        payload?.app_metadata?.providers?.[0] ||
+        null;
+      if (provider === "google") setIsGoogleAccount(true);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     try {
@@ -43,6 +61,7 @@ export default function AccountSettings() {
   }, []);
 
   const handleUpdateAccount = async () => {
+    if (isGoogleAccount) return;
     if (!currentPassword) {
       toast({
         title: "Current password required",
@@ -156,9 +175,46 @@ export default function AccountSettings() {
             Login & Security
           </h2>
           <div className="rounded-2xl bg-card border border-border p-5 space-y-4">
+            {isGoogleAccount && (
+              <div className="flex items-start gap-3 rounded-xl bg-blue-500/10 border border-blue-500/20 p-4">
+                <div className="shrink-0 mt-0.5">
+                  <svg width="16" height="16" viewBox="0 0 18 18">
+                    <path
+                      fill="#4285F4"
+                      d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.826.957 4.039l3.007-2.332z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    Signed in with Google
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Your account uses Google for authentication. Password
+                    management is handled by Google — you can't set or change a
+                    password here.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground" htmlFor="account-email">
+                <Label
+                  className="text-xs text-muted-foreground"
+                  htmlFor="account-email"
+                >
                   Login Email
                 </Label>
                 <Input
@@ -166,10 +222,18 @@ export default function AccountSettings() {
                   type="email"
                   value={accountEmail}
                   onChange={(e) => setAccountEmail(e.target.value)}
+                  readOnly={isGoogleAccount}
+                  disabled={isGoogleAccount}
+                  className={
+                    isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
+                  }
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground" htmlFor="current-password">
+                <Label
+                  className="text-xs text-muted-foreground"
+                  htmlFor="current-password"
+                >
                   Current Password
                 </Label>
                 <Input
@@ -177,10 +241,20 @@ export default function AccountSettings() {
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  disabled={isGoogleAccount}
+                  placeholder={
+                    isGoogleAccount ? "Not available for Google accounts" : ""
+                  }
+                  className={
+                    isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
+                  }
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground" htmlFor="new-password">
+                <Label
+                  className="text-xs text-muted-foreground"
+                  htmlFor="new-password"
+                >
                   New Password
                 </Label>
                 <Input
@@ -189,10 +263,20 @@ export default function AccountSettings() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   minLength={6}
+                  disabled={isGoogleAccount}
+                  placeholder={
+                    isGoogleAccount ? "Not available for Google accounts" : ""
+                  }
+                  className={
+                    isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
+                  }
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground" htmlFor="confirm-password">
+                <Label
+                  className="text-xs text-muted-foreground"
+                  htmlFor="confirm-password"
+                >
                   Confirm New Password
                 </Label>
                 <Input
@@ -201,11 +285,26 @@ export default function AccountSettings() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   minLength={6}
+                  disabled={isGoogleAccount}
+                  placeholder={
+                    isGoogleAccount ? "Not available for Google accounts" : ""
+                  }
+                  className={
+                    isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
+                  }
                 />
               </div>
             </div>
             <div className="flex justify-end pt-2 border-t border-border">
-              <Button onClick={handleUpdateAccount}>Update Account</Button>
+              <Button
+                onClick={handleUpdateAccount}
+                disabled={isGoogleAccount}
+                className={
+                  isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
+                }
+              >
+                Update Account
+              </Button>
             </div>
           </div>
         </section>
@@ -218,9 +317,12 @@ export default function AccountSettings() {
           <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-white">Delete Account</p>
+                <p className="text-sm font-semibold text-white">
+                  Delete Account
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Permanently delete your account and all associated data. This cannot be undone.
+                  Permanently delete your account and all associated data. This
+                  cannot be undone.
                 </p>
               </div>
               <Button

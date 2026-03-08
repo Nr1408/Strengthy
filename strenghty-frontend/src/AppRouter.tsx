@@ -9,6 +9,7 @@ import ScrollManager from "@/components/layout/ScrollManager";
 import SwipeNavigator from "@/components/layout/SwipeNavigator";
 import BackButtonHandler from "@/components/layout/BackButtonHandler";
 import WorkoutNotificationHandler from "@/components/layout/WorkoutNotificationHandler";
+import { getToken, isSupabaseJwtUsable, refreshSupabaseToken } from "@/lib/api";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -32,60 +33,45 @@ import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import GoogleRedirect from "./pages/GoogleRedirect";
 
+const TokenRefresher = () => {
+  useEffect(() => {
+    const token = getToken();
+    if (token && !isSupabaseJwtUsable(token)) {
+      refreshSupabaseToken().catch(() => {});
+    }
+  }, []);
+  return null;
+};
+
 const queryClient = new QueryClient();
 
-const PageTransition = ({
-  children,
-  noVerticalShift,
-  fadeOnly,
-}: {
-  children: React.ReactNode;
-  noVerticalShift?: boolean;
-  fadeOnly?: boolean;
-}) => (
-  <motion.div
-    className="h-full"
-    initial={{
-      opacity: 0,
-      y: fadeOnly || noVerticalShift ? 0 : 20,
-      scale: fadeOnly || noVerticalShift ? 1 : 0.98,
-    }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{
-      opacity: 0,
-      y: fadeOnly || noVerticalShift ? 0 : -20,
-      scale: fadeOnly || noVerticalShift ? 1 : 0.96,
-    }}
-    transition={{ duration: fadeOnly ? 0.15 : 0.25, ease: "easeOut" }}
-  >
-    {children}
-  </motion.div>
-);
-
-const authFlowVariants = {
-  enter: { opacity: 0, y: 24 },
+const pageVariants = {
+  enter: {
+    opacity: 0,
+    scale: 0.97,
+  },
   center: {
     opacity: 1,
-    y: 0,
+    scale: 1,
     transition: {
-      duration: 0.28,
+      duration: 0.2,
       ease: [0.25, 0.1, 0.25, 1],
     },
   },
   exit: {
     opacity: 0,
-    y: -24,
+    scale: 0.98,
     transition: {
-      duration: 0.25,
+      duration: 0.15,
       ease: [0.25, 0.1, 0.25, 1],
     },
   },
 } as const;
 
-const AuthFlowTransition = ({ children }: { children: React.ReactNode }) => (
+const PageTransition = ({ children }: { children: React.ReactNode }) => (
   <motion.div
     className="h-full"
-    variants={authFlowVariants}
+    variants={pageVariants}
     initial="enter"
     animate="center"
     exit="exit"
@@ -193,9 +179,9 @@ const AnimatedRoutes = () => {
         <Route
           path="/auth"
           element={
-            <AuthFlowTransition>
+            <PageTransition>
               <Auth />
-            </AuthFlowTransition>
+            </PageTransition>
           }
         />
         <Route
@@ -209,9 +195,9 @@ const AnimatedRoutes = () => {
         <Route
           path="/auth/forgot-password"
           element={
-            <AuthFlowTransition>
+            <PageTransition>
               <ForgotPassword />
-            </AuthFlowTransition>
+            </PageTransition>
           }
         />
         <Route
@@ -233,7 +219,7 @@ const AnimatedRoutes = () => {
         <Route
           path="/exercises"
           element={
-            <PageTransition noVerticalShift>
+            <PageTransition>
               <Exercises />
             </PageTransition>
           }
@@ -249,7 +235,7 @@ const AnimatedRoutes = () => {
         <Route
           path="/workouts/new"
           element={
-            <PageTransition noVerticalShift>
+            <PageTransition>
               <NewWorkout />
             </PageTransition>
           }
@@ -281,7 +267,7 @@ const AnimatedRoutes = () => {
         <Route
           path="/workouts/:id/edit"
           element={
-            <PageTransition noVerticalShift>
+            <PageTransition>
               <EditWorkout />
             </PageTransition>
           }
@@ -289,7 +275,7 @@ const AnimatedRoutes = () => {
         <Route
           path="/exercises/:id/info"
           element={
-            <PageTransition noVerticalShift fadeOnly={!!(location.state as any)?.fromPicker}>
+            <PageTransition>
               <ExerciseInfo />
             </PageTransition>
           }
@@ -374,6 +360,7 @@ const App = () => (
           <ScrollManager />
           <SwipeNavigator />
           <BackButtonHandler />
+          <TokenRefresher />
           <WorkoutNotificationHandler />
           <AnimatedRoutes />
         </BrowserRouter>

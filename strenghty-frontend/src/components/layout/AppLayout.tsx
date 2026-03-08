@@ -244,6 +244,11 @@ export function AppLayout({ children }: AppLayoutProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
+            const firstWorkoutDone = !!localStorage.getItem(
+              "user:firstWorkoutCompleted",
+            );
+            const isWorkoutsLocked =
+              item.href === "/workouts" && !firstWorkoutDone;
             return (
               <Link
                 key={item.href}
@@ -251,7 +256,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-xs font-medium transition-colors",
                   isActive ? "text-primary" : "text-muted-foreground",
+                  isWorkoutsLocked && "pointer-events-none opacity-40",
                 )}
+                aria-disabled={isWorkoutsLocked || undefined}
+                tabIndex={isWorkoutsLocked ? -1 : undefined}
               >
                 <Icon className="h-5 w-5" />
                 {item.label}

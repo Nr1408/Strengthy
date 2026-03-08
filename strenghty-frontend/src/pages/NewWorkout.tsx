@@ -62,24 +62,17 @@ import { getUnit, setUnit, countPrTypesFromSet } from "@/lib/utils";
 import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog";
 import type {
-  CardioMode,
   Exercise,
   MuscleGroup,
   Routine,
   WorkoutExercise,
   WorkoutSet,
 } from "@/types/workout";
-
-// Grid templates used by headers and set-row layouts
-const GRID_TEMPLATE_STRENGTH =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
-// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
-
-// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
-const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
+import {
+  SetsHeader,
+  isHiitExerciseName,
+  getCardioMode,
+} from "@/components/workout/SetsHeader";
 
 // consistent friendly muscle ordering used across library and create dialogs
 const allMusclesOrder: MuscleGroup[] = [
@@ -97,28 +90,6 @@ const allMusclesOrder: MuscleGroup[] = [
 ];
 
 export default function NewWorkout() {
-  const isHiitCardioExercise = (name: string) => {
-    const n = (name || "").toLowerCase();
-    return (
-      n.includes("burpee") ||
-      n.includes("mountain") ||
-      n.includes("climb") ||
-      n.includes("jump squat") ||
-      n.includes("plank jack") ||
-      n.includes("skater")
-    );
-  };
-
-  const getCardioModeForExercise = (exercise: Exercise): CardioMode => {
-    const name = exercise.name.toLowerCase();
-    if (name.includes("treadmill")) return "treadmill";
-    if (name.includes("bike") || name.includes("cycle")) return "bike";
-    if (name.includes("elliptical")) return "elliptical";
-    if (name.includes("stair") || name.includes("step")) return "stairs";
-    if (name.includes("row")) return "row";
-    return "treadmill";
-  };
-
   const navigate = useNavigate();
   const location = useLocation() as {
     state?: {
@@ -138,6 +109,9 @@ export default function NewWorkout() {
   const originState = location.state?.originState ?? null;
   const isNewRoutineTemplate = !!location.state?.fromNewRoutine;
   const isRoutineBuilder = !!location.state?.fromNewRoutine;
+  const isFirstWorkout =
+    !!(location.state as any)?.firstTime ||
+    !!(location.state as any)?.isFirstWorkout;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -429,16 +403,16 @@ export default function NewWorkout() {
       const isCardio = exercise?.muscleGroup === "cardio";
 
       const baseSet = {
-        reps: targetReps,
+        reps: 0,
         halfReps: 0,
-        weight: 0,
+        weight: null,
         unit: getUnit(),
         isPR: false,
         completed: false,
         type: "S" as const,
         rpe: undefined,
         ...(isCardio && {
-          cardioMode: getCardioModeForExercise(exercise),
+          cardioMode: getCardioMode(exercise.name),
           cardioDurationSeconds: 0,
           cardioDistance: 0,
           cardioDistanceUnit: "km" as const,
@@ -831,9 +805,7 @@ export default function NewWorkout() {
 
   const addExercise = (exercise: Exercise) => {
     const isCardio = exercise.muscleGroup === "cardio";
-    const cardioMode = isCardio
-      ? getCardioModeForExercise(exercise)
-      : undefined;
+    const cardioMode = isCardio ? getCardioMode(exercise.name) : undefined;
     const newExercise: WorkoutExercise = {
       id: crypto.randomUUID(),
       exercise,
@@ -869,9 +841,7 @@ export default function NewWorkout() {
     newExercise: Exercise,
   ) => {
     const isCardio = newExercise.muscleGroup === "cardio";
-    const cardioMode = isCardio
-      ? getCardioModeForExercise(newExercise)
-      : undefined;
+    const cardioMode = isCardio ? getCardioMode(newExercise.name) : undefined;
     setExercises((prev) =>
       prev.map((we) => {
         if (we.id !== workoutExerciseId) return we;
@@ -931,7 +901,7 @@ export default function NewWorkout() {
                 cardioMode:
                   ex.exercise.muscleGroup === "cardio"
                     ? ((lastSet as any)?.cardioMode ??
-                      getCardioModeForExercise(ex.exercise))
+                      getCardioMode(ex.exercise.name))
                     : undefined,
 
                 cardioDistanceUnit:
@@ -1501,7 +1471,7 @@ export default function NewWorkout() {
       }
 
       const mode =
-        set.cardioMode || getCardioModeForExercise(ex.exercise) || "treadmill";
+        set.cardioMode || getCardioMode(ex.exercise.name) || "treadmill";
 
       const isPersisted = /^\d+$/.test(String(set.id));
 
@@ -1729,7 +1699,7 @@ export default function NewWorkout() {
 
       if (saved.isPR) {
         const banners: PrBanner[] = [];
-        const isHiitCardio = isHiitCardioExercise(ex.exercise.name);
+        const isHiitCardio = isHiitExerciseName(ex.exercise.name);
 
         if (isHiitCardio) {
           const repsValue =
@@ -2137,9 +2107,7 @@ export default function NewWorkout() {
 
             if (ex.exercise.muscleGroup === "cardio") {
               const mode =
-                s.cardioMode ||
-                getCardioModeForExercise(ex.exercise) ||
-                "treadmill";
+                s.cardioMode || getCardioMode(ex.exercise.name) || "treadmill";
               const durationSeconds = s.cardioDurationSeconds ?? 0;
               const rawDistance = s.cardioDistance ?? 0;
               const rawStatBase = s.cardioStat ?? 0;
@@ -2276,7 +2244,7 @@ export default function NewWorkout() {
               if (ex.exercise.muscleGroup === "cardio") {
                 const mode =
                   s.cardioMode ||
-                  getCardioModeForExercise(ex.exercise) ||
+                  getCardioMode(ex.exercise.name) ||
                   "treadmill";
                 const durationSeconds = s.cardioDurationSeconds ?? 0;
                 const rawDistance = s.cardioDistance ?? 0;
@@ -2466,15 +2434,26 @@ export default function NewWorkout() {
       // Post-workout first-time completion flow
       try {
         const firstDone = localStorage.getItem("user:firstWorkoutCompleted");
-        if (!firstDone) {
-          try {
-            localStorage.setItem("user:firstWorkoutCompleted", "1");
-          } catch (e) {}
-
+        const isFirstWorkoutFromState = !!(location.state as any)
+          ?.isFirstWorkout;
+        if (!firstDone || isFirstWorkoutFromState) {
           let suggested = null as any;
           try {
             if (fromRoutine && fromRoutine.id) {
               suggested = recommendNextRoutine(fromRoutine.id);
+            }
+            // Fallback: if no next routine found, suggest the first available mockRoutine
+            if (!suggested) {
+              const { mockRoutines } = await import("@/data/mockData");
+              const fallback =
+                mockRoutines.find((r: any) => r.id !== fromRoutine?.id) ??
+                mockRoutines[0];
+              if (fallback) {
+                suggested = {
+                  routine: fallback,
+                  label: `Next: ${fallback.name}`,
+                };
+              }
             }
           } catch (e) {
             suggested = null;
@@ -2493,18 +2472,21 @@ export default function NewWorkout() {
           } catch (e) {}
 
           try {
+            localStorage.setItem("user:firstWorkoutCompleted", "1");
+            localStorage.removeItem("workout:inProgress");
+            localStorage.removeItem("workout:paused");
             navigate("/workouts/complete", {
               state: {
-                suggestedRoutine: suggested?.routine,
-                label: suggested?.label,
+                suggestedRoutine: suggested?.routine ?? null,
+                label: suggested?.label ?? "Keep the momentum going!",
               },
             });
-            try {
-              localStorage.removeItem("workout:inProgress");
-              localStorage.removeItem("workout:paused");
-            } catch (e) {}
             return;
-          } catch (e) {}
+          } catch (e) {
+            // fallback to normal workouts page if navigate fails
+            navigate("/workouts");
+            return;
+          }
         }
       } catch (e) {}
 
@@ -2590,14 +2572,18 @@ export default function NewWorkout() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() =>
+            onClick={() => {
+              if (isFirstWorkout) {
+                navigate("/dashboard");
+                return;
+              }
               navigate(
                 originPath || (isRoutineBuilder ? "/routines" : "/workouts"),
                 {
                   state: originState ?? undefined,
                 },
-              )
-            }
+              );
+            }}
           >
             Cancel
           </Button>
@@ -3166,112 +3152,10 @@ export default function NewWorkout() {
                 </div>
 
                 {/* Sets Header */}
-                {workoutExercise.exercise.muscleGroup === "cardio" ? (
-                  (() => {
-                    const name = (
-                      workoutExercise.exercise.name || ""
-                    ).toLowerCase();
-                    const isHiit =
-                      name.includes("burpee") ||
-                      name.includes("mountain") ||
-                      name.includes("climb") ||
-                      name.includes("jump squat") ||
-                      name.includes("plank jack") ||
-                      name.includes("skater");
-
-                    return (
-                      <div
-                        className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                        style={{
-                          gridTemplateColumns: isHiit
-                            ? GRID_TEMPLATE_HIIT
-                            : GRID_TEMPLATE_CARDIO,
-                        }}
-                      >
-                        <span className="flex items-center justify-center text-center translate-x-[2px]">
-                          SET
-                        </span>
-
-                        <span className="flex items-center justify-center text-center">
-                          DURATION
-                        </span>
-
-                        {isHiit ? (
-                          <span className="flex items-center justify-center text-center">
-                            REPS
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center text-center">
-                            {getCardioModeForExercise(
-                              workoutExercise.exercise,
-                            ) === "stairs"
-                              ? "CLIMB"
-                              : "DISTANCE"}
-                          </span>
-                        )}
-
-                        {isHiit ? (
-                          <span className="flex items-center justify-center text-center">
-                            RPE
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center text-center">
-                            {(() => {
-                              const mode = getCardioModeForExercise(
-                                workoutExercise.exercise,
-                              );
-                              if (mode === "treadmill") return "INCLINE";
-                              if (mode === "row") return "SPLIT TIME";
-                              return "LEVEL";
-                            })()}
-                          </span>
-                        )}
-
-                        <span className="flex items-center justify-center text-center">
-                          <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                        </span>
-
-                        <div />
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <div
-                    className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                    style={{ gridTemplateColumns: GRID_TEMPLATE_STRENGTH }}
-                  >
-                    {/* Column 1: SET */}
-                    <span className="flex items-center justify-center text-center translate-x-[2px]">
-                      SET
-                    </span>
-
-                    {/* Column 2: WEIGHT */}
-                    <span className="flex items-center justify-center text-center">
-                      WEIGHT
-                    </span>
-
-                    {/* Column 3: Spacer (6px) */}
-                    <div className="flex items-center justify-center" />
-
-                    {/* Column 4: REPS */}
-                    <span className="flex items-center justify-center text-center">
-                      REPS
-                    </span>
-
-                    {/* Column 5: RPE */}
-                    <span className="flex items-center justify-center text-center">
-                      RPE
-                    </span>
-
-                    {/* Column 6: Trophy Icon */}
-                    <span className="flex items-center justify-center text-center">
-                      <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                    </span>
-
-                    {/* Column 7: Placeholder for Checkmark button column */}
-                    <div />
-                  </div>
-                )}
+                <SetsHeader
+                  muscleGroup={workoutExercise.exercise.muscleGroup}
+                  exerciseName={workoutExercise.exercise.name}
+                />
                 <div className="space-y-2">
                   {workoutExercise.sets.map((set, index) => (
                     <SetRow

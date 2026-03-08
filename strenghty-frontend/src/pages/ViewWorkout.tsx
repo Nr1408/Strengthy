@@ -1,15 +1,3 @@
-const GRID_TEMPLATE =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
-// same as above but without the final check column
-
-// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
-
-// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
-const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
-
 import { useMemo, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,6 +11,7 @@ import {
 import type { Routine } from "@/types/workout";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SetRow } from "@/components/workout/SetRow";
+import { SetsHeader } from "@/components/workout/SetsHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { getExerciseIconFile } from "@/lib/exerciseIcons";
 import MuscleTag from "@/components/workout/MuscleTag";
@@ -429,26 +418,35 @@ export default function ViewWorkout() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Title and Duration Block */}
-        <div className="flex items-center justify-between mb-0 -mt-8">
-          <div className="pl-0">
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  navigate(-1);
-                } catch (e) {
-                  navigate("/workouts");
-                }
-              }}
-              aria-label="Back"
-              className="h-9 w-9 flex items-center justify-center rounded-full text-white bg-neutral-900/50 border border-neutral-800/60 shadow-sm hover:bg-neutral-900/70"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
+        {/* Unified Header Row */}
+        <div className="flex items-center gap-3 -mt-8 mb-1">
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                navigate(-1);
+              } catch (e) {
+                navigate("/workouts");
+              }
+            }}
+            aria-label="Back"
+            className="shrink-0 h-9 w-9 flex items-center justify-center rounded-full text-white bg-neutral-900/50 border border-neutral-800/60 shadow-sm hover:bg-neutral-900/70"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <h1 className="font-heading text-xl font-bold text-white leading-tight truncate">
+              {workout?.name || "Workout"}
+            </h1>
+            <p className="text-xs text-muted-foreground leading-tight">
+              {workout?.duration
+                ? formatMinutes(workout.duration)
+                : "Logged workout"}
+            </p>
           </div>
 
-          <div className="pr-0 relative">
+          <div className="shrink-0 relative">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -523,70 +521,58 @@ export default function ViewWorkout() {
           </div>
         </div>
 
-        <div>
-          <h1 className="font-heading text-3xl font-bold text-white">
-            {workout?.name || "Workout"}
-          </h1>
-          <p className="text-muted-foreground">
-            {workout?.duration
-              ? formatMinutes(workout.duration)
-              : "Logged workout"}
-          </p>
-        </div>
-
-        {/* Unified Stats and Buttons Row */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap gap-1 items-center">
-            <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[64px] sm:min-w-[84px]">
-              <div className="text-lg sm:text-xl font-semibold">
-                {headerExercisesCount}
-              </div>
-              <div className="text-[9px] sm:text-[10px] opacity-90">
-                Exercises
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[64px] sm:min-w-[84px]">
-              <div className="text-lg sm:text-xl font-semibold">
-                {headerSetsCount}
-              </div>
-              <div className="text-[9px] sm:text-[10px] opacity-90">Sets</div>
-            </div>
-
-            {(onlyStrength || mixedTypes) && (
-              <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[80px] sm:min-w-[100px]">
-                <div className="text-lg sm:text-xl font-semibold">
-                  {totalVolume > 0 ? totalVolume.toLocaleString() : "0"}
-                </div>
-                <div className="text-[9px] sm:text-[10px] opacity-90">
-                  Volume ({getUnit()})
-                </div>
-              </div>
-            )}
-
-            {(onlyCardio || mixedTypes) && cardioDistanceDisplay !== "-" && (
-              <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[80px] sm:min-w-[120px]">
-                <div className="text-lg sm:text-xl font-semibold">
-                  {cardioDistanceDisplay}
-                </div>
-                <div className="text-[9px] sm:text-[10px] opacity-90">
-                  Distance
-                </div>
-              </div>
-            )}
-
-            {(onlyStrength || mixedTypes) && (
-              <div className="flex flex-col items-center justify-center bg-neutral-800/60 text-white rounded-lg px-3 py-2 min-w-[64px] sm:min-w-[84px]">
-                <div className="text-lg sm:text-xl font-semibold">
-                  {prCount}
-                </div>
-                <div className="text-[9px] sm:text-[10px] opacity-90">PRs</div>
-              </div>
-            )}
+        {/* Stats Row — premium pill cards */}
+        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col items-center justify-center rounded-2xl bg-white/[0.04] border border-white/[0.07] px-3 py-3 gap-0.5 flex-1 min-w-[72px]">
+            <span className="text-xl font-bold text-white tabular-nums">
+              {headerExercisesCount}
+            </span>
+            <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+              Exercises
+            </span>
           </div>
 
-          {/* Action Buttons placeholder (moved to header) */}
-          <div className="ml-auto flex gap-2 items-center" />
+          <div className="flex flex-col items-center justify-center rounded-2xl bg-white/[0.04] border border-white/[0.07] px-3 py-3 gap-0.5 flex-1 min-w-[72px]">
+            <span className="text-xl font-bold text-white tabular-nums">
+              {headerSetsCount}
+            </span>
+            <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+              Sets
+            </span>
+          </div>
+
+          {(onlyStrength || mixedTypes) && (
+            <div className="flex flex-col items-center justify-center rounded-2xl bg-white/[0.04] border border-white/[0.07] px-3 py-3 gap-0.5 flex-1 min-w-[72px]">
+              <span className="text-xl font-bold text-white tabular-nums">
+                {totalVolume > 0 ? totalVolume.toLocaleString() : "0"}
+              </span>
+              <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+                Vol · {getUnit()}
+              </span>
+            </div>
+          )}
+
+          {(onlyStrength || mixedTypes) && prCount > 0 && (
+            <div className="flex flex-col items-center justify-center rounded-2xl bg-orange-500/10 border border-orange-500/20 px-3 py-3 gap-0.5 flex-1 min-w-[72px]">
+              <span className="text-xl font-bold text-orange-400 tabular-nums">
+                {prCount}
+              </span>
+              <span className="text-[10px] font-medium text-orange-500/70 uppercase tracking-widest">
+                PRs 🏆
+              </span>
+            </div>
+          )}
+
+          {(onlyCardio || mixedTypes) && cardioDistanceDisplay !== "-" && (
+            <div className="flex flex-col items-center justify-center rounded-2xl bg-white/[0.04] border border-white/[0.07] px-3 py-3 gap-0.5 flex-1 min-w-[72px]">
+              <span className="text-xl font-bold text-white tabular-nums">
+                {cardioDistanceDisplay}
+              </span>
+              <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+                Distance
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Exercise Cards List */}
@@ -617,130 +603,24 @@ export default function ViewWorkout() {
                   )}
                 </div>
 
-                <div className="relative w-full overflow-hidden">
-                  <div className="w-full">
-                    <div
-                      className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                      style={{
-                        gridTemplateColumns:
-                          we.exercise.muscleGroup === "cardio"
-                            ? ((): string => {
-                                const name = (
-                                  we.exercise.name || ""
-                                ).toLowerCase();
-                                const isHiit =
-                                  name.includes("burpee") ||
-                                  name.includes("mountain") ||
-                                  name.includes("climb") ||
-                                  name.includes("jump squat") ||
-                                  name.includes("plank jack") ||
-                                  name.includes("skater");
-                                return isHiit
-                                  ? GRID_TEMPLATE_HIIT
-                                  : GRID_TEMPLATE_CARDIO;
-                              })()
-                            : GRID_TEMPLATE,
-                      }}
-                    >
-                      {we.exercise.muscleGroup === "cardio" ? (
-                        (() => {
-                          const name = (we.exercise.name || "").toLowerCase();
-                          const isHiit =
-                            name.includes("burpee") ||
-                            name.includes("mountain") ||
-                            name.includes("climb") ||
-                            name.includes("jump squat") ||
-                            name.includes("plank jack") ||
-                            name.includes("skater");
-
-                          if (isHiit) {
-                            return (
-                              <>
-                                <span className="flex justify-center translate-x-[2px]">
-                                  SET
-                                </span>
-                                <span className="flex justify-center">
-                                  DURATION
-                                </span>
-                                <span className="flex justify-center">
-                                  REPS
-                                </span>
-                                <span className="flex justify-center">RPE</span>
-                                <span className="flex justify-center">
-                                  <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                                </span>
-                                <div />
-                              </>
-                            );
-                          }
-
-                          // Non-HIIT cardio header
-                          return (
-                            <>
-                              <span className="flex justify-center translate-x-[2px]">
-                                SET
-                              </span>
-                              <span className="flex justify-center">
-                                DURATION
-                              </span>
-                              <span className="flex justify-center">
-                                {we.exercise.name
-                                  .toLowerCase()
-                                  .includes("stair")
-                                  ? "FLOORS"
-                                  : "DISTANCE"}
-                              </span>
-                              <span className="flex justify-center">
-                                {we.exercise.name
-                                  .toLowerCase()
-                                  .includes("treadmill")
-                                  ? "INCLINE"
-                                  : we.exercise.name
-                                        .toLowerCase()
-                                        .includes("row")
-                                    ? "SPLIT"
-                                    : "LEVEL"}
-                              </span>
-                              <span className="flex justify-center">
-                                <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                              </span>
-                              <div />
-                            </>
-                          );
-                        })()
-                      ) : (
-                        <>
-                          <span className="flex justify-center translate-x-[2px]">
-                            SET
-                          </span>
-                          <span className="flex justify-center">WEIGHT</span>
-                          <span />
-                          <span className="flex justify-center">REPS</span>
-                          <span className="flex justify-center">RPE</span>
-                          <span className="flex justify-center">
-                            <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                          </span>
-                          <div />
-                        </>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      {we.sets.map((s: any, idx: number) => (
-                        <SetRow
-                          key={s.id}
-                          set={s}
-                          exerciseName={we.exercise.name}
-                          unit={s.unit}
-                          setNumber={idx + 1}
-                          onUpdate={() => {}}
-                          onUnitChange={() => {}}
-                          onComplete={() => {}}
-                          readOnly
-                        />
-                      ))}
-                    </div>
-                  </div>
+                <SetsHeader
+                  muscleGroup={we.exercise.muscleGroup}
+                  exerciseName={we.exercise.name}
+                />
+                <div className="space-y-2">
+                  {we.sets.map((s: any, idx: number) => (
+                    <SetRow
+                      key={s.id}
+                      set={s}
+                      exerciseName={we.exercise.name}
+                      unit={s.unit}
+                      setNumber={idx + 1}
+                      onUpdate={() => {}}
+                      onUnitChange={() => {}}
+                      onComplete={() => {}}
+                      readOnly
+                    />
+                  ))}
                 </div>
               </CardContent>
             </Card>

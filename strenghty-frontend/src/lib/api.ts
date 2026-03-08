@@ -36,7 +36,7 @@ function decodeJwtPayload(token: string): any | null {
   }
 }
 
-function isSupabaseJwtUsable(token: string | null): boolean {
+export function isSupabaseJwtUsable(token: string | null): boolean {
   if (!token) return false;
   const payload = decodeJwtPayload(token);
   if (!payload) return false;
@@ -116,20 +116,88 @@ async function resolveSupabaseUserId(): Promise<string | null> {
   }
 }
 
-function supabaseHeaders(contentTypeJson = false): HeadersInit {
-  const headers: Record<string, string> = {
-    apikey: SUPABASE_ANON_ENV,
-  };
-  const token = getToken();
-  if (!isSupabaseJwtUsable(token)) {
+export async function refreshSupabaseToken(): Promise<boolean> {
+  try {
+    const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/, "");
+    let refreshToken: string | null = null;
     try {
-      clearToken();
-    } catch (e) {}
-    throw new Error("Session expired. Please log in again.");
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && /^sb-.+-auth-token$/.test(key)) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            refreshToken =
+              parsed?.refresh_token ?? parsed?.data?.refresh_token ?? null;
+          }
+          break;
+        }
+      }
+    } catch {}
+
+    if (!refreshToken) return false;
+
+    const res = await fetch(
+      `${supabaseBase}/auth/v1/token?grant_type=refresh_token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_ENV,
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      },
+    );
+
+    if (!res.ok) return false;
+
+    const data = await res.json();
+    if (data.access_token) {
+      setToken(data.access_token);
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && /^sb-.+-auth-token$/.test(key)) {
+            const existing = JSON.parse(localStorage.getItem(key) || "{}");
+            localStorage.setItem(
+              key,
+              JSON.stringify({
+                ...existing,
+                access_token: data.access_token,
+                refresh_token: data.refresh_token || refreshToken,
+              }),
+            );
+            break;
+          }
+        }
+      } catch {}
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
   }
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+}
+
+async function supabaseHeadersAsync(
+  contentTypeJson = false,
+): Promise<HeadersInit> {
+  const headers: Record<string, string> = { apikey: SUPABASE_ANON_ENV };
+  let token = getToken();
+
+  if (!isSupabaseJwtUsable(token)) {
+    const refreshed = await refreshSupabaseToken();
+    if (refreshed) {
+      token = getToken();
+    } else {
+      try {
+        clearToken();
+      } catch {}
+      throw new Error("Session expired. Please log in again.");
+    }
   }
+
+  if (token) headers.Authorization = `Bearer ${token}`;
   if (contentTypeJson) headers["Content-Type"] = "application/json";
   return headers;
 }
@@ -227,7 +295,7 @@ async function getSupabaseProfile() {
   if (!userId || !SUPABASE_REST_BASE) return null;
   const res = await fetchWithTimeout(
     `${SUPABASE_REST_BASE}/profiles?select=*&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
-    { headers: supabaseHeaders() },
+    { headers: await supabaseHeadersAsync() },
   );
   if (!res.ok) return null;
   const rows = (await res.json()) as any[];
@@ -251,7 +319,7 @@ export async function upsertProfile(payload: {
   const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/profiles`, {
     method: "POST",
     headers: {
-      ...supabaseHeaders(true),
+      ...await supabaseHeadersAsync(true),
       Prefer: "resolution=merge-duplicates,return=representation",
     },
     body: JSON.stringify(body),
@@ -1333,7 +1401,7 @@ export async function getExercises(): Promise<UiExercise[]> {
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at&order=created_at.desc`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Load exercises failed: ${res.status}`);
     const data = (await res.json()) as ApiExercise[];
@@ -1373,7 +1441,7 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/exercises?on_conflict=owner_id,name`, {
       method: "POST",
       headers: {
-        ...supabaseHeaders(true),
+        ...await supabaseHeadersAsync(true),
         Prefer: "resolution=ignore-duplicates,return=representation",
       },
       body: JSON.stringify({
@@ -1415,7 +1483,7 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
       const eqName = encodeURIComponent(name.trim());
       const existingRes = await fetchWithTimeout(
         `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at&name=eq.${eqName}&limit=1`,
-        { headers: supabaseHeaders() },
+        { headers: await supabaseHeadersAsync() },
       );
       if (existingRes.ok) {
         const existingRows = (await existingRes.json()) as ApiExercise[];
@@ -1475,7 +1543,7 @@ export async function deleteExercise(id: string) {
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/exercises?id=eq.${encodeURIComponent(id)}`,
-      { method: "DELETE", headers: supabaseHeaders() },
+      { method: "DELETE", headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Delete exercise failed: ${res.status}`);
     return;
@@ -1488,7 +1556,7 @@ export async function getWorkouts(): Promise<UiWorkout[]> {
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workouts?select=id,date,name,notes,created_at,updated_at,ended_at&order=created_at.desc`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Load workouts failed: ${res.status}`);
     const data = (await res.json()) as ApiWorkout[];
@@ -1525,7 +1593,7 @@ export async function createWorkout(name: string, notes = "", date?: Date): Prom
     if (!userId) throw new Error("Session expired. Please log in again.");
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workouts`, {
       method: "POST",
-      headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+      headers: { ...await supabaseHeadersAsync(true), Prefer: "return=representation" },
       body: JSON.stringify({ owner_id: userId, ...payload }),
     });
     if (!res.ok) throw new Error(`Create workout failed: ${res.status}`);
@@ -1549,7 +1617,7 @@ export async function finishWorkout(id: string): Promise<UiWorkout> {
       `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
       {
         method: "PATCH",
-        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        headers: { ...await supabaseHeadersAsync(true), Prefer: "return=representation" },
         body: JSON.stringify({ ended_at: new Date().toISOString() }),
       },
     );
@@ -1571,7 +1639,7 @@ export async function deleteWorkout(id: string) {
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
-      { method: "DELETE", headers: supabaseHeaders() },
+      { method: "DELETE", headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Delete workout failed: ${res.status}`);
     return;
@@ -1597,7 +1665,7 @@ export async function updateWorkout(id: string, data: Partial<{ name: string; no
       `${SUPABASE_REST_BASE}/workouts?id=eq.${encodeURIComponent(id)}`,
       {
         method: "PATCH",
-        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        headers: { ...await supabaseHeadersAsync(true), Prefer: "return=representation" },
         body: JSON.stringify(data),
       },
     );
@@ -1623,7 +1691,7 @@ export async function getSets(workoutId: string): Promise<UiWorkoutSet[]> {
     }
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workout_sets?select=${encodeURIComponent(supabaseSelectWorkoutSet())}&workout_id=eq.${workoutNum}&order=set_number.asc`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Load sets failed: ${res.status}`);
     const data = (await res.json()) as any[];
@@ -1646,7 +1714,7 @@ export async function getSetsForExercise(
     }
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workout_sets?select=${encodeURIComponent(supabaseSelectWorkoutSet())}&exercise_id=eq.${exerciseNum}&order=created_at.desc`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Load sets for exercise failed: ${res.status}`);
     const data = (await res.json()) as any[];
@@ -1693,7 +1761,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     const resolveNextSetNumber = async () => {
       const lastRes = await fetchWithTimeout(
         `${SUPABASE_REST_BASE}/workout_sets?select=set_number&workout_id=eq.${workoutNum}&exercise_id=eq.${exerciseNum}&order=set_number.desc&limit=1`,
-        { headers: supabaseHeaders() },
+        { headers: await supabaseHeadersAsync() },
       );
       if (lastRes.status === 401) {
         throw new Error("Session expired. Please log in again.");
@@ -1710,7 +1778,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
 
     const histRes = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${exerciseNum}&workout_id=neq.${workoutNum}`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (histRes.status === 401) {
       throw new Error("Session expired. Please log in again.");
@@ -1776,7 +1844,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     for (let attempt = 0; attempt < 3; attempt++) {
       const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workout_sets`, {
         method: "POST",
-        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        headers: { ...await supabaseHeadersAsync(true), Prefer: "return=representation" },
         body: JSON.stringify({
           workout_id: workoutNum,
           exercise_id: exerciseNum,
@@ -1886,7 +1954,7 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
   if (shouldUseSupabaseApi()) {
     const currentRes = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workout_sets?select=id,workout_id,exercise_id,reps,half_reps,weight,unit&id=eq.${encodeURIComponent(id)}&limit=1`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (!currentRes.ok) throw new Error(`Update set failed: ${currentRes.status}`);
     const currentRows = (await currentRes.json()) as Array<{
@@ -1939,7 +2007,7 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
 
       const histRes = await fetchWithTimeout(
         `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${Number(current.exercise_id)}&id=neq.${encodeURIComponent(id)}${workoutFilter}`,
-        { headers: supabaseHeaders() },
+        { headers: await supabaseHeadersAsync() },
       );
       if (!histRes.ok) throw new Error(`Update set failed: ${histRes.status}`);
       const hist = (await histRes.json()) as Array<{
@@ -1998,7 +2066,7 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
       `${SUPABASE_REST_BASE}/workout_sets?id=eq.${encodeURIComponent(id)}`,
       {
         method: "PATCH",
-        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        headers: { ...await supabaseHeadersAsync(true), Prefer: "return=representation" },
         body: JSON.stringify(payload),
       },
     );
@@ -2021,7 +2089,7 @@ export async function deleteSet(id: string) {
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/workout_sets?id=eq.${encodeURIComponent(id)}`,
-      { method: "DELETE", headers: supabaseHeaders() },
+      { method: "DELETE", headers: await supabaseHeadersAsync() },
     );
     if (!res.ok && res.status !== 204 && res.status !== 404) {
       throw new Error(`Delete set failed: ${res.status}`);
@@ -2039,7 +2107,7 @@ export async function deleteCardioSet(id: string) {
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/cardio_sets?id=eq.${encodeURIComponent(id)}`,
-      { method: "DELETE", headers: supabaseHeaders() },
+      { method: "DELETE", headers: await supabaseHeadersAsync() },
     );
     if (!res.ok && res.status !== 204 && res.status !== 404) {
       throw new Error(`Delete cardio set failed: ${res.status}`);
@@ -2065,7 +2133,7 @@ export async function getCardioSetsForWorkout(workoutId: string): Promise<UiCard
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/cardio_sets?select=${encodeURIComponent(supabaseSelectCardioSet())}&workout_id=eq.${workoutNum}&order=set_number.asc`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Load cardio sets failed: ${res.status}`);
     const data = (await res.json()) as any[];
@@ -2089,7 +2157,7 @@ export async function getCardioSetsForExercise(exerciseId: string): Promise<UiCa
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/cardio_sets?select=${encodeURIComponent(supabaseSelectCardioSet())}&exercise_id=eq.${exerciseNum}&order=created_at.desc`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Load cardio sets for exercise failed: ${res.status}`);
     const data = (await res.json()) as any[];
@@ -2142,7 +2210,7 @@ export async function createCardioSet(params: {
     if (typeof payload.set_number !== 'number') {
       const lastRes = await fetchWithTimeout(
         `${SUPABASE_REST_BASE}/cardio_sets?select=set_number&workout_id=eq.${workoutNum}&exercise_id=eq.${exerciseNum}&order=set_number.desc&limit=1`,
-        { headers: supabaseHeaders() },
+        { headers: await supabaseHeadersAsync() },
       );
       if (!lastRes.ok) throw new Error(`Create cardio set failed: ${lastRes.status}`);
       const last = (await lastRes.json()) as Array<{ set_number?: number }>;
@@ -2152,7 +2220,7 @@ export async function createCardioSet(params: {
 
     const histRes = await fetchWithTimeout(
       `${SUPABASE_REST_BASE}/cardio_sets?select=duration_seconds,distance_meters,floors,level,split_seconds,spm&exercise_id=eq.${exerciseNum}&mode=eq.${encodeURIComponent(payload.mode)}`,
-      { headers: supabaseHeaders() },
+      { headers: await supabaseHeadersAsync() },
     );
     if (!histRes.ok) throw new Error(`Create cardio set failed: ${histRes.status}`);
     const hist = (await histRes.json()) as Array<{
@@ -2225,7 +2293,7 @@ export async function createCardioSet(params: {
 
     const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/cardio_sets`, {
       method: "POST",
-      headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+      headers: { ...await supabaseHeadersAsync(true), Prefer: "return=representation" },
       body: JSON.stringify({
         workout_id: workoutNum,
         exercise_id: exerciseNum,
@@ -2307,7 +2375,7 @@ export async function updateCardioSet(
       `${SUPABASE_REST_BASE}/cardio_sets?id=eq.${encodeURIComponent(id)}`,
       {
         method: "PATCH",
-        headers: { ...supabaseHeaders(true), Prefer: "return=representation" },
+        headers: { ...await supabaseHeadersAsync(true), Prefer: "return=representation" },
         body: JSON.stringify(payload),
       },
     );

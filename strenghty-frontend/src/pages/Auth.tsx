@@ -117,6 +117,7 @@ export default function Auth({
   }>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [invalidCredsOpen, setInvalidCredsOpen] = useState(false);
+  const [isGoogleAccount, setIsGoogleAccount] = useState(false);
   const [confirmEmailOpen, setConfirmEmailOpen] = useState(false);
   const [confirmEmailAddress, setConfirmEmailAddress] = useState<string | null>(
     null,
@@ -241,17 +242,52 @@ export default function Auth({
       try {
         setToken(accessToken);
         try {
+          let profileName: string | null = null;
+          let profileEmail: string | null = null;
+
+          // Native flow: idToken is available, decode it directly
           if (idToken) {
-            const payload = JSON.parse(
+            const decoded = JSON.parse(
               atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
             );
-            const profile = {
-              name: payload?.name || null,
-              email: payload?.email || null,
-            };
-            if (profile.name || profile.email) {
-              localStorage.setItem("user:profile", JSON.stringify(profile));
-            }
+            profileName = decoded?.name || null;
+            profileEmail = decoded?.email || null;
+          }
+
+          // Web OAuth flow: Supabase does not return idToken in the URL hash,
+          // so we fetch the user record directly using the access token instead.
+          if (
+            !profileName &&
+            !profileEmail &&
+            SUPABASE_URL_ENV &&
+            SUPABASE_ANON_KEY_ENV
+          ) {
+            try {
+              const res = await fetch(
+                `${SUPABASE_URL_ENV.replace(/\/+$/, "")}/auth/v1/user`,
+                {
+                  headers: {
+                    apikey: SUPABASE_ANON_KEY_ENV,
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                },
+              );
+              if (res.ok) {
+                const user = await res.json();
+                profileName =
+                  user?.user_metadata?.full_name ||
+                  user?.user_metadata?.name ||
+                  null;
+                profileEmail = user?.email || null;
+              }
+            } catch {}
+          }
+
+          if (profileName || profileEmail) {
+            localStorage.setItem(
+              "user:profile",
+              JSON.stringify({ name: profileName, email: profileEmail }),
+            );
           }
         } catch {}
         const goOnboarding = await shouldRouteToOnboarding(accessToken);
@@ -286,6 +322,18 @@ export default function Auth({
       lower.includes("email not verified") ||
       lower.includes("verify your email") ||
       lower.includes("email address not confirmed")
+    );
+  }, []);
+
+  const isGoogleAccountError = useCallback((msg: string) => {
+    const lower = msg.toLowerCase();
+    return (
+      lower.includes("provider") ||
+      lower.includes("identity provider") ||
+      lower.includes("oauth") ||
+      lower.includes("google") ||
+      lower.includes("social") ||
+      lower.includes("linked to a social")
     );
   }, []);
 
@@ -578,7 +626,20 @@ export default function Auth({
         setConfirmEmailAddress(formData.email?.trim() || null);
         setConfirmEmailOpen(true);
         return;
+      } else if (isGoogleAccountError(msg)) {
+        setIsGoogleAccount(true);
+        setInvalidCredsOpen(true);
+        return;
       } else if (isInvalidCredentialsError(msg)) {
+        const isGoogle =
+          isGoogleAccountError(msg) ||
+          msg.toLowerCase().includes("for email") ||
+          msg
+            .toLowerCase()
+            .includes("signing in with password is not supported") ||
+          msg.toLowerCase().includes("email link") ||
+          msg.toLowerCase().includes("magic link");
+        setIsGoogleAccount(isGoogle);
         setInvalidCredsOpen(true);
         return;
       }
@@ -699,13 +760,26 @@ export default function Auth({
                         type="button"
                         onClick={onClickContinueWithGoogle}
                         disabled={isLoading}
-                        className="inline-flex w-full sm:w-auto justify-center items-center rounded-md border border-white/40 px-3 sm:px-4 py-2.5 sm:py-2 text-sm text-white hover:bg-white/5"
+                        className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-zinc-800 text-white font-semibold text-sm border border-white/15 hover:bg-zinc-700 transition-colors"
                       >
-                        <img
-                          src="/google-logo.svg"
-                          alt="Google"
-                          className="mr-2 h-4 w-4"
-                        />
+                        <svg width="18" height="18" viewBox="0 0 18 18">
+                          <path
+                            fill="#4285F4"
+                            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                          />
+                          <path
+                            fill="#34A853"
+                            d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.826.957 4.039l3.007-2.332z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"
+                          />
+                        </svg>
                         Continue with Google
                       </button>
                     </div>
@@ -849,7 +923,12 @@ export default function Auth({
         </div>
         <InvalidCredentialsDialog
           open={invalidCredsOpen}
-          setOpen={setInvalidCredsOpen}
+          setOpen={(val) => {
+            setInvalidCredsOpen(val);
+            if (!val) setIsGoogleAccount(false);
+          }}
+          isGoogleAccount={isGoogleAccount}
+          onGoogleSignIn={onClickContinueWithGoogle}
         />
 
         <ConfirmEmailDialog
