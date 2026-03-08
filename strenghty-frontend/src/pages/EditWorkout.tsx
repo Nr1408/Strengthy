@@ -1014,6 +1014,14 @@ export default function EditWorkout() {
       const allowPrForExercise =
         allowPrForWorkout && (isCardioSet || hasPriorOutsideWorkout);
 
+      // Suppress false PRs on later sets within the same workout session
+      const withinWorkoutSets = ex.sets
+        .filter(
+          (s2) =>
+            s2.id !== s.id && s2.completed && /^[0-9]+$/.test(String(s2.id)),
+        )
+        .map((s2) => ({ weight: s2.weight, reps: s2.reps, unit: s2.unit }));
+
       if (/^[0-9]+$/.test(String(s.id))) {
         let saved: any;
         if (isCardioSet) {
@@ -1139,6 +1147,39 @@ export default function EditWorkout() {
         );
         // Show PR banners only for current-day workouts; historical
         // workouts skip celebrations to avoid noisy retro PRs.
+        // Suppress PR if a better-or-equal set already exists in this session
+        if (withinWorkoutSets.length > 0) {
+          const LBS_PER_KG_w = 2.20462;
+          const savedUnit =
+            (saved.unit as "lbs" | "kg" | undefined) || getUnit();
+          const savedKg =
+            savedUnit === "kg"
+              ? saved.weight || 0
+              : (saved.weight || 0) / LBS_PER_KG_w;
+          const savedReps = saved.reps || 0;
+          const saved1rm =
+            savedKg > 0 && savedReps > 0 && savedReps < 37
+              ? (savedKg * 36) / (37 - savedReps)
+              : 0;
+          const beaten = withinWorkoutSets.some((ws) => {
+            const wsKg =
+              (ws.unit as string) === "kg"
+                ? ws.weight || 0
+                : (ws.weight || 0) / LBS_PER_KG_w;
+            const ws1rm =
+              wsKg > 0 && (ws.reps || 0) > 0 && (ws.reps || 0) < 37
+                ? (wsKg * 36) / (37 - (ws.reps || 0))
+                : 0;
+            return ws1rm >= saved1rm && ws1rm > 0;
+          });
+          if (beaten) {
+            saved.isPR = false;
+            saved.absWeightPR = false;
+            saved.e1rmPR = false;
+            saved.volumePR = false;
+          }
+        }
+
         if (
           allowPrForExercise &&
           !isCardioSet &&

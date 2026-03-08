@@ -383,7 +383,7 @@ export function SetRow({
                   {currentType === "W"
                     ? "W"
                     : currentType === "S"
-                      ? "1"
+                      ? setNumber
                       : currentType === "F"
                         ? "F"
                         : "D"}
@@ -471,7 +471,7 @@ export function SetRow({
                   {currentType === "W"
                     ? "W"
                     : currentType === "S"
-                      ? "1"
+                      ? setNumber
                       : currentType === "F"
                         ? "F"
                         : "D"}
@@ -536,7 +536,7 @@ export function SetRow({
             {currentType === "W"
               ? "W"
               : currentType === "S"
-                ? "1"
+                ? setNumber
                 : currentType === "F"
                   ? "F"
                   : "D"}
@@ -777,9 +777,11 @@ export function SetRow({
             </div>
           )
         ) : (
-          <span className="text-[15px] text-muted-foreground/30 select-none">
-            ×
-          </span>
+          !readOnly && (
+            <span className="text-[15px] text-muted-foreground/30 select-none">
+              ×
+            </span>
+          )
         )}
       </Cell>
 

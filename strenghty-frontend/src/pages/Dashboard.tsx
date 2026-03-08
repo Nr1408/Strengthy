@@ -378,8 +378,15 @@ export default function Dashboard() {
               } catch {}
               return (
                 <>
-                  <h1 className="font-heading text-3xl font-bold text-white">
-                    {greeting}, {name} !
+                  <h1 className="font-heading text-3xl font-bold text-white leading-tight">
+                    {greeting},{" "}
+                    <span
+                      className="inline-block max-w-[55vw] truncate align-bottom"
+                      title={name}
+                    >
+                      {name}
+                    </span>
+                    !
                   </h1>
                   <p className="text-muted-foreground mt-1">
                     Track your progress and recent workouts

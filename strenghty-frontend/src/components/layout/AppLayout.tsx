@@ -16,32 +16,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
-import { loadSettings } from "@/lib/settings";
-import { Capacitor } from "@capacitor/core";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-
-// Lazy import local notifications helper when needed to avoid bundling issues
-async function checkNativeNotificationPermission() {
-  try {
-    const mod = await import("@capacitor/local-notifications");
-    const LocalNotifications = mod.LocalNotifications;
-    const perm = await LocalNotifications.checkPermissions();
-    return perm && perm.display === "granted";
-  } catch {
-    return false;
-  }
-}
-
-async function requestNativeNotificationPermission() {
-  try {
-    const mod = await import("@capacitor/local-notifications");
-    const LocalNotifications = mod.LocalNotifications;
-    const req = await LocalNotifications.requestPermissions();
-    return req && req.display === "granted";
-  } catch {
-    return false;
-  }
-}
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -58,7 +33,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [showPausedDialog, setShowPausedDialog] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const { toast } = useToast();
 
   const isWorkoutBuilderRoute =
@@ -94,79 +68,6 @@ export function AppLayout({ children }: AppLayoutProps) {
       // ignore
     }
   }, [location.pathname, location.state]);
-
-  // When on the Dashboard route, if user wants notifications but permission
-  // not granted, show a small prompt asking them to enable notifications.
-  // Respect a dismiss flag so we don't repeatedly nag the user.
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        // only show this prompt when on the main dashboard
-        if (location.pathname !== "/dashboard") return;
-        const settings = loadSettings();
-        if (!settings.notifications) return;
-
-        const dismissed = !!localStorage.getItem(
-          "notifications:promptDismissed",
-        );
-        if (dismissed) return;
-
-        // Native (Capacitor) permission check
-        if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
-          const granted = await checkNativeNotificationPermission();
-          if (!granted && mounted) setShowNotifPrompt(true);
-          // Warm up native haptics plugin so vibration calls succeed on APKs
-          try {
-            await import("@capacitor/haptics");
-          } catch {}
-          return;
-        }
-
-        // Web permission check
-        if (typeof Notification !== "undefined") {
-          if (Notification.permission !== "granted") {
-            if (mounted) setShowNotifPrompt(true);
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [location.pathname]);
-
-  // On fresh APK install, prompt for notification permission once immediately
-  // so users are always asked during first app run.
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        if (!(Capacitor.isNativePlatform && Capacitor.isNativePlatform())) {
-          return;
-        }
-
-        const askedKey = "notifications:firstInstallAsked";
-        const alreadyAsked = localStorage.getItem(askedKey) === "1";
-        if (alreadyAsked) return;
-
-        localStorage.setItem(askedKey, "1");
-
-        const granted = await requestNativeNotificationPermission();
-        if (!granted && mounted) {
-          setShowNotifPrompt(true);
-        }
-      } catch (e) {
-        // ignore
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden isolate">
@@ -276,76 +177,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           isWorkoutBuilderRoute ? "pt-0" : "pt-[50px]",
         )}
       >
-        {/* Notification enable prompt (non-blocking) */}
-        {showNotifPrompt && (
-          <div className="-mt-6 mb-4 rounded-2xl border border-border bg-neutral-900/90 p-3 shadow-md">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="text-sm text-white break-words min-w-0">
-                Enable notifications to receive workout alerts and reminders.
-              </div>
-
-              <div className="flex gap-2 w-full md:w-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 md:flex-none"
-                  onClick={() => {
-                    try {
-                      localStorage.setItem(
-                        "notifications:promptDismissed",
-                        "1",
-                      );
-                    } catch {}
-                    setShowNotifPrompt(false);
-                  }}
-                >
-                  Not now
-                </Button>
-
-                <Button
-                  size="sm"
-                  className="flex-1 md:flex-none"
-                  onClick={async () => {
-                    try {
-                      // Native flow
-                      if (
-                        Capacitor.isNativePlatform &&
-                        Capacitor.isNativePlatform()
-                      ) {
-                        const ok = await requestNativeNotificationPermission();
-                        if (ok) {
-                          setShowNotifPrompt(false);
-                          try {
-                            localStorage.removeItem(
-                              "notifications:promptDismissed",
-                            );
-                          } catch {}
-                          return;
-                        }
-                      } else if (typeof Notification !== "undefined") {
-                        const res = await Notification.requestPermission();
-                        if (res === "granted") {
-                          setShowNotifPrompt(false);
-                          try {
-                            localStorage.removeItem(
-                              "notifications:promptDismissed",
-                            );
-                          } catch {}
-                          return;
-                        }
-                      }
-                    } catch (e) {
-                      // ignore
-                    }
-                    // If we reach here, user didn't grant — keep prompt or let them dismiss
-                  }}
-                >
-                  Enable
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
         {children}
       </main>
       {/* Paused workout small dialog (top) */}

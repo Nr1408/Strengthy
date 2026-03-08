@@ -39,6 +39,28 @@ const ROUTINE_TAGS: Record<
   "r-glutes-hamstrings":       { goals: ["hypertrophy", "calorie-burn"],  equipment: ["full-gym"],                              experience: ["beginner", "intermediate"],             split: "lower",  beginner: true  },
   "r-arms-shoulders":          { goals: ["hypertrophy"],                  equipment: ["full-gym", "home-gym"],                  experience: ["beginner", "intermediate"],             split: "arms",   beginner: true  },
   "r-conditioning-bodyweight": { goals: ["calorie-burn", "other"],        equipment: ["bodyweight", "home-gym", "full-gym"],    experience: ["beginner", "intermediate", "advanced"], split: "cardio", beginner: true  },
+
+  // Home / bodyweight routines
+  "r-home-push":         { goals: ["hypertrophy"],                  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "push",   beginner: true  },
+  "r-home-pull":         { goals: ["hypertrophy"],                  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "pull",   beginner: true  },
+  "r-home-legs":         { goals: ["hypertrophy", "calorie-burn"],  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "lower",  beginner: true  },
+  "r-home-full-a":       { goals: ["hypertrophy", "calorie-burn"],  equipment: ["bodyweight"],           experience: ["beginner"],                             split: "full",   beginner: true  },
+  "r-home-full-b":       { goals: ["hypertrophy", "calorie-burn"],  equipment: ["bodyweight"],           experience: ["beginner", "intermediate"],             split: "full",   beginner: true  },
+  "r-home-conditioning": { goals: ["calorie-burn", "other"],        equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "cardio", beginner: true  },
+
+  // Dumbbell-only routines
+  "r-db-push":   { goals: ["hypertrophy"],                  equipment: ["home-gym"],  experience: ["beginner", "intermediate", "advanced"], split: "push",   beginner: true  },
+  "r-db-pull":   { goals: ["hypertrophy"],                  equipment: ["home-gym"],  experience: ["beginner", "intermediate", "advanced"], split: "pull",   beginner: true  },
+  "r-db-legs":   { goals: ["hypertrophy", "calorie-burn"],  equipment: ["home-gym"],  experience: ["beginner", "intermediate", "advanced"], split: "lower",  beginner: true  },
+  "r-db-full-a": { goals: ["hypertrophy", "calorie-burn"],  equipment: ["home-gym"],  experience: ["beginner"],                             split: "full",   beginner: true  },
+  "r-db-full-b": { goals: ["hypertrophy", "calorie-burn"],  equipment: ["home-gym"],  experience: ["beginner", "intermediate"],             split: "full",   beginner: true  },
+  "r-db-upper":  { goals: ["hypertrophy"],                  equipment: ["home-gym"],  experience: ["intermediate", "advanced"],             split: "upper",  beginner: false },
+
+  // Beginner / mixed
+  "r-beginner-full":     { goals: ["hypertrophy", "calorie-burn", "other"], equipment: ["bodyweight"],  experience: ["beginner"],                             split: "full",   beginner: true  },
+  "r-home-upper":        { goals: ["hypertrophy"],                          equipment: ["bodyweight"],  experience: ["beginner", "intermediate", "advanced"], split: "upper",  beginner: true  },
+  "r-db-lower-strength": { goals: ["powerlifting", "hypertrophy"],          equipment: ["home-gym"],    experience: ["intermediate", "advanced"],             split: "lower",  beginner: false },
+  "r-core-abs":          { goals: ["hypertrophy", "calorie-burn", "other"], equipment: ["bodyweight", "home-gym", "full-gym"], experience: ["beginner", "intermediate", "advanced"], split: "full", beginner: true },
 };
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -151,8 +173,22 @@ export function recommendNextRoutine(currentRoutineId?: string) {
 
     const preferredSplits = complementMap[currentTags.split] ?? ["full"];
 
+    // If the current routine is from a specific equipment pool (not full-gym),
+    // restrict candidates to the same pool so home/dumbbell users don't get
+    // gym suggestions as their next workout.
+    const currentEquipment = currentTags.equipment;
+    const equipmentRestricted = !currentEquipment.includes("full-gym");
+
     const scored = mockRoutines
-      .filter((r) => r.id !== currentRoutineId && ROUTINE_TAGS[r.id])
+      .filter((r) => {
+        if (r.id === currentRoutineId) return false;
+        const tags = ROUTINE_TAGS[r.id];
+        if (!tags) return false;
+        if (equipmentRestricted) {
+          return tags.equipment.some((e) => currentEquipment.includes(e));
+        }
+        return true;
+      })
       .map((r) => {
         const tags = ROUTINE_TAGS[r.id];
         const splitBonus = preferredSplits.includes(tags.split) ? 30 : 0;

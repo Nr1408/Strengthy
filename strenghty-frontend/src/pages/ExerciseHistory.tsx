@@ -407,13 +407,13 @@ export default function ExerciseHistory() {
                     </div>
 
                     <div className="space-y-2">
-                      {g.sets.map((s: any, idx: number) => (
+                      {g.sets.map((s: any, setIdx: number) => (
                         <SetRow
-                          key={`${g.workoutId}-${idx}`}
+                          key={`${g.workoutId}-${setIdx}`}
                           set={s}
                           exerciseName={exerciseName || ""}
                           unit={s.unit || "kg"}
-                          setNumber={s.setNumber ?? idx + 1}
+                          setNumber={s.setNumber ?? setIdx + 1}
                           onUpdate={() => {}}
                           onUnitChange={() => {}}
                           onComplete={() => {}}

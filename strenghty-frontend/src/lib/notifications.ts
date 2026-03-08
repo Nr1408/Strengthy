@@ -20,6 +20,14 @@ async function checkPermission(): Promise<boolean> {
     if (!settings.notifications) return false;
     const { display } = await LocalNotifications.checkPermissions();
     if (display === "granted") return true;
+
+    // Only request if we've already shown the system prompt once
+    // (handled by WorkoutComplete after first workout)
+    const alreadyAsked = localStorage.getItem(
+      "user:notificationPermissionAsked",
+    );
+    if (!alreadyAsked) return false;
+
     const req = await LocalNotifications.requestPermissions();
     return req.display === "granted";
   } catch {
@@ -221,6 +229,12 @@ export async function rescheduleAllNotifications(params: {
   reminderMinute?: number;
 }) {
   if (!isNative()) return;
+
+  // Don't schedule anything until first workout is done
+  try {
+    const firstDone = localStorage.getItem("user:firstWorkoutCompleted");
+    if (!firstDone) return;
+  } catch {}
 
   const granted = await checkPermission();
   if (!granted) return;

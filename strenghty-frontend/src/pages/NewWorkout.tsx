@@ -1068,7 +1068,19 @@ export default function NewWorkout() {
           backendExerciseId,
           String(wId),
         );
-        const completedSets = priorSets;
+        // Also include already-completed sets from the current workout session
+        // so within-workout sets suppress false PRs on later sets in the same workout.
+        const currentWorkoutCompletedSets = ex.sets
+          .filter(
+            (s2) =>
+              s2.id !== setId && s2.completed && /^[0-9]+$/.test(String(s2.id)),
+          )
+          .map((s2) => ({
+            weight: s2.weight,
+            reps: s2.reps,
+            unit: s2.unit,
+          }));
+        const completedSets = [...priorSets, ...currentWorkoutCompletedSets];
         hadPrior = completedSets.length > 0;
 
         const LBS_PER_KG = 2.20462;

@@ -1,8 +1,12 @@
-﻿import { useLocation, useNavigate } from "react-router-dom";
+﻿import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle2, Dumbbell, ArrowRight, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { Routine } from "@/types/workout";
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { Capacitor } from "@capacitor/core";
+import { loadSettings, saveSettings } from "@/lib/settings";
 
 export default function WorkoutComplete() {
   const navigate = useNavigate();
@@ -14,6 +18,51 @@ export default function WorkoutComplete() {
   const label =
     location.state?.label ||
     (suggested ? `Next: ${suggested.name}` : "Suggested next workout");
+
+  useEffect(() => {
+    const requestIfFirstWorkout = async () => {
+      try {
+        if (!Capacitor.isNativePlatform()) return;
+
+        const isFirstWorkout =
+          localStorage.getItem("user:firstWorkoutCompleted") === "1";
+        if (!isFirstWorkout) return;
+
+        const alreadyAsked = localStorage.getItem(
+          "user:notificationPermissionAsked",
+        );
+        if (alreadyAsked) return;
+
+        // Mark as asked before requesting so even if user kills app
+        // mid-prompt we don't ask again
+        localStorage.setItem("user:notificationPermissionAsked", "1");
+
+        // Small delay so the celebration screen renders first
+        await new Promise((res) => setTimeout(res, 1500));
+
+        const { display } = await LocalNotifications.checkPermissions();
+        if (display === "granted") {
+          try {
+            const settings = loadSettings();
+            saveSettings({ ...settings, notifications: true });
+          } catch {}
+          return;
+        }
+
+        const result = await LocalNotifications.requestPermissions();
+        if (result.display === "granted") {
+          try {
+            const settings = loadSettings();
+            saveSettings({ ...settings, notifications: true });
+          } catch {}
+        }
+      } catch {
+        // Never crash the celebration screen over a notification error
+      }
+    };
+
+    requestIfFirstWorkout();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">

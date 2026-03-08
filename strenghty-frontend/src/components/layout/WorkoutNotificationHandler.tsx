@@ -24,8 +24,20 @@ export default function WorkoutNotificationHandler() {
         const settings = loadSettings();
         if (!settings.notifications) return false;
 
+        // Don't ask for permission until after the first workout
+        const firstDone = localStorage.getItem("user:firstWorkoutCompleted");
+        if (!firstDone) return false;
+
         const perm = await LocalNotifications.checkPermissions();
         if (perm.display === "granted") return true;
+
+        // Only request if we've already shown the system prompt once
+        // (handled by WorkoutComplete after first workout)
+        const alreadyAsked = localStorage.getItem(
+          "user:notificationPermissionAsked",
+        );
+        if (!alreadyAsked) return false;
+
         const req = await LocalNotifications.requestPermissions();
         return req.display === "granted";
       } catch {
@@ -105,7 +117,7 @@ export default function WorkoutNotificationHandler() {
         } catch {
           navigate("/workouts/new");
         }
-      }
+      },
     ).then((handle) => {
       removeNotificationListener = () => handle.remove();
     });

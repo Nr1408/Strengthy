@@ -431,24 +431,32 @@ export default function Profile() {
                   ? `Member since ${memberSinceLabel}`
                   : "New member 🎉"}
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditing(true)}
-                >
-                  Edit Profile
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigate("/profile/account")}
-                >
-                  Account Settings
-                </Button>
+              <div className="mt-3 flex flex-col gap-2">
+                {/* Primary actions row */}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setEditing(true)}
+                  >
+                    Edit Profile
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => navigate("/profile/account")}
+                  >
+                    Account Settings
+                  </Button>
+                </div>
+
+                {/* Sign Out — intentionally separate and destructive */}
                 <Button
                   size="sm"
                   variant="destructive"
+                  className="w-full"
                   onClick={() => setSignOutConfirmOpen(true)}
                 >
                   Sign Out

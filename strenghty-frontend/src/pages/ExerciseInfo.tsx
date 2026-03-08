@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import MuscleTag from "@/components/workout/MuscleTag";
 import { SetRow } from "@/components/workout/SetRow";
+import { muscleGroupColors } from "@/data/mockData";
 import { getExerciseIconFile } from "@/lib/exerciseIcons";
+import libraryExercises from "@/data/libraryExercises";
 import { format } from "date-fns";
 import { Trophy, PlusCircle } from "lucide-react";
 import {
@@ -78,11 +80,9 @@ export default function ExerciseInfo() {
 
   const resolvedExerciseId = useMemo(() => {
     if (!id) return "";
-
     const routeId = String(id);
     const byExactId = exercises.find((e) => String(e.id) === routeId);
     if (byExactId) return String(byExactId.id);
-
     if (exerciseNameFromState) {
       const byName = exercises.find(
         (e) =>
@@ -91,7 +91,6 @@ export default function ExerciseInfo() {
       );
       if (byName) return String(byName.id);
     }
-
     return routeId;
   }, [id, exercises, exerciseNameFromState]);
 
@@ -110,6 +109,12 @@ export default function ExerciseInfo() {
     "heaviest",
   );
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null);
+  const [tooltipStyle, setTooltipStyle] = useState<{
+    left: number;
+    top: number;
+    label: string;
+  } | null>(null);
+  const [timeRange, setTimeRange] = useState<"1W" | "1M" | "3M" | "ALL">("ALL");
   const svgRef = useRef<SVGSVGElement | null>(null);
   const chartViewportRef = useRef<HTMLDivElement | null>(null);
   const [chartViewportWidth, setChartViewportWidth] = useState(0);
@@ -117,16 +122,13 @@ export default function ExerciseInfo() {
   useEffect(() => {
     const el = chartViewportRef.current;
     if (!el) return;
-
     const update = () => {
       const next = Math.round(el.getBoundingClientRect().width);
       setChartViewportWidth((prev) => (prev !== next ? next : prev));
     };
-
     update();
     const observer = new ResizeObserver(() => update());
     observer.observe(el);
-
     return () => {
       observer.disconnect();
     };
@@ -136,11 +138,39 @@ export default function ExerciseInfo() {
     const byId = exercises.find(
       (e) => String(e.id) === String(resolvedExerciseId || id),
     );
-    if (byId) return byId;
+    if (byId) {
+      // If the user's exercise exists but doesn't include equipment,
+      // try to augment it from the library dataset by matching name.
+      if (!byId.equipment) {
+        const libByName = libraryExercises.find(
+          (le) =>
+            String(le.name || "").toLowerCase() ===
+            String(byId.name || "").toLowerCase(),
+        );
+        if (libByName && libByName.equipment) {
+          return { ...byId, equipment: libByName.equipment };
+        }
+      }
+      return byId;
+    }
+    // Try to find in libraryExercises by ID
+    const byLibId = libraryExercises.find(
+      (e) => String(e.id) === String(resolvedExerciseId || id),
+    );
+    if (byLibId) return byLibId;
+    // Always check by name (case-insensitive) if ID lookup fails
+    const byName = libraryExercises.find(
+      (e) =>
+        String(e.name || "").toLowerCase() ===
+          String(exerciseNameFromState || "").toLowerCase() ||
+        String(e.name || "").toLowerCase() === String(id || "").toLowerCase(),
+    );
+    if (byName) return byName;
     return {
       id: String(id || ""),
       name: exerciseNameFromState || `Exercise ${id}`,
       muscleGroup: muscleFromState,
+      equipment: undefined,
       createdAt: new Date(),
     };
   }, [
@@ -226,14 +256,12 @@ export default function ExerciseInfo() {
         set.workout || set.workoutId || set.workout_id || "",
       );
       if (!workoutId) return;
-
       const workout = workouts.find((w: any) => String(w.id) === workoutId);
       const date = workout?.date
         ? new Date(workout.date)
         : workout?.createdAt
           ? new Date(workout.createdAt)
           : undefined;
-
       if (!map.has(workoutId)) {
         map.set(workoutId, {
           workoutId,
@@ -242,7 +270,6 @@ export default function ExerciseInfo() {
           sets: [],
         });
       }
-
       map.get(workoutId)?.sets.push(set);
     });
 
@@ -265,13 +292,7 @@ export default function ExerciseInfo() {
   ];
 
   const progressionPoints = useMemo(() => {
-    const dailyMap = new Map<
-      string,
-      {
-        date: Date;
-        value: number;
-      }
-    >();
+    const dailyMap = new Map<string, { date: Date; value: number }>();
 
     groupedHistory
       .slice()
@@ -281,12 +302,10 @@ export default function ExerciseInfo() {
         (group.sets || []).forEach((s: any) => {
           const w = Number(s.weight || 0);
           const reps = Number(s.reps || 0);
-
           if (graphMetric === "heaviest") {
             if (w > metricValue) metricValue = w;
             return;
           }
-
           if (graphMetric === "orm") {
             if (w > 0 && reps > 0) {
               const est = w * (1 + reps / 30);
@@ -294,31 +313,22 @@ export default function ExerciseInfo() {
             }
             return;
           }
-
           if (graphMetric === "volume") {
-            if (w > 0 && reps > 0) {
-              metricValue += w * reps;
-            }
+            if (w > 0 && reps > 0) metricValue += w * reps;
           }
         });
 
         const parsedDate = group.date ? new Date(group.date) : null;
         if (!parsedDate || Number.isNaN(parsedDate.getTime())) return;
-
         const value = Number(metricValue);
         if (!Number.isFinite(value) || value <= 0) return;
 
         const dateKey = format(parsedDate, "yyyy-MM-dd");
         const existing = dailyMap.get(dateKey);
-
         if (!existing) {
-          dailyMap.set(dateKey, {
-            date: new Date(dateKey),
-            value,
-          });
+          dailyMap.set(dateKey, { date: new Date(dateKey), value });
           return;
         }
-
         if (graphMetric === "volume") {
           existing.value += value;
         } else {
@@ -339,41 +349,39 @@ export default function ExerciseInfo() {
       });
   }, [groupedHistory, graphMetric]);
 
+  const filteredProgressionPoints = useMemo(() => {
+    if (timeRange === "ALL") return progressionPoints;
+    const now = Date.now();
+    const cutoff =
+      timeRange === "1W"
+        ? now - 7 * 86400000
+        : timeRange === "1M"
+          ? now - 30 * 86400000
+          : now - 90 * 86400000;
+    return progressionPoints.filter(
+      (p) => p.date && new Date(p.date).getTime() >= cutoff,
+    );
+  }, [progressionPoints, timeRange]);
+
   const pointSpacing = 70;
   const dynamicChartWidth = useMemo(
     () =>
       Math.max(
         chartViewportWidth || 0,
-        progressionPoints.length * pointSpacing,
+        filteredProgressionPoints.length * pointSpacing,
         260,
       ),
-    [chartViewportWidth, progressionPoints.length],
+    [chartViewportWidth, filteredProgressionPoints.length],
   );
 
   useEffect(() => {
     const el = chartViewportRef.current;
     if (!el) return;
     el.scrollLeft = el.scrollWidth;
-  }, [dynamicChartWidth, progressionPoints.length]);
-
-  const progressPolyline = useMemo(() => {
-    if (progressionPoints.length < 2) return "";
-
-    const width = 100;
-    const height = 40;
-    const maxY = Math.max(...progressionPoints.map((p) => p.value), 1);
-
-    return progressionPoints
-      .map((p, idx) => {
-        const x = (idx / (progressionPoints.length - 1)) * width;
-        const y = height - (p.value / maxY) * height;
-        return `${x},${y}`;
-      })
-      .join(" ");
-  }, [progressionPoints]);
+  }, [dynamicChartWidth, filteredProgressionPoints.length]);
 
   const graphRenderData = useMemo(() => {
-    if (progressionPoints.length === 0) {
+    if (filteredProgressionPoints.length === 0) {
       return {
         points: [] as Array<{ x: number; y: number; value: number }>,
         linePoints: "",
@@ -386,30 +394,30 @@ export default function ExerciseInfo() {
     }
 
     const viewWidth = dynamicChartWidth;
-    const viewHeight = 40;
-    const topPadding = 4;
+    const topPadding = 2;
     const bottomPadding = 4;
     const horizontalPadding = 4;
     const chartWidth = viewWidth - horizontalPadding * 2;
-    const chartHeight = viewHeight - topPadding - bottomPadding;
+    const chartHeight = 40 - topPadding - bottomPadding;
     const baselineY = topPadding + chartHeight;
-    const timestamps = progressionPoints.map((p) =>
+
+    const timestamps = filteredProgressionPoints.map((p) =>
       p.date ? new Date(p.date).getTime() : 0,
     );
     const minTime = Math.min(...timestamps);
     const maxTime = Math.max(...timestamps);
-    const timeRange = Math.max(maxTime - minTime, 1);
+    const tRange = Math.max(maxTime - minTime, 1);
 
-    const values = progressionPoints.map((p) => p.value);
+    const values = filteredProgressionPoints.map((p) => p.value);
     const maxValue = Math.max(...values);
     const minValue = Math.min(...values);
     const rawRange = Math.max(maxValue - minValue, 0);
-    const domainPadding = Math.max(rawRange * 0.2, 1);
+    // Reduce domain padding so the line sits even closer to the top visually
+    const domainPadding = Math.max(rawRange * 0.04, 0.5);
 
     let yMin = minValue - domainPadding;
     let yMax = maxValue + domainPadding;
 
-    // Keep the graph visually expressive when values are very close.
     const minVisualSpan = graphMetric === "volume" ? 10 : 4;
     const visualSpan = yMax - yMin;
     if (visualSpan < minVisualSpan) {
@@ -418,7 +426,6 @@ export default function ExerciseInfo() {
       yMax = center + minVisualSpan / 2;
     }
 
-    // Rounded, evenly spaced axis ticks.
     const tickCount = 4;
     const roughStep = Math.max((yMax - yMin) / tickCount, 1);
     const tickStep =
@@ -437,13 +444,12 @@ export default function ExerciseInfo() {
       return { value, y };
     });
 
-    const points = progressionPoints.map((p) => {
+    const points = filteredProgressionPoints.map((p) => {
       const timestamp = p.date ? new Date(p.date).getTime() : minTime;
       const x =
-        progressionPoints.length === 1
+        filteredProgressionPoints.length === 1
           ? viewWidth / 2
-          : horizontalPadding +
-            ((timestamp - minTime) / timeRange) * chartWidth;
+          : horizontalPadding + ((timestamp - minTime) / tRange) * chartWidth;
       const y =
         topPadding +
         chartHeight -
@@ -452,7 +458,6 @@ export default function ExerciseInfo() {
     });
 
     const linePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
-
     const areaPoints =
       points.length >= 2
         ? `${points[0].x},${baselineY} ${linePoints} ${points[points.length - 1].x},${baselineY}`
@@ -467,59 +472,30 @@ export default function ExerciseInfo() {
       latestIndex: points.length - 1,
       viewWidth,
     };
-  }, [dynamicChartWidth, graphMetric, progressionPoints]);
+  }, [dynamicChartWidth, graphMetric, filteredProgressionPoints]);
 
   const latestProgressPoint =
-    progressionPoints.length > 0
-      ? progressionPoints[progressionPoints.length - 1]
+    filteredProgressionPoints.length > 0
+      ? filteredProgressionPoints[filteredProgressionPoints.length - 1]
       : null;
 
   const formatVolumeCompact = (value: number) => {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1).replace(".0", "")}k`;
-    }
+    if (value >= 1000) return `${(value / 1000).toFixed(1).replace(".0", "")}k`;
     return `${Math.round(value)}`;
   };
 
-  const graphMetricUnit = graphMetric === "volume" ? "kg" : "kg";
+  const graphMetricUnit = "kg";
   const yAxisLabelFormatter = (value: number) => {
     if (graphMetric === "volume") return formatVolumeCompact(value);
     return String(Math.round(value));
   };
-
   const formatMetricValue = (value: number) => {
     if (graphMetric === "volume") return formatVolumeCompact(value);
     return String(Math.round(value));
   };
 
-  const xAxisDateLabels = useMemo(() => {
-    if (progressionPoints.length === 0) {
-      return { first: "-", middle: "-", last: "-" };
-    }
-    const first = progressionPoints[0];
-    const middle =
-      progressionPoints[Math.floor((progressionPoints.length - 1) / 2)];
-    const last = progressionPoints[progressionPoints.length - 1];
-
-    const toLabel = (value?: Date) =>
-      value ? format(new Date(value), "MMM d") : "-";
-
-    const firstLabel = toLabel(first?.date);
-    const middleLabel = toLabel(middle?.date);
-    const lastLabel = toLabel(last?.date);
-
-    return {
-      first: firstLabel,
-      middle:
-        middleLabel === firstLabel || middleLabel === lastLabel
-          ? ""
-          : middleLabel,
-      last: lastLabel,
-    };
-  }, [progressionPoints]);
-
   const xAxisTicks = useMemo(() => {
-    if (progressionPoints.length === 0)
+    if (filteredProgressionPoints.length === 0)
       return [] as Array<{
         key: string;
         label: string;
@@ -527,59 +503,79 @@ export default function ExerciseInfo() {
         align: "left" | "center" | "right";
       }>;
 
-    const desiredTickCount = 4;
-    const total = progressionPoints.length;
+    const total = filteredProgressionPoints.length;
+    const horizontalPadding = 4;
+    const viewWidth = dynamicChartWidth;
+    const chartWidth = viewWidth - horizontalPadding * 2;
+    const timestamps = filteredProgressionPoints.map((p) =>
+      p.date ? new Date(p.date).getTime() : 0,
+    );
+    const minTime = Math.min(...timestamps);
+    const maxTime = Math.max(...timestamps);
+    const tRange = Math.max(maxTime - minTime, 1);
 
-    let indexes: number[] = [];
-    if (total <= desiredTickCount) {
+    let indexes: number[];
+    if (total <= 6) {
       indexes = Array.from({ length: total }, (_, i) => i);
     } else {
-      const step = (total - 1) / (desiredTickCount - 1);
+      const desiredCount = 5;
+      const step = (total - 1) / (desiredCount - 1);
       const unique = new Set<number>();
-      for (let i = 0; i < desiredTickCount; i += 1) {
-        unique.add(Math.round(i * step));
-      }
+      for (let i = 0; i < desiredCount; i++) unique.add(Math.round(i * step));
       unique.add(0);
       unique.add(total - 1);
       indexes = Array.from(unique).sort((a, b) => a - b);
     }
 
-    const horizontalPadding = 4;
-    const viewWidth = dynamicChartWidth;
-    const chartWidth = viewWidth - horizontalPadding * 2;
-    const timestamps = progressionPoints.map((p) =>
-      p.date ? new Date(p.date).getTime() : 0,
-    );
-    const minTime = Math.min(...timestamps);
-    const maxTime = Math.max(...timestamps);
-    const timeRange = Math.max(maxTime - minTime, 1);
-
-    return indexes.map((idx, i) => {
-      const point = progressionPoints[idx];
+    return indexes.map((idx) => {
+      const point = filteredProgressionPoints[idx];
       const timestamp = point.date ? new Date(point.date).getTime() : minTime;
       const x =
         total === 1
           ? viewWidth / 2
-          : horizontalPadding +
-            ((timestamp - minTime) / timeRange) * chartWidth;
-      const align: "left" | "center" | "right" = "center";
+          : horizontalPadding + ((timestamp - minTime) / tRange) * chartWidth;
       return {
         key: `${point.workoutId}-${idx}`,
         label: point.date ? format(new Date(point.date), "MMM d") : "-",
         x,
-        align,
+        align: "center" as const,
       };
     });
-  }, [dynamicChartWidth, progressionPoints]);
+  }, [dynamicChartWidth, filteredProgressionPoints]);
 
   const chartHorizontalPadding = 4;
 
+  // Color maps copied from Exercises.tsx for pill styling
+  const colorMap: Record<string, string> = {
+    chest: "bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30",
+    back: "bg-blue-500/20 border-blue-500/40 text-blue-400 hover:bg-blue-500/30",
+    shoulders:
+      "bg-purple-600/20 border-purple-600/40 text-purple-500 hover:bg-purple-600/30",
+    biceps:
+      "bg-green-500/20 border-green-500/40 text-green-400 hover:bg-green-500/30",
+    triceps:
+      "bg-yellow-500/20 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/30",
+    forearms:
+      "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30",
+    quads:
+      "bg-orange-500/20 border-orange-500/40 text-orange-400 hover:bg-orange-500/30",
+    hamstrings:
+      "bg-violet-500/20 border-violet-500/40 text-violet-400 hover:bg-violet-500/30",
+    glutes:
+      "bg-rose-500/20 border-rose-500/40 text-rose-400 hover:bg-rose-500/30",
+    calves:
+      "bg-amber-500/20 border-amber-500/40 text-amber-400 hover:bg-amber-500/30",
+    core: "bg-pink-500/20 border-pink-500/40 text-pink-400 hover:bg-pink-500/30",
+    cardio:
+      "bg-cyan-500/20 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/30",
+    other:
+      "bg-slate-500/20 border-slate-500/40 text-slate-400 hover:bg-slate-500/30",
+  };
   const pill =
-    "inline-flex items-center rounded-full border border-white/10 bg-zinc-800 px-3 py-1 text-xs font-semibold text-white uppercase tracking-wide";
+    "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-all";
 
   const handleBack = () => {
     if (openedFromPicker) {
-      // navigate back to the originating route and request reopening of the picker dialog
       navigate(returnRoute || -1, {
         state: {
           reopenExerciseDialog: true,
@@ -588,26 +584,19 @@ export default function ExerciseInfo() {
       });
       return;
     }
-
     if (openedFromExercises) {
-      navigate("/exercises", {
-        state: { showLibrary: returnShowLibrary },
-      });
+      navigate("/exercises", { state: { showLibrary: returnShowLibrary } });
       return;
     }
-
     navigate(-1);
   };
 
   const handleAddFromInfo = () => {
-    // When adding from the standalone ExerciseInfo page, navigate back to returnRoute
-    // and include payload instructing the caller to add/replace the exercise.
     const payload = {
       id: String(selectedExercise.id),
       name: selectedExercise.name,
       muscleGroup: selectedExercise.muscleGroup,
     };
-
     navigate(returnRoute || -1, {
       state: {
         addExerciseFromInfo: true,
@@ -630,7 +619,6 @@ export default function ExerciseInfo() {
               ◀
             </button>
           </div>
-
           {openedFromPicker ? (
             <div>
               <Button
@@ -645,12 +633,26 @@ export default function ExerciseInfo() {
           ) : null}
         </div>
 
+        {/* Exercise info card */}
         <Card className="rounded-2xl overflow-hidden">
           <CardContent className="px-[18px] py-5">
             <h2 className="text-2xl font-bold text-white">
               {selectedExercise.name}
             </h2>
-
+            {/* Always show equipment badge if present */}
+            {selectedExercise.equipment ? (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="inline-flex items-center rounded-full border border-orange-500/40 bg-orange-500/15 px-3 py-1 text-xs font-semibold text-orange-400 uppercase tracking-wide">
+                  {selectedExercise.equipment}
+                </span>
+              </div>
+            ) : (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="inline-flex items-center rounded-full border border-red-500/40 bg-red-500/15 px-2 py-1 text-xs font-semibold text-red-400">
+                  No equipment
+                </span>
+              </div>
+            )}
             <div className="mt-4">
               <div className="h-[100px] w-[100px] rounded-md bg-zinc-800 border border-white/10 p-2 flex items-center justify-center">
                 <img
@@ -660,31 +662,40 @@ export default function ExerciseInfo() {
                 />
               </div>
             </div>
-
             <div className="mt-3">
               <span className="text-sm text-muted-foreground block">
                 Primary
               </span>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className={pill}>
+                <span
+                  className={`${pill} ${colorMap[primaryMuscle] || colorMap.other}`}
+                >
                   {String(selectedExercise.muscleGroup || "other")}
                 </span>
               </div>
             </div>
-
-            <div className="mt-2.5 text-sm text-muted-foreground">
-              <div>Secondary</div>
+            <div className="mt-2.5">
+              <span className="text-sm text-muted-foreground block">
+                Secondary
+              </span>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                {secondaryMuscles.map((m) => (
-                  <span key={m} className={pill}>
-                    {m}
-                  </span>
-                ))}
+                {secondaryMuscles.map((m) => {
+                  const key = (m || "").toLowerCase();
+                  return (
+                    <span
+                      key={m}
+                      className={`${pill} ${colorMap[key] || colorMap.other}`}
+                    >
+                      {m}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Records card */}
         <Card className="rounded-2xl overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="text-white">Your Records</CardTitle>
@@ -723,17 +734,15 @@ export default function ExerciseInfo() {
           </CardContent>
         </Card>
 
+        {/* Progress graph card */}
         <Card className="rounded-2xl overflow-hidden">
           <CardHeader className="pb-3">
-            <CardTitle className="text-white">
-              {graphMetric === "volume"
-                ? "Volume Progress (kg)"
-                : "Progress Graph"}
-            </CardTitle>
+            <CardTitle className="text-white">Progress Graph</CardTitle>
           </CardHeader>
           <CardContent className="px-[18px] pt-[18px] pb-[18px]">
             {progressionPoints.length >= 2 ? (
               <div className="mt-3.5 rounded-xl border border-white/5 bg-zinc-900/60 px-4 pt-10 pb-6">
+                {/* Latest value */}
                 <div className="mb-3 text-sm text-muted-foreground">
                   {latestProgressPoint
                     ? graphMetric === "volume"
@@ -744,10 +753,35 @@ export default function ExerciseInfo() {
                       : `Latest: - ${graphMetricUnit}`}
                 </div>
 
+                {/* Time range filter */}
+                <div className="mb-3 flex gap-1.5">
+                  {(["1W", "1M", "3M", "ALL"] as const).map((range) => (
+                    <button
+                      key={range}
+                      type="button"
+                      onClick={() => {
+                        setTimeRange(range);
+                        setTooltipStyle(null);
+                      }}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold border transition-colors ${
+                        timeRange === range
+                          ? "border-white/20 bg-zinc-700 text-white"
+                          : "border-white/10 bg-transparent text-muted-foreground"
+                      }`}
+                    >
+                      {range}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Metric toggle */}
                 <div className="mb-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => setGraphMetric("heaviest")}
+                    onClick={() => {
+                      setGraphMetric("heaviest");
+                      setTooltipStyle(null);
+                    }}
                     className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                       graphMetric === "heaviest"
                         ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
@@ -758,7 +792,10 @@ export default function ExerciseInfo() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setGraphMetric("orm")}
+                    onClick={() => {
+                      setGraphMetric("orm");
+                      setTooltipStyle(null);
+                    }}
                     className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                       graphMetric === "orm"
                         ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
@@ -769,7 +806,10 @@ export default function ExerciseInfo() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setGraphMetric("volume")}
+                    onClick={() => {
+                      setGraphMetric("volume");
+                      setTooltipStyle(null);
+                    }}
                     className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                       graphMetric === "volume"
                         ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
@@ -780,198 +820,217 @@ export default function ExerciseInfo() {
                   </button>
                 </div>
 
-                <div
-                  className="flex items-stretch gap-2 w-full"
-                  style={{ position: "relative" }}
-                >
-                  <div className="w-[42px] shrink-0 relative h-24 sm:h-28 lg:h-32 xl:h-36 pr-1 text-xs text-muted-foreground text-right">
-                    {graphRenderData.yAxisTicks.map((tick, idx) => (
-                      <span
-                        key={`y-tick-label-${idx}`}
-                        className="absolute right-0 -translate-y-1/2 whitespace-nowrap"
-                        style={{ top: `${(tick.y / 40) * 100}%` }}
-                      >
-                        {`${yAxisLabelFormatter(tick.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
-                      </span>
-                    ))}
+                {/* Graph or filtered empty state */}
+                {filteredProgressionPoints.length < 2 ? (
+                  <div className="mt-2.5 flex min-h-[80px] items-center justify-center rounded-xl border border-white/5 bg-zinc-900/60 text-sm text-muted-foreground">
+                    No data in this range — try a wider window.
                   </div>
-
+                ) : (
                   <div
-                    ref={chartViewportRef}
-                    className="w-full min-w-0 overflow-x-auto scrollbar-thin"
+                    className="flex items-stretch gap-2 w-full"
+                    style={{ position: "relative" }}
                   >
-                    <div style={{ minWidth: `${dynamicChartWidth + 20}px` }}>
-                      <div
-                        style={{
-                          width: `${dynamicChartWidth}px`,
-                          marginLeft: "10px",
-                          marginRight: "10px",
-                        }}
-                      >
-                        <svg
-                          ref={svgRef}
-                          viewBox={`0 0 ${dynamicChartWidth} 40`}
-                          preserveAspectRatio="none"
-                          className="w-full h-24 sm:h-28 lg:h-32 xl:h-36"
+                    {/* Y-axis labels */}
+                    <div className="w-[42px] shrink-0 relative h-24 sm:h-28 lg:h-32 xl:h-36 pr-1 text-xs text-muted-foreground text-right">
+                      {graphRenderData.yAxisTicks.map((tick, idx) => (
+                        <span
+                          key={`y-tick-label-${idx}`}
+                          className="absolute right-0 -translate-y-1/2 whitespace-nowrap"
+                          style={{ top: `${(tick.y / 40) * 100}%` }}
                         >
-                          <defs>
-                            <linearGradient
-                              id="progressGradient"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="0%"
-                                stopColor="rgba(249,115,22,0.18)"
-                              />
-                              <stop
-                                offset="50%"
-                                stopColor="rgba(249,115,22,0.05)"
-                              />
-                              <stop
-                                offset="100%"
-                                stopColor="rgba(249,115,22,0)"
-                              />
-                            </linearGradient>
-                          </defs>
+                          {`${yAxisLabelFormatter(tick.value)} ${graphMetric === "volume" ? "" : "kg"}`.trim()}
+                        </span>
+                      ))}
+                    </div>
 
-                          {graphRenderData.yAxisTicks.map((tick, idx) => (
+                    {/* Scrollable chart viewport */}
+                    <div
+                      ref={chartViewportRef}
+                      className="w-full min-w-0 overflow-x-auto chart-scroll"
+                      style={
+                        {
+                          scrollbarWidth: "none",
+                          msOverflowStyle: "none",
+                        } as React.CSSProperties
+                      }
+                    >
+                      <div style={{ minWidth: `${dynamicChartWidth + 20}px` }}>
+                        <div
+                          style={{
+                            width: `${dynamicChartWidth}px`,
+                            marginLeft: "10px",
+                            marginRight: "10px",
+                          }}
+                        >
+                          <svg
+                            ref={svgRef}
+                            viewBox={`0 0 ${dynamicChartWidth} 40`}
+                            preserveAspectRatio="none"
+                            className="w-full h-24 sm:h-28 lg:h-32 xl:h-36"
+                            onClick={() => setTooltipStyle(null)}
+                          >
+                            <defs>
+                              <linearGradient
+                                id="progressGradient"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                              >
+                                <stop
+                                  offset="0%"
+                                  stopColor="rgba(249,115,22,0.18)"
+                                />
+                                <stop
+                                  offset="50%"
+                                  stopColor="rgba(249,115,22,0.05)"
+                                />
+                                <stop
+                                  offset="100%"
+                                  stopColor="rgba(249,115,22,0)"
+                                />
+                              </linearGradient>
+                            </defs>
+
+                            {graphRenderData.yAxisTicks.map((tick, idx) => (
+                              <line
+                                key={`grid-line-${idx}`}
+                                x1={chartHorizontalPadding}
+                                y1={tick.y}
+                                x2={
+                                  graphRenderData.viewWidth -
+                                  chartHorizontalPadding
+                                }
+                                y2={tick.y}
+                                stroke="rgba(255,255,255,0.06)"
+                                strokeWidth="1"
+                              />
+                            ))}
+
                             <line
-                              key={`grid-line-${idx}`}
                               x1={chartHorizontalPadding}
-                              y1={tick.y}
+                              y1={graphRenderData.baselineY}
                               x2={
                                 graphRenderData.viewWidth -
                                 chartHorizontalPadding
                               }
-                              y2={tick.y}
-                              stroke="rgba(255,255,255,0.06)"
+                              y2={graphRenderData.baselineY}
+                              stroke="rgba(255,255,255,0.05)"
                               strokeWidth="1"
                             />
-                          ))}
 
-                          <line
-                            x1={chartHorizontalPadding}
-                            y1={graphRenderData.baselineY}
-                            x2={
-                              graphRenderData.viewWidth - chartHorizontalPadding
-                            }
-                            y2={graphRenderData.baselineY}
-                            stroke="rgba(255,255,255,0.05)"
-                            strokeWidth="1"
-                          />
+                            <polygon
+                              points={graphRenderData.areaPoints}
+                              fill="url(#progressGradient)"
+                              opacity="0.65"
+                            />
 
-                          <polygon
-                            points={graphRenderData.areaPoints}
-                            fill="url(#progressGradient)"
-                            opacity="0.65"
-                          />
+                            <polyline
+                              fill="none"
+                              stroke="#f97316"
+                              strokeWidth="1.3"
+                              strokeOpacity="0.9"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              points={graphRenderData.linePoints}
+                            />
 
-                          <polyline
-                            fill="none"
-                            stroke="#f97316"
-                            strokeWidth="1.3"
-                            strokeOpacity="0.9"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            points={graphRenderData.linePoints}
-                          />
-
-                          {graphRenderData.points.map((point, idx) => {
-                            const isLatest =
-                              idx === graphRenderData.latestIndex;
-                            return (
-                              <ellipse
-                                key={`progress-point-${idx}`}
-                                cx={point.x}
-                                cy={point.y}
-                                rx={isLatest ? 4 : 4}
-                                ry={isLatest ? 1.5 : 1.3}
-                                fill="#f97316"
-                                stroke="rgba(0,0,0,0.4)"
-                                strokeWidth="0.9"
-                                onClick={() => setActivePointIndex(idx)}
-                                style={{ cursor: "pointer" }}
-                              >
-                                <title>{`${formatMetricValue(point.value)} ${graphMetricUnit}`}</title>
-                              </ellipse>
-                            );
-                          })}
-
-                          {activePointIndex !== null &&
-                            (() => {
-                              const p =
-                                graphRenderData.points[activePointIndex];
-                              const valueLabel = `${formatMetricValue(p.value)} ${graphMetricUnit}`;
-                              const svgH = 40;
-                              const renderedW =
-                                chartViewportWidth || dynamicChartWidth;
-                              const renderedH = 96;
-                              const scaleX = dynamicChartWidth / renderedW;
-                              const scaleY = svgH / renderedH;
-                              const boxW = 44;
-                              const boxH = 20;
-                              const bx = Math.min(
-                                Math.max(p.x - (boxW * scaleX) / 2, 4),
-                                dynamicChartWidth - boxW * scaleX - 4,
-                              );
-                              const by = Math.max(
-                                p.y - boxH * scaleY - 2 * scaleY,
-                                0,
-                              );
+                            {graphRenderData.points.map((point, idx) => {
+                              const isLatest =
+                                idx === graphRenderData.latestIndex;
                               return (
-                                <g
-                                  transform={`translate(${bx},${by}) scale(${scaleX},${scaleY})`}
-                                  pointerEvents="none"
+                                <ellipse
+                                  key={`progress-point-${idx}`}
+                                  cx={point.x}
+                                  cy={point.y}
+                                  rx={4}
+                                  ry={isLatest ? 1.5 : 1.3}
+                                  fill="#f97316"
+                                  stroke="rgba(0,0,0,0.4)"
+                                  strokeWidth="0.9"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const svg = svgRef.current;
+                                    if (!svg) return;
+                                    const ctm = svg.getScreenCTM();
+                                    const container = chartViewportRef.current;
+                                    if (!ctm || !container) return;
+                                    const m: any = ctm as any;
+                                    const containerRect =
+                                      container.getBoundingClientRect();
+                                    const screenX = m.a * point.x + m.e;
+                                    const screenY = m.d * point.y + m.f;
+                                    setTooltipStyle({
+                                      left: screenX - containerRect.left,
+                                      top: screenY - containerRect.top,
+                                      label: `${formatMetricValue(point.value)} ${graphMetricUnit}`,
+                                    });
+                                    setActivePointIndex(idx);
+                                  }}
+                                  style={{ cursor: "pointer" }}
                                 >
-                                  <rect
-                                    x={0}
-                                    y={0}
-                                    width={boxW}
-                                    height={boxH}
-                                    rx="3"
-                                    fill="rgba(0,0,0,0.88)"
-                                  />
-                                  <text
-                                    x={boxW / 2}
-                                    y={12.5}
-                                    textAnchor="middle"
-                                    fontSize="9"
-                                    fill="white"
-                                    fontWeight="600"
-                                  >
-                                    {valueLabel}
-                                  </text>
-                                </g>
+                                  <title>{`${formatMetricValue(point.value)} ${graphMetricUnit}`}</title>
+                                </ellipse>
                               );
-                            })()}
-                        </svg>
+                            })}
+                          </svg>
 
-                        <div className="mt-2 relative h-4 text-[11px] text-muted-foreground">
-                          {xAxisTicks.map((tick) => (
-                            <span
-                              key={tick.key}
-                              className={
-                                tick.align === "left"
-                                  ? "absolute translate-x-0 whitespace-nowrap"
-                                  : tick.align === "right"
-                                    ? "absolute -translate-x-full whitespace-nowrap"
-                                    : "absolute -translate-x-1/2 whitespace-nowrap"
-                              }
-                              style={{
-                                left: `${(tick.x / dynamicChartWidth) * 100}%`,
-                              }}
-                            >
-                              {tick.label}
-                            </span>
-                          ))}
+                          {/* X-axis date labels */}
+                          <div className="mt-2 relative h-4 text-[11px] text-muted-foreground">
+                            {xAxisTicks.map((tick) => (
+                              <span
+                                key={tick.key}
+                                className="absolute -translate-x-1/2 whitespace-nowrap"
+                                style={{
+                                  left: `${(tick.x / dynamicChartWidth) * 100}%`,
+                                }}
+                              >
+                                {tick.label}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Tooltip — outside scroll container so it never clips */}
+                    {tooltipStyle && (
+                      <div
+                        className="pointer-events-none absolute z-20"
+                        style={{
+                          left: tooltipStyle.left + 42,
+                          top: tooltipStyle.top,
+                          transform: "translate(-50%, calc(-100% - 10px))",
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: "rgba(10,10,10,0.95)",
+                            borderRadius: "6px",
+                            padding: "4px 8px",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            color: "white",
+                            whiteSpace: "nowrap",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                          }}
+                        >
+                          {tooltipStyle.label}
+                        </div>
+                        <div
+                          style={{
+                            width: 0,
+                            height: 0,
+                            margin: "0 auto",
+                            borderLeft: "5px solid transparent",
+                            borderRight: "5px solid transparent",
+                            borderTop: "5px solid rgba(10,10,10,0.95)",
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="mt-2.5 flex min-h-[110px] items-center justify-center rounded-xl border border-white/5 bg-zinc-900/60 text-sm text-muted-foreground">
@@ -981,6 +1040,7 @@ export default function ExerciseInfo() {
           </CardContent>
         </Card>
 
+        {/* History card */}
         <Card className="rounded-2xl overflow-hidden">
           <CardHeader className="pb-1">
             <CardTitle className="text-white">History</CardTitle>
@@ -1078,7 +1138,6 @@ export default function ExerciseInfo() {
                                 const isHiit = isHiitExerciseName(
                                   selectedExercise.name || "",
                                 );
-
                                 if (isHiit) {
                                   return (
                                     <>
@@ -1100,7 +1159,6 @@ export default function ExerciseInfo() {
                                     </>
                                   );
                                 }
-
                                 return (
                                   <>
                                     <span className="flex justify-center">
@@ -1142,20 +1200,26 @@ export default function ExerciseInfo() {
                           </div>
 
                           <div className="space-y-2">
-                            {g.sets.map((s: any, idx: number) => (
-                              <SetRow
-                                key={`${g.workoutId}-${idx}`}
-                                set={s}
-                                exerciseName={selectedExercise.name || ""}
-                                unit={s.unit || "kg"}
-                                setNumber={s.setNumber ?? idx + 1}
-                                onUpdate={() => {}}
-                                onUnitChange={() => {}}
-                                onComplete={() => {}}
-                                readOnly
-                                showComplete={false}
-                              />
-                            ))}
+                            {g.sets
+                              .slice()
+                              .sort(
+                                (a: any, b: any) =>
+                                  (a.setNumber || 0) - (b.setNumber || 0),
+                              )
+                              .map((s: any, setIdx: number) => (
+                                <SetRow
+                                  key={`h-${g.workoutId}-${setIdx}`}
+                                  set={s}
+                                  exerciseName={selectedExercise.name || ""}
+                                  unit={s.unit || "kg"}
+                                  setNumber={s.setNumber ?? setIdx + 1}
+                                  onUpdate={() => {}}
+                                  onUnitChange={() => {}}
+                                  onComplete={() => {}}
+                                  readOnly
+                                  showComplete={false}
+                                />
+                              ))}
                           </div>
                         </div>
                       </CardContent>
