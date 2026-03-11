@@ -809,37 +809,56 @@ export function authHeaders() {
 
 // Forgot password / reset helpers
 export async function requestPasswordReset(email: string): Promise<{ detail: string; otp?: string }> {
-  const res = await fetch(`${API_BASE}/auth/password-reset/request/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email }),
-  });
+  const url = `${API_BASE}/auth/password-reset/request/`;
+  try {
+    const res = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    }, 15000);
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error((data && (data.detail as string)) || "Failed to request password reset.");
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error((data && (data.detail as string)) || "Failed to request password reset.");
+    }
+
+    return (await res.json()) as { detail: string; otp?: string };
+  } catch (err: any) {
+    if (err?.message && err.message.includes("timed out")) {
+      throw new Error(`Could not reach backend (${API_BASE}). Request timed out.`);
+    }
+    // Network-level errors (DNS, CORS, connection refused) show up here
+    throw new Error(
+      `Could not reach backend (${API_BASE}). ${err?.message || "Network error."}`,
+    );
   }
-
-  return (await res.json()) as { detail: string; otp?: string };
 }
 
 export async function confirmPasswordReset(email: string, otp: string, newPassword: string): Promise<string> {
-  const res = await fetch(`${API_BASE}/auth/password-reset/confirm/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, otp, new_password: newPassword }),
-  });
+  const url = `${API_BASE}/auth/password-reset/confirm/`;
+  try {
+    const res = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, otp, new_password: newPassword }),
+    }, 15000);
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error((data && (data.detail as string)) || "Failed to reset password.");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error((data && (data.detail as string)) || "Failed to reset password.");
+    }
+
+    return (data && (data.detail as string)) || "Password has been reset.";
+  } catch (err: any) {
+    if (err?.message && err.message.includes("timed out")) {
+      throw new Error(`Could not reach backend (${API_BASE}). Request timed out.`);
+    }
+    throw new Error(`Could not reach backend (${API_BASE}). ${err?.message || "Network error."}`);
   }
-
-  return (data && (data.detail as string)) || "Password has been reset.";
 }
 
 function mapExercise(api: ApiExercise): UiExercise {
