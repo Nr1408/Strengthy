@@ -1025,6 +1025,7 @@ export default function Auth({
                         )}
                       </div>
                     </div>
+                  </>
                   </CardContent>
                 </motion.div>
               </AnimatePresence>
