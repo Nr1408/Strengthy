@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE, login, register, setToken } from "@/lib/api";
+import { API_BASE, login, register, setToken, getToken } from "@/lib/api";
 import ConfirmEmailDialog from "@/components/ConfirmEmailDialog";
 import InvalidCredentialsDialog from "@/components/InvalidCredentialsDialog";
 import { createClient } from "@supabase/supabase-js";
@@ -613,7 +613,15 @@ export default function Auth({
       // Login flow
       await login(formData.email, formData.password);
       toast({ title: "Welcome back", description: "Signed in." });
-      navigate("/dashboard");
+      try {
+        const token = getToken();
+        const goOnboarding = token
+          ? await shouldRouteToOnboarding(token)
+          : false;
+        navigate(goOnboarding ? "/onboarding" : "/dashboard");
+      } catch {
+        navigate("/dashboard");
+      }
     } catch (err: any) {
       const msg = String(err?.message || err || "Authentication failed");
 
