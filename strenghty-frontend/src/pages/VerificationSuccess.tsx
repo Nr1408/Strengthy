@@ -1,10 +1,46 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { setToken } from "@/lib/api";
 
 export default function VerificationSuccess() {
   const navigate = useNavigate();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Supabase appends session to the URL hash after email confirmation:
+    // /verified#access_token=xxx&refresh_token=yyy&type=signup
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const accessToken = hash.get("access_token");
+    const type = hash.get("type");
+
+    if (accessToken) {
+      setToken(accessToken);
+      // Clean up the hash from the URL so tokens aren't visible
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+
+    setReady(true);
+
+    // If it's a new signup, auto-redirect to onboarding after a short delay
+    if (accessToken && type === "signup") {
+      const timer = setTimeout(() => navigate("/onboarding"), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [navigate]);
+
+  const handleContinue = () => {
+    navigate("/onboarding");
+  };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
+        <Loader2 className="h-8 w-8 text-[#FF6B00] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
@@ -19,16 +55,16 @@ export default function VerificationSuccess() {
           </h1>
 
           <p className="text-sm text-zinc-300 mb-6">
-            Your email is confirmed. You can now close this tab and return to
-            the app to start tracking your gains.
+            Your email is confirmed. Let's set up your profile to start
+            tracking your gains.
           </p>
 
           <div className="w-full flex justify-center">
             <Button
-              onClick={() => navigate("/dashboard")}
+              onClick={handleContinue}
               className="bg-[#FF6B00] hover:brightness-95 text-black px-6 py-2 rounded-md"
             >
-              Back to Dashboard
+              Start Tracking
             </Button>
           </div>
         </div>
