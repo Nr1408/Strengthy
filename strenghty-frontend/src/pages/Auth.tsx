@@ -970,7 +970,7 @@ export default function Auth({
                           "Loading..."
                         ) : (
                           <>
-                            <>{showSignup ? "Create Account" : "Log In"}</>
+                            {showSignup ? "Create Account" : "Log In"}
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </>
                         )}
