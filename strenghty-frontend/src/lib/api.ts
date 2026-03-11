@@ -1794,6 +1794,14 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
       unit?: string | null;
     }>;
 
+    // Fetch sets already saved in THIS workout for the same exercise
+    // so a weaker later set doesn't get a false PR over a stronger earlier one
+    const sessionRes = await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${exerciseNum}&workout_id=eq.${workoutNum}`,
+      { headers: await supabaseHeadersAsync() },
+    );
+    const sessionSets = sessionRes.ok ? (await sessionRes.json()) as typeof hist : [];
+
     const toNum = (v: unknown): number | null => {
       if (v === null || typeof v === "undefined") return null;
       const n = Number(v);
@@ -1813,7 +1821,7 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     let maxVolume = -Infinity;
     let maxReps = -Infinity;
 
-    for (const row of hist) {
+    for (const row of [...hist, ...sessionSets]) {
       const repsVal = toNum(row.reps) ?? 0;
       const halfRepsVal = toNum(row.half_reps) ?? 0;
       const repsTotal = repsVal + halfRepsVal * 0.5;
@@ -1834,12 +1842,35 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
     const currentWeightKg = weightToKg(typeof weight === "number" ? weight : null, unit || null);
     const hasHistory = hist.length > 0;
 
-    const isAbsWeightPr = hasHistory && currentWeightKg != null && currentWeightKg > maxAbsWeight;
-    const isE1rmPr =
-      hasHistory && currentWeightKg != null && calcE1rm(currentWeightKg, currentRepsTotal) > maxE1rm;
-    const isVolumePr = hasHistory && currentWeightKg != null && currentWeightKg * currentRepsTotal > maxVolume;
-    const isRepPr = hasHistory && currentRepsTotal > maxReps;
-    const isPr = !!(isAbsWeightPr || isE1rmPr || isVolumePr || isRepPr);
+      const isAbsWeightPr = hasHistory && currentWeightKg != null && currentWeightKg > maxAbsWeight;
+      const e1rmValue = currentWeightKg != null ? calcE1rm(currentWeightKg, currentRepsTotal) : null;
+      const isE1rmPr = hasHistory && currentWeightKg != null && e1rmValue != null && e1rmValue > maxE1rm;
+      const volumeValue = currentWeightKg != null ? currentWeightKg * currentRepsTotal : null;
+      const isVolumePr = hasHistory && currentWeightKg != null && volumeValue != null && volumeValue > maxVolume;
+      const isRepPr = hasHistory && currentRepsTotal > maxReps;
+      const isPr = !!(isAbsWeightPr || isE1rmPr || isVolumePr || isRepPr);
+
+      // Debug log for PR calculations
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          window.localStorage.setItem(
+            "debug:prCalc",
+            JSON.stringify({
+              currentWeightKg,
+              currentRepsTotal,
+              e1rmValue,
+              maxE1rm,
+              volumeValue,
+              maxVolume,
+              isAbsWeightPr,
+              isE1rmPr,
+              isVolumePr,
+              isRepPr,
+              isPr,
+            })
+          );
+        } catch (e) {}
+      }
 
     for (let attempt = 0; attempt < 3; attempt++) {
       const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/workout_sets`, {
@@ -2017,12 +2048,20 @@ export async function updateSet(id: string, data: Partial<{ setNumber: number; r
         unit?: string | null;
       }>;
 
+      // Also include sibling sets in the same workout so editing a weaker set
+      // doesn't produce a false PR when a stronger set already exists this session
+      const sessionRes2 = await fetchWithTimeout(
+        `${SUPABASE_REST_BASE}/workout_sets?select=reps,half_reps,weight,unit&exercise_id=eq.${Number(current.exercise_id)}&workout_id=eq.${currentWorkoutId}&id=neq.${encodeURIComponent(id)}`,
+        { headers: await supabaseHeadersAsync() },
+      );
+      const sessionSets2 = sessionRes2.ok ? (await sessionRes2.json()) as typeof hist : [];
+
       let maxAbsWeight = -Infinity;
       let maxE1rm = -Infinity;
       let maxVolume = -Infinity;
       let maxReps = -Infinity;
 
-      for (const row of hist) {
+      for (const row of [...hist, ...sessionSets2]) {
         const repsVal = toNum(row.reps) ?? 0;
         const halfRepsVal = toNum(row.half_reps) ?? 0;
         const repsTotal = repsVal + halfRepsVal * 0.5;
@@ -2392,4 +2431,27 @@ export async function updateCardioSet(
   if (!res.ok) throw new Error(`Update cardio set failed: ${res.status}`);
   const api = (await res.json()) as ApiCardioSet;
   return mapCardioSet(api);
+}
+
+export async function patchSetPrFlags(
+  id: string,
+  flags: {
+    is_pr?: boolean;
+    is_abs_weight_pr?: boolean;
+    is_e1rm_pr?: boolean;
+    is_volume_pr?: boolean;
+    is_rep_pr?: boolean;
+  }
+): Promise<void> {
+  if (!shouldUseSupabaseApi()) return;
+  try {
+    await fetchWithTimeout(
+      `${SUPABASE_REST_BASE}/workout_sets?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { ...await supabaseHeadersAsync(true) },
+        body: JSON.stringify(flags),
+      }
+    );
+  } catch (e) {}
 }

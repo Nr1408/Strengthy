@@ -25,7 +25,11 @@ import ExploreRoutines from "./pages/ExploreRoutines";
 import NewWorkout from "./pages/NewWorkout";
 import WorkoutPreview from "./pages/WorkoutPreview";
 import WorkoutComplete from "./pages/WorkoutComplete";
-import EditWorkout from "./pages/EditWorkout";
+import * as EditWorkoutModule from "./pages/EditWorkout";
+const EditWorkout =
+  (EditWorkoutModule as any)?.default ||
+  (EditWorkoutModule as any)?.EditWorkout ||
+  (() => <div>EditWorkout module not found</div>);
 import ViewWorkout from "./pages/ViewWorkout";
 import ExerciseHistory from "./pages/ExerciseHistory";
 import ExerciseInfo from "./pages/ExerciseInfo";

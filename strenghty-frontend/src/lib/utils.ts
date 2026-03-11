@@ -96,11 +96,16 @@ export function countPrTypesFromSet(set: any): number {
     addFlag((set as any).intensityPR || (set as any).is_intensity_pr);
     addFlag((set as any).splitPR || (set as any).is_split_pr);
   } else if (type === "W" || type === "S" || type === "F" || type === "D" || typeof type === "undefined") {
-    // Strength PR flags (repPR intentionally excluded per UX — "Most Reps at this Weight"
-    // is not surfaced as its own visible PR type).
+    // Strength PR flags, including repPR (Most Reps at this weight)
     addFlag((set as any).absWeightPR || (set as any).is_abs_weight_pr);
     addFlag((set as any).e1rmPR || (set as any).is_e1rm_pr);
     addFlag((set as any).volumePR || (set as any).is_volume_pr);
+    // Only count repPR if weight is null or zero (unweighted sets)
+    const repPRFlag = (set as any).repPR || (set as any).is_rep_pr;
+    const weightVal = typeof (set as any).weight === "number" ? (set as any).weight : undefined;
+    if (repPRFlag && (!weightVal || weightVal === 0)) {
+      addFlag(true);
+    }
   }
 
   // Fallback: generic PR with no typed flags

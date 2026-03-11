@@ -69,6 +69,21 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
   }, [location.pathname, location.state]);
 
+  // On app start, check backend for workouts and set localStorage flag if any exist
+  useEffect(() => {
+    async function syncFirstWorkoutFlag() {
+      try {
+        const workouts = await getWorkouts();
+        if (workouts && workouts.length > 0) {
+          localStorage.setItem("user:firstWorkoutCompleted", "1");
+        }
+      } catch (e) {
+        // ignore errors
+      }
+    }
+    syncFirstWorkoutFlag();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden isolate">
       {/* Top status bar shelf (minimal height) */}

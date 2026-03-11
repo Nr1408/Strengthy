@@ -384,9 +384,8 @@ export default function Dashboard() {
                       className="inline-block max-w-[55vw] truncate align-bottom"
                       title={name}
                     >
-                      {name}
+                      {name}!
                     </span>
-                    !
                   </h1>
                   <p className="text-muted-foreground mt-1">
                     Track your progress and recent workouts

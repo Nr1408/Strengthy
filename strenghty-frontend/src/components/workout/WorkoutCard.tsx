@@ -23,19 +23,16 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
   const setsQuery = useQuery({
     queryKey: ["sets", workout.id],
     queryFn: () => getSets(workout.id),
-    enabled:
-      !workout.exercises ||
-      workout.exercises.length === 0 ||
-      workout.exercises.every((ex) => (ex.sets || []).length === 0),
+    // Always fetch canonical sets from the server to ensure counts (PRs,
+    // volume, etc.) reflect persisted state. We fall back to the lightweight
+    // `workout.exercises` only if the fetch hasn't returned yet.
+    enabled: true,
   });
 
   const cardioQuery = useQuery({
     queryKey: ["cardio-sets", workout.id],
     queryFn: () => getCardioSetsForWorkout(workout.id),
-    enabled:
-      !workout.exercises ||
-      workout.exercises.length === 0 ||
-      workout.exercises.every((ex) => (ex.sets || []).length === 0),
+    enabled: true,
   });
 
   let totalSets = 0;
@@ -46,7 +43,49 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
   let hasStrength = false;
   let hasCardio = false;
 
-  if (workout.exercises && workout.exercises.length > 0) {
+  // Prefer server-fetched canonical sets when available. Some callers may
+  // include `workout.exercises` inline (optimistic / pre-persisted data),
+  // but relying on the server ensures consistency between the Workouts
+  // list, ViewWorkout and other pages.
+  const fetchedStrengthSets = setsQuery.data as UiWorkoutSet[] | undefined;
+  const fetchedCardioSets = cardioQuery.data as any[] | undefined;
+
+  if (fetchedStrengthSets && fetchedStrengthSets.length > 0) {
+    totalSets =
+      fetchedStrengthSets.length +
+      (fetchedCardioSets ? fetchedCardioSets.length : 0);
+    totalPRs =
+      fetchedStrengthSets.reduce(
+        (acc: number, s: UiWorkoutSet) => acc + countPrTypesFromSet(s),
+        0,
+      ) +
+      (fetchedCardioSets
+        ? fetchedCardioSets.reduce(
+            (acc: number, s: any) => acc + countPrTypesFromSet(s),
+            0,
+          )
+        : 0);
+    // Compute volume from canonical server-fetched sets
+    totalVolume = fetchedStrengthSets.reduce((acc, s) => {
+      const w = typeof s.weight === "number" ? s.weight : Number(s.weight || 0);
+      const r = typeof s.reps === "number" ? s.reps : Number(s.reps || 0);
+      return acc + w * r;
+    }, 0);
+    hasStrength = fetchedStrengthSets.length > 0;
+    hasCardio = !!(fetchedCardioSets && fetchedCardioSets.length > 0);
+    const uniqueIds = Array.from(
+      new Set([
+        ...(fetchedStrengthSets || []).map((s) => s.exercise),
+        ...(fetchedCardioSets || []).map((c) => c.exercise),
+      ]),
+    ).slice(0, 3);
+    exerciseBadges = uniqueIds.map((id) => {
+      const found = (exercisesList as UiExercise[]).find(
+        (e) => e.id === id || String(e.id) === String(id),
+      );
+      return found ? found.name : `Exercise ${id}`;
+    });
+  } else if (workout.exercises && workout.exercises.length > 0) {
     totalSets = workout.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
     totalPRs = workout.exercises.reduce((acc, ex) => {
       const setPrs = (ex.sets || []).reduce(
@@ -76,51 +115,6 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
           s.split_seconds !== undefined,
       ),
     );
-  } else {
-    // If workout.exercises is empty, combine strength + cardio sets fetched from server
-    const strengthSets = (setsQuery.data || []) as UiWorkoutSet[];
-    const cardioSets = (cardioQuery.data || []) as any[];
-    totalSets = strengthSets.length + cardioSets.length;
-    totalPRs =
-      strengthSets.reduce(
-        (acc: number, s: UiWorkoutSet) => acc + countPrTypesFromSet(s),
-        0,
-      ) +
-      cardioSets.reduce(
-        (acc: number, s: any) => acc + countPrTypesFromSet(s),
-        0,
-      );
-
-    totalVolume = strengthSets.reduce((acc, s) => {
-      const w = typeof s.weight === "number" ? s.weight : Number(s.weight || 0);
-      const r = typeof s.reps === "number" ? s.reps : Number(s.reps || 0);
-      return acc + w * r;
-    }, 0);
-
-    // Sum cardio distances (distance_meters) for cardio sets
-    totalDistanceMeters = cardioSets.reduce((acc, c) => {
-      const d =
-        typeof c.distance === "number"
-          ? c.distance
-          : Number(c.distance || c.distance_meters || 0);
-      return acc + (Number.isFinite(d) ? d : 0);
-    }, 0);
-
-    hasStrength = strengthSets.length > 0;
-    hasCardio = cardioSets.length > 0;
-
-    const uniqueIds = Array.from(
-      new Set([
-        ...strengthSets.map((s) => s.exercise),
-        ...cardioSets.map((c) => c.exercise),
-      ]),
-    ).slice(0, 3);
-    exerciseBadges = uniqueIds.map((id) => {
-      const found = (exercisesList as UiExercise[]).find(
-        (e) => e.id === id || String(e.id) === String(id),
-      );
-      return found ? found.name : `Exercise ${id}`;
-    });
   }
   // If workout.exercises provided, compute volume from them too
   if (workout.exercises && workout.exercises.length > 0) {

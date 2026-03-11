@@ -277,11 +277,14 @@ export function SetRow({
       });
     }
 
-    if (set.e1rmPR && weight > 0 && reps > 0 && reps < 37) {
-      const est1rm = (weight * 36) / (37 - reps);
+    if (set.e1rmPR && weight > 0 && reps > 0) {
+      const LBS_PER_KG = 2.20462;
+      const weightKg = unit === "kg" ? weight : weight / LBS_PER_KG;
+      const est1rmKg = weightKg * (1 + reps / 30);
+      const estDisplay = unit === "kg" ? est1rmKg : est1rmKg * LBS_PER_KG;
       prLines.push({
         label: "Best 1RM",
-        value: `${est1rm.toFixed(1)} ${unit}`,
+        value: `${estDisplay.toFixed(1)} ${unit}`,
       });
     }
 
@@ -332,8 +335,16 @@ export function SetRow({
   // actual PR lines to display. This avoids showing a trophy on
   // first-time or HIIT/bodyweight entries that don't have any PR
   // metrics computed.
+  console.log("PR debug:", {
+    isPR: set.isPR,
+    e1rmPR: set.e1rmPR,
+    volumePR: set.volumePR,
+    absWeightPR: set.absWeightPR,
+    completed: set.completed,
+    prLines,
+  });
   const showTrophy =
-    set.isPR && (readOnly || set.completed) && prLines.length > 0;
+    (set.isPR || set.e1rmPR || set.volumePR || set.absWeightPR) && (readOnly || set.completed) && prLines.length > 0;
 
   // For layout purposes, treat HIIT/bodyweight exercises as cardio-like so
   // they always use the HIIT grid and column semantics (time, reps, RPE)

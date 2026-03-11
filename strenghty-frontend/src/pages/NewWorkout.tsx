@@ -46,6 +46,7 @@ import {
   updateWorkout,
   createSet,
   updateSet,
+  patchSetPrFlags,
   createCardioSet,
   updateCardioSet,
   finishWorkout,
@@ -277,6 +278,7 @@ export default function NewWorkout() {
         setId: string;
         previousBestText: string;
         newSetText: string;
+        ratio: number;
       }
     | {
         type: "firstTime";
@@ -990,6 +992,20 @@ export default function NewWorkout() {
     const nowCompleted = !set.completed;
     if (!nowCompleted) return;
 
+    // Hoist currentWorkoutCompletedSets so it's available for localRepPR logic
+    const currentWorkoutCompletedSets = ex.sets
+      .filter(
+        (s2) =>
+          s2.id !== setId &&
+          s2.completed &&
+          ((s2.weight ?? 0) > 0 || (s2.reps || 0) > 0),
+      )
+      .map((s2) => ({
+        weight: s2.weight,
+        reps: s2.reps,
+        unit: s2.unit,
+      }));
+
     try {
       let wId = workoutId;
       if (!wId) {
@@ -1061,6 +1077,7 @@ export default function NewWorkout() {
       let hadPrior = false;
       let best1rmKg = 0;
       let bestVolumeKg = 0;
+      let bestWeightKg = 0;
       // map of rounded kg -> max reps at that weight (for local rep-PR detection)
       const priorRepsAtWeight: Record<number, number> = {};
       try {
@@ -1068,20 +1085,9 @@ export default function NewWorkout() {
           backendExerciseId,
           String(wId),
         );
-        // Also include already-completed sets from the current workout session
-        // so within-workout sets suppress false PRs on later sets in the same workout.
-        const currentWorkoutCompletedSets = ex.sets
-          .filter(
-            (s2) =>
-              s2.id !== setId && s2.completed && /^[0-9]+$/.test(String(s2.id)),
-          )
-          .map((s2) => ({
-            weight: s2.weight,
-            reps: s2.reps,
-            unit: s2.unit,
-          }));
+        // Use hoisted currentWorkoutCompletedSets here
         const completedSets = [...priorSets, ...currentWorkoutCompletedSets];
-        hadPrior = completedSets.length > 0;
+        hadPrior = priorSets.length > 0;
 
         const LBS_PER_KG = 2.20462;
         for (const ps of completedSets) {
@@ -1090,10 +1096,13 @@ export default function NewWorkout() {
           if (!(w > 0 && r > 0)) continue;
           const kg =
             (ps.unit as "lbs" | "kg" | undefined) === "kg" ? w : w / LBS_PER_KG;
+          if (kg > bestWeightKg) bestWeightKg = kg;
           const vol = kg * r;
           if (vol > bestVolumeKg) bestVolumeKg = vol;
-          if (r > 0 && r < 37) {
-            const est = (kg * 36) / (37 - r);
+          if (r > 0) {
+            // Use Epley formula (matches api.ts) for 1RM estimation so
+            // comparisons are consistent even for large rep counts.
+            const est = kg * (1 + r / 30);
             if (est > best1rmKg) best1rmKg = est;
           }
           // record max reps at this rounded kg
@@ -1123,9 +1132,7 @@ export default function NewWorkout() {
         const newKg = newUnit === "kg" ? newWeight : newWeight / LBS_PER_KG;
         const newVolumeKg = newKg > 0 && newReps > 0 ? newKg * newReps : 0;
         const new1rmKg =
-          newKg > 0 && newReps > 0 && newReps < 37
-            ? (newKg * 36) / (37 - newReps)
-            : 0;
+          newKg > 0 && newReps > 0 ? newKg * (1 + newReps / 30) : 0;
 
         const ratio1rm =
           best1rmKg > 0 && new1rmKg > 0 ? new1rmKg / best1rmKg : 1;
@@ -1156,7 +1163,9 @@ export default function NewWorkout() {
           absoluteTrigger,
         });
 
-        if (relativeTrigger || absoluteTrigger) {
+        const shouldShowDialog = (relativeTrigger || absoluteTrigger) && !force;
+
+        if (shouldShowDialog) {
           // If the user recently forced this set (confirmed), do not re-open the dialog.
           if (recentForced.current.has(setId)) {
             // clear the marker and continue saving
@@ -1198,6 +1207,7 @@ export default function NewWorkout() {
                 setId,
                 previousBestText: prevSummary ?? "Previous best unknown",
                 newSetText: newSummary,
+                ratio: Math.round(ratio * 10) / 10,
               });
             } else {
               setUnusualSet({
@@ -1210,8 +1220,9 @@ export default function NewWorkout() {
                 reps: newReps,
               });
             }
+
+            return;
           }
-          return;
         }
       }
 
@@ -1272,6 +1283,60 @@ export default function NewWorkout() {
         }
       }
 
+      // Client-side fallback: if the server didn't mark e1rm/volume PRs but
+      // local history shows this set exceeds previous bests, mark them locally
+      // so the UI can show trophies/banners immediately.
+      try {
+        const LBS_PER_KG = 2.20462;
+        const weightNum = typeof saved.weight === "number" ? saved.weight : 0;
+        const repsNum = typeof saved.reps === "number" ? saved.reps : 0;
+        const weightKg =
+          saved.unit === "kg" ? weightNum : weightNum / LBS_PER_KG;
+        const localE1rm =
+          weightKg > 0 && repsNum > 0 ? weightKg * (1 + repsNum / 30) : 0;
+        const localVol = weightKg > 0 && repsNum > 0 ? weightKg * repsNum : 0;
+        if (!saved.e1rmPR && localE1rm > best1rmKg) saved.e1rmPR = true;
+        if (!saved.volumePR && localVol > bestVolumeKg) saved.volumePR = true;
+        if (!saved.absWeightPR && weightKg > bestWeightKg)
+          saved.absWeightPR = true;
+        if (
+          !saved.isPR &&
+          (saved.e1rmPR || saved.volumePR || saved.absWeightPR)
+        )
+          saved.isPR = true;
+      } catch (e) {}
+
+      // Suppress PR if a within-workout set already beats or equals this one
+      let suppressedBySession = false;
+      if (currentWorkoutCompletedSets.length > 0) {
+        const savedKg =
+          saved.unit === "kg"
+            ? saved.weight || 0
+            : (saved.weight || 0) / 2.20462;
+        const savedReps = saved.reps || 0;
+        {
+          const savedVolume = savedKg * (saved.reps || 0);
+          const saved1rm =
+            savedKg > 0 && (saved.reps || 0) > 0
+              ? savedKg * (1 + (saved.reps || 0) / 30)
+              : 0;
+
+          suppressedBySession = currentWorkoutCompletedSets.some((ws) => {
+            const wsKg =
+              (ws.unit as string) === "kg"
+                ? ws.weight || 0
+                : (ws.weight || 0) / 2.20462;
+            const wsReps = ws.reps || 0;
+            const ws1rm = wsKg > 0 && wsReps > 0 ? wsKg * (1 + wsReps / 30) : 0;
+            const wsVolume = wsKg * wsReps;
+
+            // Suppress only if a sibling set beats BOTH 1RM and volume
+            // (prevents a normal set from suppressing a very high-rep set)
+            return ws1rm >= saved1rm && wsVolume >= savedVolume && ws1rm > 0;
+          });
+        }
+      }
+
       setExercises((prev) =>
         prev.map((e) =>
           e.id !== exerciseId
@@ -1299,10 +1364,30 @@ export default function NewWorkout() {
                             if (typeof hist === "undefined" || newReps > hist)
                               localRepPR = true;
                           }
+                          // Suppress if a within-workout set already has >= reps at same weight
+                          if (localRepPR) {
+                            const beaten = currentWorkoutCompletedSets.some(
+                              (ws) => {
+                                const wsKg =
+                                  (ws.unit as string) === "kg"
+                                    ? ws.weight || 0
+                                    : (ws.weight || 0) / 2.20462;
+                                const wsKey = Math.round(wsKg * 100) / 100;
+                                return (
+                                  wsKey === key && (ws.reps || 0) >= newReps
+                                );
+                              },
+                            );
+                            if (beaten) localRepPR = false;
+                          }
                         } catch (e) {}
 
                         const isPRFlag = hadPrior
-                          ? saved.isPR || localRepPR
+                          ? saved.isPR ||
+                            saved.e1rmPR ||
+                            saved.volumePR ||
+                            saved.absWeightPR ||
+                            localRepPR
                           : false;
                         return {
                           ...s,
@@ -1320,6 +1405,103 @@ export default function NewWorkout() {
         ),
       );
 
+      // Capture sibling state BEFORE demotion to know what changed
+      const preDemotionSets =
+        exercises.find((e) => e.id === exerciseId)?.sets ?? [];
+
+      // Retroactively demote sibling sets that are now outperformed by the saved set
+      const savedKgFinal =
+        saved.unit === "kg" ? saved.weight || 0 : (saved.weight || 0) / 2.20462;
+      const savedRepsFinal = saved.reps || 0;
+      const savedE1rmFinal =
+        savedKgFinal > 0 && savedRepsFinal > 0
+          ? savedKgFinal * (1 + savedRepsFinal / 30)
+          : 0;
+      const savedVolFinal = savedKgFinal * savedRepsFinal;
+
+      setExercises((prev) =>
+        prev.map((e) => {
+          if (e.id !== exerciseId) return e;
+          return {
+            ...e,
+            sets: e.sets.map((s2) => {
+              if (s2.id === setId || !s2.completed) return s2;
+              const s2Kg =
+                s2.unit === "kg" ? s2.weight || 0 : (s2.weight || 0) / 2.20462;
+              const s2Reps = s2.reps || 0;
+              const s2E1rm =
+                s2Kg > 0 && s2Reps > 0 ? s2Kg * (1 + s2Reps / 30) : 0;
+              const s2Vol = s2Kg * s2Reps;
+
+              const newE1rmPR = s2.e1rmPR && !(savedE1rmFinal > s2E1rm);
+              const newVolumePR = s2.volumePR && !(savedVolFinal > s2Vol);
+              const newAbsWeightPR = s2.absWeightPR && !(savedKgFinal > s2Kg);
+              const newIsPR =
+                newE1rmPR || newVolumePR || newAbsWeightPR || !!s2.repPR;
+
+              if (
+                newE1rmPR === s2.e1rmPR &&
+                newVolumePR === s2.volumePR &&
+                newAbsWeightPR === s2.absWeightPR
+              ) {
+                return s2;
+              }
+
+              return {
+                ...s2,
+                isPR: newIsPR,
+                e1rmPR: newE1rmPR,
+                volumePR: newVolumePR,
+                absWeightPR: newAbsWeightPR,
+              };
+            }),
+          };
+        }),
+      );
+
+      // Persist sibling PR demotion to DB
+      for (const sibling of preDemotionSets) {
+        if (sibling.id === saved.id || !sibling.completed) continue;
+        const lostE1rm =
+          !!saved.e1rmPR &&
+          !!sibling.e1rmPR &&
+          savedE1rmFinal >
+            (() => {
+              const kg =
+                sibling.unit === "kg"
+                  ? sibling.weight || 0
+                  : (sibling.weight || 0) / 2.20462;
+              const r = sibling.reps || 0;
+              return kg > 0 && r > 0 ? kg * (1 + r / 30) : 0;
+            })();
+        const lostVolume =
+          !!saved.volumePR &&
+          !!sibling.volumePR &&
+          savedVolFinal >
+            (() => {
+              const kg =
+                sibling.unit === "kg"
+                  ? sibling.weight || 0
+                  : (sibling.weight || 0) / 2.20462;
+              return kg * (sibling.reps || 0);
+            })();
+        if (lostE1rm || lostVolume) {
+          const newE1rm = lostE1rm ? false : !!sibling.e1rmPR;
+          const newVol = lostVolume ? false : !!sibling.volumePR;
+          const stillPR = !!(
+            sibling.absWeightPR ||
+            newE1rm ||
+            newVol ||
+            sibling.repPR
+          );
+          patchSetPrFlags(sibling.id, {
+            is_pr: stillPR,
+            is_e1rm_pr: newE1rm,
+            is_volume_pr: newVol,
+          }).catch(() => {});
+        }
+      }
+
       // If server reported a PR, or our local detection found one, enqueue banners
       let localDetectedPR = false;
       try {
@@ -1334,8 +1516,14 @@ export default function NewWorkout() {
             localDetectedPR = true;
         }
       } catch (e) {}
-
-      if (hadPrior && (saved.isPR || localDetectedPR)) {
+      if (
+        hadPrior &&
+        (saved.isPR ||
+          saved.e1rmPR ||
+          saved.volumePR ||
+          saved.absWeightPR ||
+          localDetectedPR)
+      ) {
         const unit = (saved.unit as "lbs" | "kg" | undefined) || getUnit();
         const weight = typeof saved.weight === "number" ? saved.weight : 0;
         const reps = saved.reps;
@@ -1350,12 +1538,17 @@ export default function NewWorkout() {
           });
         }
 
-        if (saved.e1rmPR && weight > 0 && reps > 0 && reps < 37) {
-          const est1rm = (weight * 36) / (37 - reps);
+        if (saved.e1rmPR && weight > 0 && reps > 0) {
+          const LBS_PER_KG = 2.20462;
+          // Compute a robust estimated 1RM that works for large rep counts.
+          // Use an Epley-like conversion in kg and convert back to user unit for display.
+          const weightKg = unit === "kg" ? weight : weight / LBS_PER_KG;
+          const est1rmKg = weightKg * (1 + reps / 30);
+          const estDisplay = unit === "kg" ? est1rmKg : est1rmKg * LBS_PER_KG;
           banners.push({
             exerciseName: ex.exercise.name,
             label: "Best 1RM",
-            value: `${est1rm.toFixed(1)} ${unit}`,
+            value: `${estDisplay.toFixed(1)} ${unit}`,
           });
         }
 
@@ -2624,8 +2817,13 @@ export default function NewWorkout() {
             >
               <DialogContent className="max-w-sm">
                 <DialogHeader>
-                  <DialogTitle>Review set entry</DialogTitle>
-                  <DialogDescription>
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/15 text-amber-400 shrink-0">
+                      <AlertTriangle className="h-4 w-4" />
+                    </div>
+                    <DialogTitle>Review set entry</DialogTitle>
+                  </div>
+                  <DialogDescription className="mt-2">
                     This entry differs significantly from your previous best for
                     this exercise. Please review the values before logging.
                   </DialogDescription>
@@ -2637,7 +2835,7 @@ export default function NewWorkout() {
                         <dt className="text-xs font-medium text-muted-foreground">
                           Previous best
                         </dt>
-                        <dd className="mt-1 text-sm text-white truncate">
+                        <dd className="mt-1 text-sm text-white break-words">
                           {unusualSet.previousBestText}
                         </dd>
                       </div>
@@ -2646,11 +2844,22 @@ export default function NewWorkout() {
                         <dt className="text-xs font-medium text-muted-foreground">
                           Current entry
                         </dt>
-                        <dd className="mt-1 text-sm text-white truncate">
+                        <dd className="mt-1 text-sm text-white break-words">
                           {unusualSet.newSetText}
                         </dd>
                       </div>
                     </dl>
+
+                    <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <p className="text-xs text-amber-300">
+                        Current entry is{" "}
+                        <span className="font-semibold">
+                          {unusualSet.ratio}×
+                        </span>{" "}
+                        your previous best
+                      </p>
+                    </div>
 
                     <div className="mt-5 flex justify-end gap-3">
                       <Button
@@ -3601,7 +3810,7 @@ export default function NewWorkout() {
                   {filteredExercises.map((exercise) => (
                     <div
                       key={exercise.id}
-                      className="flex w-full items-center border-b border-white/5"
+                      className="flex w-full items-center border-b border-white/5 min-w-0"
                     >
                       <button
                         type="button"
@@ -3618,7 +3827,7 @@ export default function NewWorkout() {
                             },
                           });
                         }}
-                        className="flex flex-1 items-center gap-4 py-4 text-left transition-colors hover:bg-white/2"
+                        className="flex flex-1 min-w-0 items-center gap-4 py-4 text-left transition-colors hover:bg-white/2"
                       >
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
                           <img
