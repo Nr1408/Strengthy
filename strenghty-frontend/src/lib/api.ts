@@ -1143,7 +1143,16 @@ export async function register(username: string, password: string) {
     // Use Supabase client signUp to allow setting email redirect options
     try {
       const supabase = createClient(SUPABASE_URL_ENV, SUPABASE_ANON_ENV);
-      const redirectTo = "https://strengthy-strengthy-frontend.vercel.app/verified";
+      const redirectTo = (() => {
+        try {
+          if (typeof window !== "undefined" && window.location && window.location.origin) {
+            return `${window.location.origin}/verified`;
+          }
+        } catch (e) {
+          // ignore
+        }
+        return "https://strengthy-strengthy-frontend.vercel.app/verified";
+      })();
       const { data, error } = await supabase.auth.signUp(
         { email: username, password },
         { emailRedirectTo: redirectTo },
