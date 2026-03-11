@@ -51,7 +51,7 @@ export default function VerificationSuccess() {
           </div>
 
           <h1 className="font-heading text-3xl font-extrabold text-[#FF6B00] mb-2">
-            ACCOUNT VERIFIED.
+            Account Verified.
           </h1>
 
           <p className="text-sm text-zinc-300 mb-6">
