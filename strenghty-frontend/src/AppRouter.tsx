@@ -36,6 +36,7 @@ import ExerciseInfo from "./pages/ExerciseInfo";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import GoogleRedirect from "./pages/GoogleRedirect";
+import VerificationSuccess from "./pages/VerificationSuccess";
 
 const TokenRefresher = () => {
   useEffect(() => {
@@ -201,6 +202,14 @@ const AnimatedRoutes = () => {
           element={
             <PageTransition>
               <ForgotPassword />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/verified"
+          element={
+            <PageTransition>
+              <VerificationSuccess />
             </PageTransition>
           }
         />

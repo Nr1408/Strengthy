@@ -1,4 +1,5 @@
 import type { CardioMode } from "@/types/workout";
+import { createClient } from "@supabase/supabase-js";
 // Capacitor Preferences is imported dynamically where needed to avoid
 // bundling/runtime issues on some platforms.
 
@@ -1139,19 +1140,33 @@ export async function login(username: string, password: string) {
 
 export async function register(username: string, password: string) {
   if (USE_SUPABASE_AUTH) {
-    const res = await fetch(`${SUPABASE_URL_ENV.replace(/\/+$/g, "")}/auth/v1/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_ENV },
-      body: JSON.stringify({ email: username, password }),
-    });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`Register failed: ${res.status} ${txt}`);
+    // Use Supabase client signUp to allow setting email redirect options
+    try {
+      const supabase = createClient(SUPABASE_URL_ENV, SUPABASE_ANON_ENV);
+      const redirectTo = "https://strengthy-strengthy-frontend.vercel.app/verified";
+      const { data, error } = await supabase.auth.signUp(
+        { email: username, password },
+        { emailRedirectTo: redirectTo },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      // If Supabase returns an access token (rare on email confirm flows), persist it
+      // data may contain `user` and `session` depending on project config
+      try {
+        // @ts-ignore - session may or may not exist depending on response
+        if (data?.session?.access_token) {
+          setToken(data.session.access_token);
+        }
+      } catch {}
+
+      return { id: data?.user?.id || null, username: data?.user?.email || username };
+    } catch (e: any) {
+      const msg = e?.message || String(e || "Register failed");
+      throw new Error(msg);
     }
-    const data = await res.json();
-    // Supabase may return an access_token on signup
-    if (data.access_token) setToken(data.access_token);
-    return { id: data.user?.id || null, username: data.user?.email || username };
   }
 
   // Fallback: legacy Django endpoint

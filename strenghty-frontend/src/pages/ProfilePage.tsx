@@ -197,6 +197,7 @@ export default function Profile() {
     queryFn: getWorkouts,
   });
 
+  // Use all workouts for member since, not just completed
   const completedWorkouts = useMemo(
     () => workouts.filter((w) => w.endedAt),
     [workouts],
@@ -239,18 +240,19 @@ export default function Profile() {
     [completedWorkouts],
   );
 
+  // Member Since: earliest workout date, fallback to account creation
   const memberSinceLabel = useMemo(() => {
-    if (!completedWorkouts.length) return "Just getting started";
-    const earliest = completedWorkouts.reduce(
-      (min, w) => (w.date < min ? w.date : min),
-      completedWorkouts[0].date,
-    );
+    if (!workouts.length) return "Just getting started";
+    let earliest = workouts[0]?.date;
+    for (const w of workouts) {
+      if (w.date < earliest) earliest = w.date;
+    }
     try {
       return format(earliest, "MMM yyyy");
     } catch {
       return "Just getting started";
     }
-  }, [completedWorkouts]);
+  }, [workouts]);
 
   const [profileInfo, setProfileInfo] = useState<{
     name: string;
@@ -451,16 +453,6 @@ export default function Profile() {
                     Account Settings
                   </Button>
                 </div>
-
-                {/* Sign Out — intentionally separate and destructive */}
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => setSignOutConfirmOpen(true)}
-                >
-                  Sign Out
-                </Button>
               </div>
             </div>
           </div>
@@ -530,7 +522,7 @@ export default function Profile() {
         <section className="mt-5 sm:mt-7">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Physical stats card */}
-            <div className="rounded-2xl bg-card border border-border p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+            <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Physical
@@ -543,7 +535,7 @@ export default function Profile() {
                   <Pencil className="h-3 w-3" /> Edit
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-6">
+              <div className={`grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6`}>
                 <PhysicalStat
                   label="Height"
                   value={
@@ -556,11 +548,19 @@ export default function Profile() {
                   label="Weight"
                   value={
                     onboardingInfo?.currentWeight
-                      ? `${onboardingInfo.currentWeight} ${onboardingInfo.weightUnit || "kg"}`
+                      ? `${onboardingInfo.currentWeight} ${onboardingInfo.weightUnit === "lbs" ? "lbs" : "kg"}`
                       : null
                   }
                 />
                 <PhysicalStat label="Age" value={onboardingInfo?.age || null} />
+                <PhysicalStat
+                  label="Goal Weight"
+                  value={
+                    onboardingInfo?.goalWeight
+                      ? `${onboardingInfo.goalWeight} ${onboardingInfo.weightUnit === "lbs" ? "lbs" : "kg"}`
+                      : null
+                  }
+                />
               </div>
             </div>
 
@@ -669,9 +669,7 @@ export default function Profile() {
                   Member Since
                 </p>
                 <p className="text-sm font-semibold text-white">
-                  {completedWorkouts.length > 0
-                    ? memberSinceLabel
-                    : "New member 🎉"}
+                  {workouts.length > 0 ? memberSinceLabel : "New member 🎉"}
                 </p>
               </div>
             </div>
@@ -679,6 +677,17 @@ export default function Profile() {
         </section>
 
         <div className="h-6" />
+
+        {/* Sign Out button as footer action */}
+        <div className="mt-12 mb-2">
+          <Button
+            variant="outline"
+            className="w-full border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 font-medium text-base py-3"
+            onClick={() => setSignOutConfirmOpen(true)}
+          >
+            Sign Out
+          </Button>
+        </div>
 
         {/* Edit dialog (small) */}
         <Dialog open={editing} onOpenChange={setEditing}>
@@ -718,7 +727,7 @@ export default function Profile() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="edit-age">Age</Label>
                   <Input
@@ -728,47 +737,49 @@ export default function Profile() {
                       updateOnboardingInfo({ age: e.target.value })
                     }
                   />
-                </div>
-                <div>
-                  <Label htmlFor="edit-height">Height</Label>
-                  <div className="flex gap-2 mt-1">
-                    <div className="relative flex-1">
-                      <Input
-                        id="edit-height"
-                        type="number"
-                        value={onboardingInfo?.height || ""}
-                        onChange={(e) =>
-                          updateOnboardingInfo({ height: e.target.value })
-                        }
-                        placeholder={
-                          onboardingInfo?.heightUnit === "ft" ? "5.9" : "175"
-                        }
-                      />
-                    </div>
-                    <div className="flex rounded-lg bg-zinc-900 border border-white/10 p-1 shrink-0">
-                      {(["cm", "ft"] as const).map((unit) => (
-                        <button
-                          key={unit}
-                          type="button"
-                          onClick={() =>
-                            updateOnboardingInfo({ heightUnit: unit })
+
+                  <div className="mt-3">
+                    <Label htmlFor="edit-height">Height</Label>
+                    <div className="flex gap-2 mt-1">
+                      <div className="relative flex-1">
+                        <Input
+                          id="edit-height"
+                          type="number"
+                          value={onboardingInfo?.height || ""}
+                          onChange={(e) =>
+                            updateOnboardingInfo({ height: e.target.value })
                           }
-                          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                            onboardingInfo?.heightUnit === unit
-                              ? "bg-orange-500 text-white shadow-sm"
-                              : "text-zinc-400 hover:text-white"
-                          }`}
-                        >
-                          {unit}
-                        </button>
-                      ))}
+                          placeholder={
+                            onboardingInfo?.heightUnit === "ft" ? "5.9" : "175"
+                          }
+                        />
+                      </div>
+                      <div className="flex rounded-lg bg-zinc-900 border border-white/10 p-1 shrink-0">
+                        {(["cm", "ft"] as const).map((unit) => (
+                          <button
+                            key={unit}
+                            type="button"
+                            onClick={() =>
+                              updateOnboardingInfo({ heightUnit: unit })
+                            }
+                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                              onboardingInfo?.heightUnit === unit
+                                ? "bg-orange-500 text-white shadow-sm"
+                                : "text-zinc-400 hover:text-white"
+                            }`}
+                          >
+                            {unit}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
+
                 <div>
-                  <Label htmlFor="edit-weight">Current Weight</Label>
-                  <div className="flex gap-2 mt-1">
-                    <div className="relative flex-1">
+                  <div>
+                    <Label htmlFor="edit-weight">Current Weight</Label>
+                    <div className="relative mt-1">
                       <Input
                         id="edit-weight"
                         type="number"
@@ -782,25 +793,49 @@ export default function Profile() {
                           onboardingInfo?.weightUnit === "lbs" ? "165" : "75"
                         }
                       />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium text-sm">
+                        {onboardingInfo?.weightUnit}
+                      </span>
                     </div>
-                    <div className="flex rounded-lg bg-zinc-900 border border-white/10 p-1 shrink-0">
-                      {(["kg", "lbs"] as const).map((unit) => (
-                        <button
-                          key={unit}
-                          type="button"
-                          onClick={() =>
-                            updateOnboardingInfo({ weightUnit: unit })
-                          }
-                          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                            onboardingInfo?.weightUnit === unit
-                              ? "bg-orange-500 text-white shadow-sm"
-                              : "text-zinc-400 hover:text-white"
-                          }`}
-                        >
-                          {unit}
-                        </button>
-                      ))}
+                  </div>
+
+                  <div className="mt-3">
+                    <Label htmlFor="edit-goal-weight">Goal Weight</Label>
+                    <div className="relative mt-1">
+                      <Input
+                        id="edit-goal-weight"
+                        type="number"
+                        value={onboardingInfo?.goalWeight || ""}
+                        onChange={(e) =>
+                          updateOnboardingInfo({ goalWeight: e.target.value })
+                        }
+                        placeholder={
+                          onboardingInfo?.weightUnit === "lbs" ? "165" : "75"
+                        }
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium text-sm">
+                        {onboardingInfo?.weightUnit}
+                      </span>
                     </div>
+                  </div>
+
+                  <div className="flex gap-2 justify-end mt-3">
+                    {(["kg", "lbs"] as const).map((unit) => (
+                      <button
+                        key={unit}
+                        type="button"
+                        onClick={() =>
+                          updateOnboardingInfo({ weightUnit: unit })
+                        }
+                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                          onboardingInfo?.weightUnit === unit
+                            ? "bg-orange-500 text-white shadow-sm"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        {unit}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1146,11 +1181,24 @@ function PhysicalStat({
   label: string;
   value: string | null;
 }) {
+  // Split value and unit for better layout (prevents wrapping)
+  let main = value || "—";
+  let unit = "";
+  if (value && /\s/.test(value)) {
+    const parts = value.split(/\s+/);
+    main = parts[0];
+    unit = parts.slice(1).join(" ");
+  }
   return (
     <div className="flex flex-col">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-2xl font-black text-white mt-0.5">
-        {value || "—"}
+      <div className="flex items-baseline gap-1 mt-0.5">
+        <span className="text-2xl font-black text-white">{main}</span>
+        {unit && (
+          <span className="text-base font-semibold text-muted-foreground whitespace-nowrap">
+            {unit}
+          </span>
+        )}
       </div>
     </div>
   );

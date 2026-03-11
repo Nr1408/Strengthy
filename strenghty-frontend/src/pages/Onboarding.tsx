@@ -154,6 +154,7 @@ export default function Onboarding() {
     height: "" as string,
     heightUnit: "cm" as "cm" | "ft",
     weight: "" as string,
+    goalWeight: "" as string,
     weightUnit: "kg" as "kg" | "lbs",
     equipment: "" as "full-gym" | "home-gym" | "bodyweight" | "",
     experience: "" as "beginner" | "intermediate" | "advanced" | "",
@@ -304,6 +305,7 @@ export default function Onboarding() {
         height: userData.height ? Number(userData.height) : null,
         height_unit: userData.heightUnit,
         current_weight: userData.weight ? Number(userData.weight) : null,
+        goal_weight: userData.goalWeight ? Number(userData.goalWeight) : null,
         experience: userData.experience || null,
         monthly_workouts: userData.monthlyWorkouts,
       });
@@ -324,6 +326,8 @@ export default function Onboarding() {
       heightUnit: userData.heightUnit,
       weight: userData.weight ? Number(userData.weight) : null,
       weightUnit: userData.weightUnit,
+      goalWeight: userData.goalWeight ? Number(userData.goalWeight) : null,
+      goalWeightUnit: userData.weightUnit,
       equipment: (userData.equipment as any) || "other",
       experience: (userData.experience as any) || "intermediate",
       monthlyWorkouts: Number(userData.monthlyWorkouts) || 12,
@@ -394,7 +398,7 @@ export default function Onboarding() {
       </header>
 
       {/* Main Content */}
-      <main className="flex flex-1 flex-col items-center justify-center p-4">
+      <main className="flex flex-1 flex-col items-center justify-center p-4 pb-24">
         <div className="w-full max-w-2xl">
           {/* Step Title */}
           <div
@@ -465,7 +469,7 @@ export default function Onboarding() {
             {/* Step 1: Personal metrics (age / height / weight) */}
             {currentStep === 1 && (
               <div className="mx-auto max-w-md space-y-3">
-                <div className="group rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:border-primary/50">
+                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-300 hover:border-primary/50">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-500">
                       <User className="h-4 w-4 text-white" />
@@ -486,7 +490,7 @@ export default function Onboarding() {
                       onChange={(e) =>
                         setUserData((p) => ({ ...p, age: e.target.value }))
                       }
-                      className="text-lg font-heading h-11 pr-16"
+                      className="text-lg font-heading h-10 sm:h-11 pr-16"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium">
                       years
@@ -494,20 +498,20 @@ export default function Onboarding() {
                   </div>
                 </div>
 
-                <div className="group rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:border-primary/50">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500">
-                      <Ruler className="h-4 w-4 text-white" />
+                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-300 hover:border-primary/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500">
+                        <Ruler className="h-4 w-4 text-white" />
+                      </div>
+                      <Label
+                        htmlFor="height"
+                        className="text-base font-medium text-white"
+                      >
+                        Your Height
+                      </Label>
                     </div>
-                    <Label
-                      htmlFor="height"
-                      className="text-base font-medium text-white"
-                    >
-                      Your Height
-                    </Label>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex gap-1 justify-end mb-2">
+                    <div className="flex items-center gap-1 bg-zinc-900 border border-white/10 rounded-lg p-1">
                       <button
                         type="button"
                         onClick={() =>
@@ -528,10 +532,9 @@ export default function Onboarding() {
                           })
                         }
                         className={cn(
-                          "px-2.5 py-0.5 rounded-lg text-xs font-medium border transition-all",
                           userData.heightUnit === "cm"
-                            ? "bg-orange-500 border-orange-500 text-white"
-                            : "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white",
+                            ? "bg-orange-500 text-white rounded-md px-3 py-1 text-xs font-semibold"
+                            : "text-zinc-400 hover:text-white rounded-md px-3 py-1 text-xs font-semibold",
                         )}
                       >
                         cm
@@ -556,15 +559,16 @@ export default function Onboarding() {
                           })
                         }
                         className={cn(
-                          "px-2.5 py-0.5 rounded-lg text-xs font-medium border transition-all",
                           userData.heightUnit === "ft"
-                            ? "bg-orange-500 border-orange-500 text-white"
-                            : "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white",
+                            ? "bg-orange-500 text-white rounded-md px-3 py-1 text-xs font-semibold"
+                            : "text-zinc-400 hover:text-white rounded-md px-3 py-1 text-xs font-semibold",
                         )}
                       >
                         ft
                       </button>
                     </div>
+                  </div>
+                  <div className="space-y-2">
                     <div className="relative">
                       <Input
                         id="height"
@@ -576,7 +580,7 @@ export default function Onboarding() {
                         onChange={(e) =>
                           setUserData((p) => ({ ...p, height: e.target.value }))
                         }
-                        className="text-lg font-heading h-11 pr-14"
+                        className="text-lg font-heading h-10 sm:h-11 pr-14"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium text-sm">
                         {userData.heightUnit}
@@ -585,77 +589,61 @@ export default function Onboarding() {
                   </div>
                 </div>
 
-                <div className="group rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:border-primary/50">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
-                      <Scale className="h-4 w-4 text-white" />
+                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-300 hover:border-primary/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
+                        <Scale className="h-4 w-4 text-white" />
+                      </div>
+                      <Label
+                        htmlFor="weight"
+                        className="text-base font-medium text-white"
+                      >
+                        Current Weight
+                      </Label>
                     </div>
-                    <Label
-                      htmlFor="weight"
-                      className="text-base font-medium text-white"
-                    >
-                      Current Weight
-                    </Label>
+                    <div className="flex items-center gap-1 bg-zinc-900 border border-white/10 rounded-lg p-1">
+                      {(["kg", "lbs"] as const).map((unit) => (
+                        <button
+                          key={unit}
+                          type="button"
+                          onClick={() =>
+                            setUserData((p) => {
+                              if (p.weight) {
+                                const converted = convertWeight(
+                                  p.weight,
+                                  p.weightUnit,
+                                  unit,
+                                );
+                                const convertedGoal = p.goalWeight
+                                  ? convertWeight(
+                                      p.goalWeight,
+                                      p.weightUnit,
+                                      unit,
+                                    )
+                                  : "";
+                                return {
+                                  ...p,
+                                  weightUnit: unit,
+                                  weight: converted,
+                                  goalWeight: convertedGoal,
+                                };
+                              }
+                              return { ...p, weightUnit: unit };
+                            })
+                          }
+                          className={cn(
+                            userData.weightUnit === unit
+                              ? "bg-orange-500 text-white rounded-md px-3 py-1 text-xs font-semibold"
+                              : "text-zinc-400 hover:text-white rounded-md px-3 py-1 text-xs font-semibold",
+                          )}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex gap-1 justify-end mb-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setUserData((p) => {
-                            if (p.weight) {
-                              const converted = convertWeight(
-                                p.weight,
-                                p.weightUnit,
-                                "kg",
-                              );
-                              return {
-                                ...p,
-                                weightUnit: "kg",
-                                weight: converted,
-                              };
-                            }
-                            return { ...p, weightUnit: "kg" };
-                          })
-                        }
-                        className={cn(
-                          "px-2.5 py-0.5 rounded-lg text-xs font-medium border transition-all",
-                          userData.weightUnit === "kg"
-                            ? "bg-orange-500 border-orange-500 text-white"
-                            : "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white",
-                        )}
-                      >
-                        kg
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setUserData((p) => {
-                            if (p.weight) {
-                              const converted = convertWeight(
-                                p.weight,
-                                p.weightUnit,
-                                "lbs",
-                              );
-                              return {
-                                ...p,
-                                weightUnit: "lbs",
-                                weight: converted,
-                              };
-                            }
-                            return { ...p, weightUnit: "lbs" };
-                          })
-                        }
-                        className={cn(
-                          "px-2.5 py-0.5 rounded-lg text-xs font-medium border transition-all",
-                          userData.weightUnit === "lbs"
-                            ? "bg-orange-500 border-orange-500 text-white"
-                            : "bg-zinc-900 border-white/10 text-zinc-400 hover:text-white",
-                        )}
-                      >
-                        lbs
-                      </button>
-                    </div>
                     <div className="relative">
                       <Input
                         id="weight"
@@ -671,6 +659,41 @@ export default function Onboarding() {
                         {userData.weightUnit}
                       </span>
                     </div>
+
+                    {/* Goal Weight moved to its own card below */}
+                  </div>
+                </div>
+
+                {/* Goal Weight card - separate for visual consistency on mobile */}
+                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-300 hover:border-primary/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
+                      <Scale className="h-4 w-4 text-white" />
+                    </div>
+                    <Label
+                      htmlFor="goal-weight"
+                      className="text-base font-medium text-white"
+                    >
+                      Goal Weight
+                    </Label>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="goal-weight"
+                      type="number"
+                      placeholder="75"
+                      value={userData.goalWeight}
+                      onChange={(e) =>
+                        setUserData((p) => ({
+                          ...p,
+                          goalWeight: e.target.value,
+                        }))
+                      }
+                      className="text-lg font-heading h-10 sm:h-11 pr-14"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white font-medium text-sm">
+                      {userData.weightUnit}
+                    </span>
                   </div>
                 </div>
               </div>

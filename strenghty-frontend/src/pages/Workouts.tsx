@@ -851,7 +851,7 @@ export default function Workouts() {
         {/* Workout List */}
         {isLoading ? (
           <div className="text-muted-foreground">Loading workouts...</div>
-        ) : sortedDates.length > 0 ? (
+        ) : completedWorkouts.length > 0 ? (
           <div className="space-y-8">
             {sortedDates.map((dateKey) => {
               const date = new Date(dateKey);
