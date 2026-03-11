@@ -809,6 +809,53 @@ export function authHeaders() {
 
 // Forgot password / reset helpers
 export async function requestPasswordReset(email: string): Promise<{ detail: string; otp?: string }> {
+  // If Supabase auth is configured, use Supabase's password reset flow
+  if (USE_SUPABASE_AUTH) {
+    try {
+      const supabase = createClient(SUPABASE_URL_ENV, SUPABASE_ANON_ENV);
+      const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+      const redirectTo = typeof window !== "undefined"
+        ? `${window.location.origin}/auth`
+        : "https://strengthy-strengthy-frontend.vercel.app/auth";
+
+      // Prefer client helper if available
+      try {
+        // @ts-ignore - method may exist in v2 client
+        if (typeof supabase.auth.resetPasswordForEmail === "function") {
+          // v2 signature: resetPasswordForEmail(email, { redirectTo })
+          const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+          if (error) throw error;
+          return { detail: "If an account exists for this email, we've sent a reset link." };
+        }
+      } catch (e) {
+        // fallthrough to REST endpoint
+      }
+
+      // Fallback: call Supabase REST recover endpoint directly
+      const res = await fetchWithTimeout(`${supabaseBase}/auth/v1/recover`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_ENV,
+        },
+        body: JSON.stringify({ email, redirect_to: redirectTo }),
+      }, 15000);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data && (data.msg || data.error_description || data.error || data.message)) || "Failed to request password reset.");
+      }
+
+      return { detail: "If an account exists for this email, we've sent a reset link." };
+    } catch (err: any) {
+      if (err?.message && err.message.includes("timed out")) {
+        throw new Error(`Could not reach Supabase (${SUPABASE_URL_ENV}). Request timed out.`);
+      }
+      throw new Error(`Could not reach Supabase (${SUPABASE_URL_ENV}). ${err?.message || "Network error."}`);
+    }
+  }
+
+  // Legacy / Django backend flow
   const url = `${API_BASE}/auth/password-reset/request/`;
   try {
     const res = await fetchWithTimeout(url, {
@@ -829,14 +876,16 @@ export async function requestPasswordReset(email: string): Promise<{ detail: str
     if (err?.message && err.message.includes("timed out")) {
       throw new Error(`Could not reach backend (${API_BASE}). Request timed out.`);
     }
-    // Network-level errors (DNS, CORS, connection refused) show up here
-    throw new Error(
-      `Could not reach backend (${API_BASE}). ${err?.message || "Network error."}`,
-    );
+    throw new Error(`Could not reach backend (${API_BASE}). ${err?.message || "Network error."}`);
   }
 }
 
 export async function confirmPasswordReset(email: string, otp: string, newPassword: string): Promise<string> {
+  // Supabase uses email links for password reset; there is no OTP confirm endpoint.
+  if (USE_SUPABASE_AUTH) {
+    throw new Error("Supabase handles password resets via email links. Please use the link sent to your email to reset your password.");
+  }
+
   const url = `${API_BASE}/auth/password-reset/confirm/`;
   try {
     const res = await fetchWithTimeout(url, {
