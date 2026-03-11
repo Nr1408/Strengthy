@@ -1153,9 +1153,10 @@ export async function register(username: string, password: string) {
         }
         return "https://strengthy-strengthy-frontend.vercel.app/verified";
       })();
+      // Pass both option keys to cover different Supabase client/server expectations
       const { data, error } = await supabase.auth.signUp(
         { email: username, password },
-        { emailRedirectTo: redirectTo },
+        { emailRedirectTo: redirectTo, redirectTo },
       );
 
       if (error) {
