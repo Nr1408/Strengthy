@@ -55,18 +55,8 @@ export default function VerificationSuccess() {
           </h1>
 
           <p className="text-sm text-zinc-300 mb-6">
-            Your email is confirmed. Let's set up your profile to start
-            tracking your gains.
+            Your email is confirmed. You can close this browser window.
           </p>
-
-          <div className="w-full flex justify-center">
-            <Button
-              onClick={handleContinue}
-              className="bg-[#FF6B00] hover:brightness-95 text-black px-6 py-2 rounded-md"
-            >
-              Start Tracking
-            </Button>
-          </div>
         </div>
       </div>
     </div>
