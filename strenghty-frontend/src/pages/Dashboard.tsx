@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Plus,
   Calendar,
@@ -55,17 +55,25 @@ export default function Dashboard() {
     label: string;
   }>(null);
 
+  const location = useLocation();
+
   useEffect(() => {
+    // Re-read the persisted next-suggestion whenever the dashboard
+    // becomes active (path changes) so navigating back from preview
+    // reliably shows the recently-saved suggestion.
     try {
       const raw = localStorage.getItem("user:nextSuggestedRoutine");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && parsed.id) setNextSuggested(parsed);
+        else setNextSuggested(null);
+      } else {
+        setNextSuggested(null);
       }
     } catch (e) {
       setNextSuggested(null);
     }
-  }, []);
+  }, [location.pathname]);
 
   // Date ranges
   const thisWeekRange = useMemo(() => {

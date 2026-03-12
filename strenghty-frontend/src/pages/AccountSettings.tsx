@@ -294,7 +294,9 @@ export default function AccountSettings() {
                         const next = !s;
                         try {
                           if (currentPasswordRef.current) {
-                            currentPasswordRef.current.type = next ? "text" : "password";
+                            currentPasswordRef.current.type = next
+                              ? "text"
+                              : "password";
                           }
                         } catch {}
                         return next;
@@ -343,7 +345,9 @@ export default function AccountSettings() {
                         const next = !s;
                         try {
                           if (newPasswordRef.current) {
-                            newPasswordRef.current.type = next ? "text" : "password";
+                            newPasswordRef.current.type = next
+                              ? "text"
+                              : "password";
                           }
                         } catch {}
                         return next;
@@ -392,7 +396,9 @@ export default function AccountSettings() {
                         const next = !s;
                         try {
                           if (confirmPasswordRef.current) {
-                            confirmPasswordRef.current.type = next ? "text" : "password";
+                            confirmPasswordRef.current.type = next
+                              ? "text"
+                              : "password";
                           }
                         } catch {}
                         return next;
