@@ -1310,45 +1310,48 @@ export async function updateAccount(params: {
   // which accepts PATCH to /auth/v1/user with the user's JWT.
   if (shouldUseSupabaseApi() && SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
     try {
-      const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
-      const token = getToken();
-      if (!token) throw new Error("Session expired. Please sign in again.");
+      if (!supabaseClient) throw new Error("Supabase not configured.");
 
-      const supabasePayload: any = {};
-      if (params.newPassword) supabasePayload.password = params.newPassword;
-      // Supabase doesn't allow changing email via this endpoint in all setups;
-      // include username/email when provided — backend may ignore if not allowed.
-      if (params.email) {
-        supabasePayload.email = params.email;
-        supabasePayload.username = params.email;
-      }
-
-      const res = await fetchWithTimeout(`${supabaseBase}/auth/v1/user`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          apikey: SUPABASE_ANON_ENV,
-        },
-        body: JSON.stringify(supabasePayload),
-      });
-
-      if (!res.ok) {
-        let body = "";
+      const userEmail = params.email || (() => {
         try {
-          body = await res.text();
+          const raw = localStorage.getItem("user:profile");
+          if (raw) return JSON.parse(raw)?.email || null;
         } catch {}
-        throw new Error(`Update account failed: ${res.status}${body ? ` ${body}` : ""}`);
+        try {
+          const token = getToken();
+          if (token) return decodeJwtPayload(token)?.email || null;
+        } catch {}
+        return null;
+      })();
+
+      if (!userEmail) throw new Error("Could not determine your email. Please log out and back in.");
+
+      const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+      const verifyRes = await fetchWithTimeout(
+        `${supabaseBase}/auth/v1/token?grant_type=password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_ENV },
+          body: JSON.stringify({ email: userEmail, password: params.currentPassword }),
+        }
+      );
+      if (!verifyRes.ok) throw new Error("Current password is incorrect.");
+
+      const updatePayload: any = {};
+      if (params.newPassword) updatePayload.password = params.newPassword;
+      if (params.email) updatePayload.email = params.email;
+
+      if (Object.keys(updatePayload).length === 0) {
+        return { username: userEmail, email: userEmail };
       }
 
-      const data = await res.json();
-      return { username: data?.email ?? data?.user?.email ?? "", email: data?.email ?? data?.user?.email ?? "" };
+      const { data, error } = await (supabaseClient as any).auth.updateUser(updatePayload);
+      if (error) throw new Error(error.message || "Update failed.");
+
+      const updatedEmail = data?.user?.email ?? userEmail;
+      return { username: updatedEmail, email: updatedEmail };
     } catch (e: any) {
-      // Re-throw with a helpful message for network-level failures
-      if (e?.message && e.message.includes("Failed to fetch")) {
-        throw new Error("Network error updating account. Check your connection or backend availability.");
-      }
-      throw e;
+      throw new Error(e?.message || "Update account failed.");
     }
   }
 
