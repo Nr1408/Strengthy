@@ -667,6 +667,17 @@ export default function Auth({
       await login(formData.email, formData.password);
       toast({ title: "Welcome back", description: "Signed in." });
       try {
+        const isNewUser = localStorage.getItem("auth:isNewUser") === "1";
+        if (isNewUser) {
+          try {
+            localStorage.removeItem("auth:isNewUser");
+            localStorage.removeItem("user:onboarding");
+            localStorage.removeItem("user:monthlyGoal");
+          } catch {}
+          navigate("/onboarding");
+          return;
+        }
+
         const token = getToken();
         const goOnboarding = token
           ? await shouldRouteToOnboarding(token)

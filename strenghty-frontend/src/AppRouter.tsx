@@ -175,6 +175,37 @@ const FirstWorkoutGuard = () => {
   return null;
 };
 
+const RequireOnboarding = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const token = getToken();
+      if (!token) {
+        navigate("/auth", { replace: true });
+        return;
+      }
+
+      const raw = localStorage.getItem("user:onboarding");
+      if (!raw) {
+        navigate("/onboarding", { replace: true });
+        return;
+      }
+
+      const onboarding = JSON.parse(raw);
+      const hasGoal = !!String(onboarding?.goal || "").trim();
+      const hasExperience = !!String(onboarding?.experience || "").trim();
+      if (!hasGoal || !hasExperience) {
+        navigate("/onboarding", { replace: true });
+      }
+    } catch {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [navigate]);
+
+  return <>{children}</>;
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   const isOAuthPopup = (() => {
@@ -251,7 +282,9 @@ const AnimatedRoutes = () => {
           path="/dashboard"
           element={
             <PageTransition>
-              <Dashboard />
+              <RequireOnboarding>
+                <Dashboard />
+              </RequireOnboarding>
             </PageTransition>
           }
         />

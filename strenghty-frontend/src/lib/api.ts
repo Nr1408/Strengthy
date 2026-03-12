@@ -313,6 +313,13 @@ export async function fetchAndPersistProfile(): Promise<boolean> {
 
     if (!p) return false;
 
+    // Don't overwrite a blank onboarding profile for brand-new users
+    // who were just created and haven't completed the onboarding flow yet.
+    try {
+      const isNewUser = localStorage.getItem("auth:isNewUser") === "1";
+      if (isNewUser) return true;
+    } catch {}
+
     // Persist a minimal profile for display
     try {
       const profile = { name: p.full_name || p.name || p.username || null, email: p.email || null, avatar: p.avatar || null };
