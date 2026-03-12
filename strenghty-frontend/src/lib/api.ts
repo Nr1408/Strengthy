@@ -1237,7 +1237,7 @@ export async function deleteAccount() {
       if (/\.functions\./i.test(supabaseClean)) {
         fnBase = supabaseClean.replace(/\/+$/g, "");
       } else if (/\.supabase\.co$/i.test(supabaseClean)) {
-        fnBase = supabaseClean.replace(/\.supabase\.co$/i, ".functions.supabase.co") + "/v1";
+        fnBase = supabaseClean.replace(/\.supabase\.co$/i, ".functions.supabase.co");
       } else {
         // fallback: append the standard functions path
         fnBase = supabaseClean + "/functions/v1";
