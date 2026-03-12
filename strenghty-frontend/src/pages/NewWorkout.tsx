@@ -2774,24 +2774,21 @@ export default function NewWorkout() {
         className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2"
       >
         <div className="flex items-center justify-between px-4 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (isFirstWorkout) {
-                navigate("/dashboard");
-                return;
+          {!isFirstWorkout && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                navigate(
+                  originPath || (isRoutineBuilder ? "/routines" : "/workouts"),
+                  { state: originState ?? undefined },
+                )
               }
-              navigate(
-                originPath || (isRoutineBuilder ? "/routines" : "/workouts"),
-                {
-                  state: originState ?? undefined,
-                },
-              );
-            }}
-          >
-            Cancel
-          </Button>
+            >
+              Cancel
+            </Button>
+          )}
+          {isFirstWorkout && <div className="w-16" />}
           <Button size="sm" onClick={saveWorkout} disabled={isSavingWorkout}>
             {isSavingWorkout
               ? "Saving..."

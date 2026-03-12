@@ -60,7 +60,7 @@ const ROUTINE_TAGS: Record<
   "r-beginner-full":     { goals: ["hypertrophy", "calorie-burn", "other"], equipment: ["bodyweight"],  experience: ["beginner"],                             split: "full",   beginner: true  },
   "r-home-upper":        { goals: ["hypertrophy"],                          equipment: ["bodyweight"],  experience: ["beginner", "intermediate", "advanced"], split: "upper",  beginner: true  },
   "r-db-lower-strength": { goals: ["powerlifting", "hypertrophy"],          equipment: ["home-gym"],    experience: ["intermediate", "advanced"],             split: "lower",  beginner: false },
-  "r-core-abs":          { goals: ["hypertrophy", "calorie-burn", "other"], equipment: ["bodyweight", "home-gym", "full-gym"], experience: ["beginner", "intermediate", "advanced"], split: "full", beginner: true },
+  "r-core-abs":          { goals: ["hypertrophy", "calorie-burn", "other"], equipment: ["bodyweight", "home-gym", "full-gym"], experience: ["beginner", "intermediate", "advanced"], split: "core", beginner: true },
 };
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -89,6 +89,11 @@ function scoreRoutine(routineId: string, user: UserOnboardingData): number {
     (tags.split === "full" || tags.split === "lower" || tags.split === "cardio")
   ) {
     score += 10;
+  }
+
+  // Core-only routines should never be recommended as a primary workout
+  if (tags.split === "core") {
+    score -= 40;
   }
 
   // Bodyweight-only users: heavily penalise gym-only routines

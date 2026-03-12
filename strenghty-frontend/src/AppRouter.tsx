@@ -149,6 +149,32 @@ const OAuthPopupBridge = () => {
   );
 };
 
+const FirstWorkoutGuard = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Only run on initial mount, not on every navigation
+    const firstWorkoutDone = localStorage.getItem("user:firstWorkoutCompleted");
+    const inProgress = localStorage.getItem("workout:inProgress");
+    const onboardingDone = localStorage.getItem("user:onboarding");
+
+    // If user closed the app during their first workout:
+    // they have onboarding data + an in-progress workout
+    // but haven't completed their first workout yet
+    if (onboardingDone && !firstWorkoutDone && inProgress) {
+      try {
+        localStorage.removeItem("workout:inProgress");
+        localStorage.removeItem("workout:paused");
+      } catch (e) {}
+      // Use window.location so it's a hard redirect that clears
+      // any stale router state
+      window.location.replace("/onboarding");
+    }
+  }, []); // empty deps = runs once on mount
+
+  return null;
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   const isOAuthPopup = (() => {
@@ -375,6 +401,7 @@ const App = () => (
           <BackButtonHandler />
           <TokenRefresher />
           <WorkoutNotificationHandler />
+          <FirstWorkoutGuard />
           <AnimatedRoutes />
         </BrowserRouter>
       </div>

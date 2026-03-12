@@ -120,7 +120,7 @@ export default function ForgotPassword() {
             ) : (
               <div className="space-y-4">
                 <p className="text-center">
-                  Check your inbox. We've sent a password reset link to {email}.
+                  Check your inbox. We've sent a password reset link to {email}
                 </p>
                 <p className="text-center text-sm text-muted-foreground">
                   <Link
