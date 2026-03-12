@@ -110,15 +110,6 @@ export default function Auth({
   defaultSignup,
 }: AuthProps = {}) {
   const [isLoading, setIsLoading] = useState(false);
-  const [recoveryMode, setRecoveryMode] = useState(false);
-  const [recoveryAccessToken, setRecoveryAccessToken] = useState<string | null>(
-    null,
-  );
-  const [recoveryRefreshToken, setRecoveryRefreshToken] = useState<
-    string | null
-  >(null);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [pendingAction, setPendingAction] = useState<null | {
     kind: "login" | "signup" | "google";
     title: string;
@@ -131,6 +122,15 @@ export default function Auth({
   const [confirmEmailAddress, setConfirmEmailAddress] = useState<string | null>(
     null,
   );
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryAccessToken, setRecoveryAccessToken] = useState<string | null>(
+    null,
+  );
+  const [recoveryRefreshToken, setRecoveryRefreshToken] = useState<
+    string | null
+  >(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
 
   const [formData, setFormData] = useState<AuthFormData>({
@@ -374,113 +374,75 @@ export default function Auth({
   }, [location.search]);
 
   useEffect(() => {
-    // Supabase OAuth full-page callback handling
-    try {
-      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-      const error = hash.get("error_description") || hash.get("error");
-      if (error) {
-        toast({
-          title: "Google sign-in failed",
-          description: String(error),
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const accessToken = (hash.get("access_token") || "").trim();
-      if (!accessToken) return;
-      const idToken = (hash.get("id_token") || "").trim() || null;
-      const refreshToken = (hash.get("refresh_token") || "").trim();
-      const type = (hash.get("type") || "").trim();
-
-      // Handle password recovery links (type=recovery)
-      if (type === "recovery") {
-        setRecoveryMode(true);
-        setRecoveryAccessToken(accessToken || null);
-        setRecoveryRefreshToken(refreshToken || null);
-        try {
-          setToken(accessToken);
-          if (refreshToken && supabase) {
-            void supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-          }
-        } catch {}
-        // Clean up the hash from the URL so tokens aren't visible
-        try {
-          const cleanUrl = `${window.location.pathname}${window.location.search}`;
-          window.history.replaceState({}, document.title, cleanUrl);
-        } catch {}
-        return;
-      }
-
-      // Immediately switch to signing state so the auth form does not flash
-      // after account selection and redirect back.
-      setPendingAction({
-        kind: "google",
-        title: "Signing you in",
-        detail: "Syncing your account...",
-      });
-      setIsLoading(true);
-
-      if (refreshToken && supabase) {
-        void supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-      }
-
-      const cleanUrl = `${window.location.pathname}${window.location.search}`;
-      window.history.replaceState({}, document.title, cleanUrl);
-      void completeWebGoogleLogin(accessToken, idToken);
-    } catch {
-      // no-op
-    }
-  }, [completeWebGoogleLogin]);
-
-  const handleRecoverySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPassword || newPassword !== confirmNewPassword) {
-      toast({ title: "Passwords do not match", variant: "destructive" });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      if (!supabase) throw new Error("Supabase is not configured");
-      // Ensure session is set
+    // Supabase OAuth full-page callback handling (including recovery links)
+    (async () => {
       try {
-        if (recoveryRefreshToken) {
-          await supabase.auth.setSession({
-            access_token: recoveryAccessToken || undefined,
-            refresh_token: recoveryRefreshToken,
+        const hash = new URLSearchParams(
+          window.location.hash.replace(/^#/, ""),
+        );
+        const error = hash.get("error_description") || hash.get("error");
+
+        if (error) {
+          toast({
+            title: "Google sign-in failed",
+            description: String(error),
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const accessToken = (hash.get("access_token") || "").trim();
+        const idToken = (hash.get("id_token") || "").trim() || null;
+        const refreshToken = (hash.get("refresh_token") || "").trim();
+        const type = (hash.get("type") || "").trim();
+
+        // Handle password recovery links (type=recovery)
+        if (type === "recovery") {
+          setRecoveryMode(true);
+          setRecoveryAccessToken(accessToken || null);
+          setRecoveryRefreshToken(refreshToken || null);
+          try {
+            if (supabase && refreshToken) {
+              await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+            }
+          } catch {}
+          try {
+            const cleanUrl = `${window.location.pathname}${window.location.search}`;
+            window.history.replaceState({}, document.title, cleanUrl);
+          } catch {}
+          return;
+        }
+
+        // If there is no access token, nothing to do here.
+        if (!accessToken) return;
+
+        // Immediately switch to signing state so the auth form does not flash
+        // after account selection and redirect back.
+        setPendingAction({
+          kind: "google",
+          title: "Signing you in",
+          detail: "Syncing your account...",
+        });
+        setIsLoading(true);
+
+        if (refreshToken && supabase) {
+          void supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
           });
         }
-      } catch {}
 
-      const { data, error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      if (error) throw error;
-      toast({
-        title: "Password updated",
-        description: "You can now log in with your new password.",
-      });
-      // Clear recovery state and navigate back to login
-      setRecoveryMode(false);
-      setNewPassword("");
-      setConfirmNewPassword("");
-      navigate("/auth");
-    } catch (e: any) {
-      toast({
-        title: "Reset failed",
-        description: String(e?.message || e || "Unable to reset password"),
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        const cleanUrl = `${window.location.pathname}${window.location.search}`;
+        window.history.replaceState({}, document.title, cleanUrl);
+        void completeWebGoogleLogin(accessToken, idToken);
+      } catch {
+        // no-op
+      }
+    })();
+  }, [completeWebGoogleLogin]);
 
   useEffect(() => {
     const isNative =
@@ -742,6 +704,47 @@ export default function Auth({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword !== confirmNewPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      if (!supabase) throw new Error("Supabase is not configured");
+      try {
+        if (recoveryRefreshToken) {
+          await supabase.auth.setSession({
+            access_token: recoveryAccessToken || undefined,
+            refresh_token: recoveryRefreshToken,
+          });
+        }
+      } catch {}
+
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) throw error;
+      toast({
+        title: "Password updated",
+        description: "You can now log in with your new password.",
+      });
+      setRecoveryMode(false);
+      setNewPassword("");
+      setConfirmNewPassword("");
+      navigate("/auth");
+    } catch (e: any) {
+      toast({
+        title: "Reset failed",
+        description: String(e?.message || e || "Unable to reset password"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const activeStep = showSignup ? "signup" : "login";
 
   return (
@@ -836,97 +839,46 @@ export default function Auth({
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="px-6 pb-6">
-                    <div>
-                      {/* Google sign-in button */}
-                      <div className="mb-4 flex justify-center">
-                        <button
-                          type="button"
-                          onClick={onClickContinueWithGoogle}
-                          disabled={isLoading}
-                          className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-zinc-800 text-white font-semibold text-sm border border-white/15 hover:bg-zinc-700 transition-colors"
-                        >
-                          <svg width="18" height="18" viewBox="0 0 18 18">
-                            <path
-                              fill="#4285F4"
-                              d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-                            />
-                            <path
-                              fill="#34A853"
-                              d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"
-                            />
-                            <path
-                              fill="#FBBC05"
-                              d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.826.957 4.039l3.007-2.332z"
-                            />
-                            <path
-                              fill="#EA4335"
-                              d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"
-                            />
-                          </svg>
-                          Continue with Google
-                        </button>
-                      </div>
-                      <div className="relative mb-4">
-                        <div className="absolute inset-0 flex items-center">
-                          <span className="w-full border-t border-border" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                          <span className="bg-background px-2 text-muted-foreground">
-                            or continue with email
-                          </span>
-                        </div>
-                      </div>
-
-                      <form onSubmit={handleSubmit} className="space-y-4">
-                        {showSignup && (
-                          <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <div className="relative">
-                              <User className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                              <Input
-                                id="name"
-                                name="name"
-                                placeholder="John Doe"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                                className="pl-10 border border-white/60"
-                                required
-                                disabled={isLoading}
-                              />
-                            </div>
-                          </div>
-                        )}
-
+                    {recoveryMode ? (
+                      <form
+                        onSubmit={handleRecoverySubmit}
+                        className="space-y-4"
+                      >
                         <div className="space-y-2">
-                          <Label htmlFor="email">Email</Label>
+                          <Label htmlFor="newPassword">New password</Label>
                           <div className="relative">
-                            <Mail className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                            <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
                             <Input
-                              id="email"
-                              name="email"
-                              type="email"
-                              placeholder="you@example.com"
-                              value={formData.email}
-                              onChange={handleInputChange}
-                              className="pl-10 border border-white/60"
+                              id="newPassword"
+                              name="newPassword"
+                              type="password"
+                              placeholder="••••••••"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                               required
+                              minLength={6}
                               disabled={isLoading}
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="password">Password</Label>
+                          <Label htmlFor="confirmNewPassword">
+                            Confirm new password
+                          </Label>
                           <div className="relative">
                             <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
                             <Input
-                              id="password"
-                              name="password"
+                              id="confirmNewPassword"
+                              name="confirmNewPassword"
                               type="password"
                               placeholder="••••••••"
-                              value={formData.password}
-                              onChange={handleInputChange}
-                              className="pl-10 border border-white/60"
+                              value={confirmNewPassword}
+                              onChange={(e) =>
+                                setConfirmNewPassword(e.target.value)
+                              }
+                              className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                               required
                               minLength={6}
                               disabled={isLoading}
@@ -936,46 +888,176 @@ export default function Auth({
 
                         <Button
                           type="submit"
-                          className="w-full"
+                          className="w-full min-h-[44px] sm:min-h-[40px]"
                           disabled={isLoading}
                         >
-                          {isLoading ? "Loading..." : "Log In"}
+                          {isLoading ? "Updating..." : "Set new password"}
                         </Button>
                       </form>
-
-                      <div
-                        className={
-                          showSignup
-                            ? "mt-4 text-center text-sm"
-                            : "mt-4 space-y-2 text-center text-sm sm:flex sm:items-center sm:justify-between sm:space-y-0"
-                        }
-                      >
-                        {!showSignup && (
-                          <Link
-                            to="/auth/forgot-password"
-                            className="text-muted-foreground hover:text-primary hover:underline sm:text-left"
+                    ) : (
+                      <>
+                        <div className="mb-4 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={onClickContinueWithGoogle}
+                            disabled={isLoading}
+                            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-zinc-800 text-white font-semibold text-sm border border-white/15 hover:bg-zinc-700 transition-colors"
                           >
-                            Forgot password?
-                          </Link>
-                        )}
+                            <svg width="18" height="18" viewBox="0 0 18 18">
+                              <path
+                                fill="#4285F4"
+                                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                              />
+                              <path
+                                fill="#34A853"
+                                d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"
+                              />
+                              <path
+                                fill="#FBBC05"
+                                d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.826.957 4.039l3.007-2.332z"
+                              />
+                              <path
+                                fill="#EA4335"
+                                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"
+                              />
+                            </svg>
+                            Continue with Google
+                          </button>
+                        </div>
+                        <div className="relative mb-4">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-border" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">
+                              or continue with email
+                            </span>
+                          </div>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                          {showSignup && (
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Name</Label>
+                              <div className="relative">
+                                <User className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                                <Input
+                                  id="name"
+                                  name="name"
+                                  placeholder="John Doe"
+                                  value={formData.name}
+                                  onChange={handleInputChange}
+                                  className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                  required
+                                  disabled={isLoading}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <div className="relative">
+                              <Mail className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                              <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                placeholder="you@example.com"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                required
+                                disabled={isLoading}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <div className="relative">
+                              <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                              <Input
+                                id="password"
+                                name="password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={formData.password}
+                                onChange={handleInputChange}
+                                className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                required
+                                minLength={6}
+                                disabled={isLoading}
+                              />
+                            </div>
+                          </div>
+
+                          <Button
+                            type="submit"
+                            className="w-full min-h-[44px] sm:min-h-[40px]"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? (
+                              "Loading..."
+                            ) : (
+                              <>
+                                <>{showSignup ? "Create Account" : "Log In"}</>
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                              </>
+                            )}
+                          </Button>
+                        </form>
 
                         <div
                           className={
                             showSignup
-                              ? "text-muted-foreground"
-                              : "text-muted-foreground sm:text-right sm:flex-1"
+                              ? "mt-4 text-center text-sm"
+                              : "mt-4 space-y-2 text-center text-sm sm:flex sm:items-center sm:justify-between sm:space-y-0"
                           }
                         >
-                          <button
-                            type="button"
-                            onClick={() => setShowSignup(!showSignup)}
-                            className="font-medium text-primary hover:underline"
+                          {!showSignup && (
+                            <Link
+                              to="/auth/forgot-password"
+                              className="text-muted-foreground hover:text-primary hover:underline sm:text-left"
+                            >
+                              Forgot password?
+                            </Link>
+                          )}
+
+                          <div
+                            className={
+                              showSignup
+                                ? "text-muted-foreground"
+                                : "text-muted-foreground sm:text-right sm:flex-1"
+                            }
                           >
-                            {showSignup ? "Log in" : "Sign up"}
-                          </button>
+                            {showSignup ? (
+                              <>
+                                Already have an account?{" "}
+                                <button
+                                  type="button"
+                                  onClick={() => setShowSignup(false)}
+                                  className="font-medium text-primary hover:underline"
+                                >
+                                  Log in
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                Don't have an account?{" "}
+                                <button
+                                  type="button"
+                                  onClick={() => setShowSignup(true)}
+                                  className="font-medium text-primary hover:underline"
+                                >
+                                  Sign up
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </CardContent>
                 </motion.div>
               </AnimatePresence>

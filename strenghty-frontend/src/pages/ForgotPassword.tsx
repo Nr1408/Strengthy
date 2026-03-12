@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Mail, KeyRound, Lock, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,69 +12,41 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import {
-  confirmPasswordReset,
-  requestPasswordReset,
-  API_BASE,
-} from "@/lib/api";
+import { createClient } from "@supabase/supabase-js";
 
 export default function ForgotPassword() {
-  const [step, setStep] = useState<"email" | "reset">("email");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [sent, setSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const handleRequestOtp = async (e: React.FormEvent) => {
+  const handleSendResetLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     setIsLoading(true);
     try {
-      const res = await requestPasswordReset(email);
-      toast({
-        title: "Check your email",
-        description:
-          res.otp && import.meta.env.DEV
-            ? `Use this code to reset your password: ${res.otp}`
-            : "If an account exists for this email, we've sent a code.",
-      });
-      setStep("reset");
-    } catch (err: any) {
-      toast({
-        title: "Could not start reset",
-        description: `${err?.message || "Please try again."}\nAPI: ${API_BASE}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const supabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL as string,
+        import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+      );
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !otp || !password || !confirmPassword) return;
-    if (password !== confirmPassword) {
-      toast({
-        title: "Passwords do not match",
-        description: "Please make sure both password fields match.",
-        variant: "destructive",
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: "https://strengthy-strengthy-frontend.vercel.app/auth",
       });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const msg = await confirmPasswordReset(email, otp, password);
-      toast({ title: "Password reset", description: msg });
-      navigate("/auth");
+
+      if (error) {
+        throw error;
+      }
+
+      setSent(true);
+      toast({
+        title: "Check your inbox",
+        description: `We've sent a password reset link to ${email}.`,
+      });
     } catch (err: any) {
       toast({
-        title: "Reset failed",
-        description: `${
-          err?.message || "Unable to reset password."
-        }\nAPI: ${API_BASE}`,
+        title: "Could not send reset link",
+        description: err?.message || "Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -105,17 +77,15 @@ export default function ForgotPassword() {
         <Card className="w-full max-w-md rounded-2xl overflow-hidden">
           <CardHeader className="text-center">
             <CardTitle className="font-heading text-2xl">
-              {step === "email" ? "Forgot password" : "Reset your password"}
+              Forgot password
             </CardTitle>
             <CardDescription>
-              {step === "email"
-                ? "Enter your email and we'll send you a one-time code."
-                : "Enter the code you received and choose a new password."}
+              Enter your email and we'll send you a password reset link.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-6 pb-6">
-            {step === "email" ? (
-              <form onSubmit={handleRequestOtp} className="space-y-4">
+            {!sent ? (
+              <form onSubmit={handleSendResetLink} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
@@ -133,7 +103,7 @@ export default function ForgotPassword() {
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Sending code..." : "Send reset code"}
+                  {isLoading ? "Sending..." : "Send reset link"}
                 </Button>
                 <p className="mt-4 text-center text-sm text-muted-foreground">
                   Remembered your password?{" "}
@@ -146,88 +116,19 @@ export default function ForgotPassword() {
                 </p>
               </form>
             ) : (
-              <form onSubmit={handleResetPassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp">One-time code</Label>
-                  <div className="relative">
-                    <KeyRound className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                    <Input
-                      id="otp"
-                      name="otp"
-                      placeholder="6-digit code"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">New password</Label>
-                  <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm new password</Label>
-                  <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    "Resetting..."
-                  ) : (
-                    <>
-                      Reset password
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-
-                <p className="mt-4 text-center text-sm text-muted-foreground">
-                  Back to{" "}
-                  <button
-                    type="button"
-                    onClick={() => setStep("email")}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    Resend Code
-                  </button>{" "}
-                  or{" "}
+              <div className="space-y-4">
+                <p className="text-center">
+                  Check your inbox. We've sent a password reset link to {email}.
+                </p>
+                <p className="text-center text-sm text-muted-foreground">
                   <Link
                     to="/auth"
                     className="font-medium text-primary hover:underline"
                   >
-                    Login
+                    Back to login
                   </Link>
                 </p>
-              </form>
+              </div>
             )}
           </CardContent>
         </Card>
