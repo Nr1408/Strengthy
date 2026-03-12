@@ -180,11 +180,9 @@ export default function Auth({
         const hasGoals =
           Array.isArray(profile.goals) && profile.goals.length > 0;
         const hasExperience = !!String(profile.experience || "").trim();
-        const hasMonthlyWorkouts =
-          typeof profile.monthly_workouts === "number" &&
-          profile.monthly_workouts > 0;
 
-        return !(hasGoals || hasExperience || hasMonthlyWorkouts);
+        // Only skip onboarding when the user has both goals AND experience
+        return !(hasGoals && hasExperience);
       } catch {
         return false;
       }
@@ -638,6 +636,10 @@ export default function Auth({
       if (showSignup) {
         // Create the account
         await register(formData.email, formData.password);
+        // Mark new user so next sign-in routes to onboarding
+        try {
+          localStorage.setItem("auth:isNewUser", "1");
+        } catch {}
         openConfirmEmailDialog(formData.email);
         toast({
           title: "Please confirm your email",
@@ -651,6 +653,16 @@ export default function Auth({
       await login(formData.email, formData.password);
       toast({ title: "Welcome back", description: "Signed in." });
       try {
+        const isNewUser = localStorage.getItem("auth:isNewUser") === "1";
+        if (isNewUser) {
+          try {
+            localStorage.removeItem("auth:isNewUser");
+            localStorage.removeItem("user:onboarding");
+            localStorage.removeItem("user:monthlyGoal");
+          } catch {}
+          navigate("/onboarding");
+          return;
+        }
         const token = getToken();
         const goOnboarding = token
           ? await shouldRouteToOnboarding(token)
