@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { mockRoutines } from "@/data/mockData";
+import { recommendFirstWorkout } from "@/lib/onboarding";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
 import { StatsCard } from "@/components/workout/StatsCard";
@@ -305,12 +306,29 @@ export default function Dashboard() {
   );
 
   const todayRoutine = useMemo(() => {
+    // If no workouts completed yet, use the onboarding "Blueprint"
+    if (completedWorkouts.length === 0) {
+      try {
+        const onboardingRaw = localStorage.getItem("user:onboarding");
+        if (onboardingRaw) {
+          const onboardingData = JSON.parse(onboardingRaw);
+          const blueprint = recommendFirstWorkout(onboardingData);
+          return blueprint.routine;
+        }
+      } catch (e) {
+        // fall through to nextSuggested or default
+        console.error("Failed to load blueprint", e);
+      }
+    }
+
+    // If there is at least one completed workout, prefer the saved next suggestion
     if (nextSuggested?.id) {
       const rt = mockRoutines.find((r) => r.id === nextSuggested.id);
       if (rt) return rt;
     }
+
     return mockRoutines[0] ?? null;
-  }, [nextSuggested]);
+  }, [nextSuggested, completedWorkouts.length]);
 
   const todayRoutineName = todayRoutine?.name ?? "Your workout";
 
@@ -421,7 +439,8 @@ export default function Dashboard() {
 
         {/* Stats */}
         {/* Next Up (post-first-workout) */}
-        {nextSuggested &&
+        {/* Only show "Next Up" banner after at least one workout is logged */}
+        {completedWorkouts.length > 0 && nextSuggested &&
           (() => {
             const rt = mockRoutines.find((r) => r.id === nextSuggested.id);
             // Clean the label — strip "Next: " prefix if present
