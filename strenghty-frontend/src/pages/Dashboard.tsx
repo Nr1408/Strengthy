@@ -341,7 +341,11 @@ export default function Dashboard() {
         if (onboardingRaw) {
           const onboardingData = JSON.parse(onboardingRaw);
           const bp = recommendFirstWorkout(onboardingData);
-          return { routine: bp.routine, label: bp.label, title: "Your Blueprint" };
+          return {
+            routine: bp.routine,
+            label: bp.label,
+            title: "Your Blueprint",
+          };
         }
         return null;
       }
@@ -467,7 +471,8 @@ export default function Dashboard() {
         {bannerData &&
           (() => {
             const rt = bannerData.routine;
-            const routineName = rt?.name || bannerData.label.replace(/^Next:\s*/i, "");
+            const routineName =
+              rt?.name || bannerData.label.replace(/^Next:\s*/i, "");
             const exerciseCount = rt?.exercises?.length ?? 0;
 
             return (
@@ -482,7 +487,10 @@ export default function Dashboard() {
                     </p>
                     {exerciseCount > 0 && (
                       <p className="text-xs text-zinc-400 mt-0.5">
-                        {exerciseCount} exercises{completedWorkouts.length === 0 ? " · Recommended for your Blueprint" : " · Recommended after your first workout"}
+                        {exerciseCount} exercises
+                        {completedWorkouts.length === 0
+                          ? " · Recommended for your Blueprint"
+                          : " · Recommended after your first workout"}
                       </p>
                     )}
                   </div>
@@ -500,7 +508,9 @@ export default function Dashboard() {
                               return;
                             }
                             // for Next Up, clear persisted suggestion and start
-                            localStorage.removeItem("user:nextSuggestedRoutine");
+                            localStorage.removeItem(
+                              "user:nextSuggestedRoutine",
+                            );
                             setNextSuggested(null);
                             navigate("/workouts/new", {
                               state: { routine: rt, forceNew: true },
