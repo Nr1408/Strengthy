@@ -131,6 +131,7 @@ export default function Auth({
   >(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [recoveryDone, setRecoveryDone] = useState(false);
   const [showSignup, setShowSignup] = useState(Boolean(defaultSignup));
 
   const [formData, setFormData] = useState<AuthFormData>({
@@ -730,10 +731,9 @@ export default function Auth({
         title: "Password updated",
         description: "You can now log in with your new password.",
       });
-      setRecoveryMode(false);
+      setRecoveryDone(true);
       setNewPassword("");
       setConfirmNewPassword("");
-      navigate("/auth");
     } catch (e: any) {
       toast({
         title: "Reset failed",
@@ -846,60 +846,90 @@ export default function Auth({
                   </CardHeader>
                   <CardContent className="px-6 pb-6">
                     {recoveryMode ? (
-                      <form
-                        onSubmit={handleRecoverySubmit}
-                        className="space-y-4"
-                      >
-                        <div className="space-y-2">
-                          <Label htmlFor="newPassword">New password</Label>
-                          <div className="relative">
-                            <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                            <Input
-                              id="newPassword"
-                              name="newPassword"
-                              type="password"
-                              placeholder="••••••••"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                              required
-                              minLength={6}
-                              disabled={isLoading}
-                            />
+                      recoveryDone ? (
+                        <div className="space-y-4 text-center">
+                          <div className="text-4xl">✅</div>
+                          <p className="text-lg font-semibold text-white">
+                            Password updated!
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Your password has been changed successfully. You can
+                            now close this tab and log in with your new
+                            password.
+                          </p>
+                          <div className="flex justify-center">
+                            <Button
+                              onClick={() => {
+                                try {
+                                  window.close();
+                                } catch {}
+                              }}
+                              className="mt-2"
+                            >
+                              Close this tab
+                            </Button>
                           </div>
+                          <p className="text-xs text-muted-foreground">
+                            If this tab doesn't close, you can close it
+                            manually.
+                          </p>
                         </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="confirmNewPassword">
-                            Confirm new password
-                          </Label>
-                          <div className="relative">
-                            <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
-                            <Input
-                              id="confirmNewPassword"
-                              name="confirmNewPassword"
-                              type="password"
-                              placeholder="••••••••"
-                              value={confirmNewPassword}
-                              onChange={(e) =>
-                                setConfirmNewPassword(e.target.value)
-                              }
-                              className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
-                              required
-                              minLength={6}
-                              disabled={isLoading}
-                            />
-                          </div>
-                        </div>
-
-                        <Button
-                          type="submit"
-                          className="w-full min-h-[44px] sm:min-h-[40px]"
-                          disabled={isLoading}
+                      ) : (
+                        <form
+                          onSubmit={handleRecoverySubmit}
+                          className="space-y-4"
                         >
-                          {isLoading ? "Updating..." : "Set new password"}
-                        </Button>
-                      </form>
+                          <div className="space-y-2">
+                            <Label htmlFor="newPassword">New password</Label>
+                            <div className="relative">
+                              <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                              <Input
+                                id="newPassword"
+                                name="newPassword"
+                                type="password"
+                                placeholder="••••••••"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                required
+                                minLength={6}
+                                disabled={isLoading}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="confirmNewPassword">
+                              Confirm new password
+                            </Label>
+                            <div className="relative">
+                              <Lock className="pointer-events-none absolute left-3 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-white" />
+                              <Input
+                                id="confirmNewPassword"
+                                name="confirmNewPassword"
+                                type="password"
+                                placeholder="••••••••"
+                                value={confirmNewPassword}
+                                onChange={(e) =>
+                                  setConfirmNewPassword(e.target.value)
+                                }
+                                className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                required
+                                minLength={6}
+                                disabled={isLoading}
+                              />
+                            </div>
+                          </div>
+
+                          <Button
+                            type="submit"
+                            className="w-full min-h-[44px] sm:min-h-[40px]"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? "Updating..." : "Set new password"}
+                          </Button>
+                        </form>
+                      )
                     ) : (
                       <>
                         <div className="mb-4 flex justify-center">

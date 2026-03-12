@@ -14,6 +14,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@supabase/supabase-js";
 
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL as string,
+  import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+);
+
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -25,11 +30,6 @@ export default function ForgotPassword() {
     if (!email) return;
     setIsLoading(true);
     try {
-      const supabase = createClient(
-        import.meta.env.VITE_SUPABASE_URL as string,
-        import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-      );
-
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: "https://strengthy-strengthy-frontend.vercel.app/auth",
       });
@@ -40,8 +40,8 @@ export default function ForgotPassword() {
 
       setSent(true);
       toast({
-        title: "Check your inbox",
-        description: `We've sent a password reset link to ${email}.`,
+        title: "Check your email",
+        description: `We've sent a password reset link to ${email}. Click the link in the email to set a new password.`,
       });
     } catch (err: any) {
       toast({
@@ -77,10 +77,12 @@ export default function ForgotPassword() {
         <Card className="w-full max-w-md rounded-2xl overflow-hidden">
           <CardHeader className="text-center">
             <CardTitle className="font-heading text-2xl">
-              Forgot password
+              {sent ? "Check your email" : "Forgot password"}
             </CardTitle>
             <CardDescription>
-              Enter your email and we'll send you a password reset link.
+              {sent
+                ? `We've sent a password reset link to ${email}. Click the link in the email to set a new password.`
+                : "Enter your email and we'll send you a password reset link."}
             </CardDescription>
           </CardHeader>
           <CardContent className="px-6 pb-6">
