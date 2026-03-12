@@ -306,7 +306,12 @@ export default function Auth({
           } catch {}
         }
 
-        toast({ title: "Welcome!", description: "Signed in with Google." });
+        // Only show the welcome toast for returning users routed to the
+        // dashboard. New users being sent to onboarding should not see the
+        // generic welcome toast.
+        if (!goOnboarding) {
+          toast({ title: "Welcome!", description: "Signed in with Google." });
+        }
         navigate(goOnboarding ? "/onboarding" : "/dashboard");
       } finally {
         setPendingAction(null);
@@ -651,7 +656,6 @@ export default function Auth({
 
       // Login flow
       await login(formData.email, formData.password);
-      toast({ title: "Welcome back", description: "Signed in." });
       try {
         const isNewUser = localStorage.getItem("auth:isNewUser") === "1";
         if (isNewUser) {
@@ -660,13 +664,23 @@ export default function Auth({
             localStorage.removeItem("user:onboarding");
             localStorage.removeItem("user:monthlyGoal");
           } catch {}
+          // Route new users straight to onboarding without showing the
+          // generic "Welcome back" toast.
           navigate("/onboarding");
           return;
         }
+
         const token = getToken();
         const goOnboarding = token
           ? await shouldRouteToOnboarding(token)
           : false;
+
+        // Only show the welcome toast for returning users routed to the
+        // dashboard (not for users being sent to onboarding).
+        if (!goOnboarding) {
+          toast({ title: "Welcome back", description: "Signed in." });
+        }
+
         navigate(goOnboarding ? "/onboarding" : "/dashboard");
       } catch {
         navigate("/dashboard");
