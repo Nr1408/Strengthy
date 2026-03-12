@@ -1181,10 +1181,17 @@ export async function login(username: string, password: string) {
     }
     const data = await res.json();
     if (data.access_token) setToken(data.access_token);
+
+    // Sync session into the Supabase client so SDK-managed refresh works
+    // (useful for native/popup flows where SDK expects its own session state).
     try {
-      // Attempt to fetch and persist server profile/onboarding for recommender
-      try { await fetchAndPersistProfile(); } catch (e) {}
+      if (supabaseClient && data.access_token && data.refresh_token) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        try { await (supabaseClient as any).auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token }); } catch {}
+      }
     } catch {}
+
+    try { await fetchAndPersistProfile(); } catch (e) {}
     return data;
   }
 
