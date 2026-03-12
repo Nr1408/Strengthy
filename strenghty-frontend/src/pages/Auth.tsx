@@ -815,7 +815,7 @@ export default function Auth({
             ) : (
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
-                  key={activeStep}
+                  key={recoveryMode ? "recovery" : activeStep}
                   variants={authStepVariants}
                   layout
                   initial="enter"
@@ -830,12 +830,18 @@ export default function Auth({
                 >
                   <CardHeader className="text-center">
                     <CardTitle className="font-heading text-2xl">
-                      {showSignup ? "Create your account" : "Welcome back"}
+                      {recoveryMode
+                        ? "Set new password"
+                        : showSignup
+                          ? "Create your account"
+                          : "Welcome back"}
                     </CardTitle>
                     <CardDescription>
-                      {showSignup
-                        ? "Start tracking your workouts and PRs"
-                        : "Log in to continue your fitness journey"}
+                      {recoveryMode
+                        ? "Enter your new password below."
+                        : showSignup
+                          ? "Start tracking your workouts and PRs"
+                          : "Log in to continue your fitness journey"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="px-6 pb-6">
