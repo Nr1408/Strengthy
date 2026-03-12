@@ -137,6 +137,29 @@ export default function Dashboard() {
         }
       } catch {}
 
+      // Fallback: check the generic in-progress slot which may have been
+      // populated when starting from the blueprint or restoring state.
+      try {
+        if (!lastRoutineId) {
+          const inProg = localStorage.getItem("workout:inProgress");
+          if (inProg) {
+            const p = JSON.parse(inProg as string);
+            if (p?.routineId) lastRoutineId = p.routineId;
+          }
+        }
+      } catch {}
+
+      // Final fallback: derive from the onboarding blueprint (first workout)
+      try {
+        if (!lastRoutineId) {
+          const onboardingRaw = localStorage.getItem("user:onboarding");
+          if (onboardingRaw) {
+            const bp = recommendFirstWorkout(JSON.parse(onboardingRaw));
+            if (bp?.routine?.id) lastRoutineId = bp.routine.id;
+          }
+        }
+      } catch {}
+
       if (!lastRoutineId) return;
 
       // Collect last 3 routine IDs to avoid immediate repeats
