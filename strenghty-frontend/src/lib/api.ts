@@ -25,6 +25,14 @@ const SUPABASE_REST_BASE = SUPABASE_URL_ENV
   : "";
 const HAS_SUPABASE_CONFIG = !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV);
 
+// Initialize a single Supabase client for the module to keep auth state
+// consistent during the app session. Other modules (pages) may still
+// construct their own clients for specific flows, but central helpers
+// in this file will reuse `supabaseClient` when available.
+const supabaseClient = HAS_SUPABASE_CONFIG
+  ? createClient(SUPABASE_URL_ENV, SUPABASE_ANON_ENV)
+  : null;
+
 function decodeJwtPayload(token: string): any | null {
   try {
     const parts = token.split(".");
@@ -119,58 +127,18 @@ async function resolveSupabaseUserId(): Promise<string | null> {
 
 export async function refreshSupabaseToken(): Promise<boolean> {
   try {
-    const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/, "");
-    let refreshToken: string | null = null;
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && /^sb-.+-auth-token$/.test(key)) {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            refreshToken =
-              parsed?.refresh_token ?? parsed?.data?.refresh_token ?? null;
-          }
-          break;
-        }
-      }
-    } catch {}
-
-    if (!refreshToken) return false;
-
-    const res = await fetch(
-      `${supabaseBase}/auth/v1/token?grant_type=refresh_token`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_ANON_ENV,
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      },
-    );
-
-    if (!res.ok) return false;
-
-    const data = await res.json();
-    if (data.access_token) {
-      setToken(data.access_token);
+    if (!supabaseClient) return false;
+    // Use the native Supabase client to refresh the session. This delegates
+    // refresh logic to the SDK and its configured storage adapter.
+    // supabase.auth.refreshSession() returns { data, error }.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client: any = supabaseClient;
+    const resp = await client.auth.refreshSession();
+    const data = resp?.data;
+    const session = data?.session;
+    if (session?.access_token) {
       try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && /^sb-.+-auth-token$/.test(key)) {
-            const existing = JSON.parse(localStorage.getItem(key) || "{}");
-            localStorage.setItem(
-              key,
-              JSON.stringify({
-                ...existing,
-                access_token: data.access_token,
-                refresh_token: data.refresh_token || refreshToken,
-              }),
-            );
-            break;
-          }
-        }
+        setToken(session.access_token);
       } catch {}
       return true;
     }
@@ -183,22 +151,42 @@ export async function refreshSupabaseToken(): Promise<boolean> {
 async function supabaseHeadersAsync(
   contentTypeJson = false,
 ): Promise<HeadersInit> {
-  const headers: Record<string, string> = { apikey: SUPABASE_ANON_ENV };
-  let token = getToken();
-
-  if (!isSupabaseJwtUsable(token)) {
-    const refreshed = await refreshSupabaseToken();
-    if (refreshed) {
-      token = getToken();
+  if (!supabaseClient) {
+    throw new Error("Session expired. Please log in again.");
+  }
+  // Use the SDK to get the current session. If absent, attempt to refresh
+  // via the SDK. If no session is available after refresh, surface a clear
+  // error so callers can prompt the user to reauthenticate.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client: any = supabaseClient;
+  let token: string | null = null;
+  try {
+    const getResp = await client.auth.getSession();
+    const session = getResp?.data?.session;
+    if (session?.access_token) {
+      token = session.access_token;
     } else {
-      try {
-        clearToken();
-      } catch {}
-      throw new Error("Session expired. Please log in again.");
+      const refreshResp = await client.auth.refreshSession();
+      const refreshedSession = refreshResp?.data?.session;
+      if (refreshedSession?.access_token) {
+        token = refreshedSession.access_token;
+      }
     }
+  } catch {
+    // fallthrough to error below
   }
 
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (!token) {
+    try {
+      clearToken();
+    } catch {}
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  const headers: Record<string, string> = {
+    apikey: SUPABASE_ANON_ENV,
+    Authorization: `Bearer ${token}`,
+  };
   if (contentTypeJson) headers["Content-Type"] = "application/json";
   return headers;
 }
@@ -1142,7 +1130,8 @@ export async function register(username: string, password: string) {
   if (USE_SUPABASE_AUTH) {
     // Use Supabase client signUp to allow setting email redirect options
     try {
-      const supabase = createClient(SUPABASE_URL_ENV, SUPABASE_ANON_ENV);
+      if (!supabaseClient) throw new Error("Supabase auth not configured");
+      const supabase = supabaseClient;
       const redirectTo = typeof window !== "undefined"
         ? `${window.location.origin}/verified`
         : "https://strengthy-strengthy-frontend.vercel.app/verified";
@@ -1205,6 +1194,53 @@ export async function updateAccount(params: {
     payload.password = params.newPassword;
   }
 
+  // If Supabase is configured, prefer using Supabase Auth endpoint
+  // which accepts PATCH to /auth/v1/user with the user's JWT.
+  if (shouldUseSupabaseApi() && SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
+    try {
+      const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+      const token = getToken();
+      if (!token) throw new Error("Session expired. Please sign in again.");
+
+      const supabasePayload: any = {};
+      if (params.newPassword) supabasePayload.password = params.newPassword;
+      // Supabase doesn't allow changing email via this endpoint in all setups;
+      // include username/email when provided — backend may ignore if not allowed.
+      if (params.email) {
+        supabasePayload.email = params.email;
+        supabasePayload.username = params.email;
+      }
+
+      const res = await fetchWithTimeout(`${supabaseBase}/auth/v1/user`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: SUPABASE_ANON_ENV,
+        },
+        body: JSON.stringify(supabasePayload),
+      });
+
+      if (!res.ok) {
+        let body = "";
+        try {
+          body = await res.text();
+        } catch {}
+        throw new Error(`Update account failed: ${res.status}${body ? ` ${body}` : ""}`);
+      }
+
+      const data = await res.json();
+      return { username: data?.email ?? data?.user?.email ?? "", email: data?.email ?? data?.user?.email ?? "" };
+    } catch (e: any) {
+      // Re-throw with a helpful message for network-level failures
+      if (e?.message && e.message.includes("Failed to fetch")) {
+        throw new Error("Network error updating account. Check your connection or backend availability.");
+      }
+      throw e;
+    }
+  }
+
+  // Fallback: legacy Django endpoint
   const res = await fetch(`${API_BASE}/auth/account/`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1813,9 +1849,8 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   }
 
   const createSetViaSupabaseRest = async (): Promise<UiWorkoutSet> => {
-    if (!isSupabaseJwtUsable(getToken())) {
-      throw new Error("Session expired. Please log in again.");
-    }
+    // `supabaseHeadersAsync` will validate/refresh the session and throw
+    // a clear error if the session is expired. No manual JWT checks here.
 
     const resolveNextSetNumber = async () => {
       const lastRes = await fetchWithTimeout(

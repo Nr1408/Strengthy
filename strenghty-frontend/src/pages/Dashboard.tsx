@@ -358,8 +358,9 @@ export default function Dashboard() {
       // derive the last-started routine id from localStorage for the
       // most recent completed workout and ask the recommender.
       try {
-        const last = [...completedWorkouts]
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+        const last = [...completedWorkouts].sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+        )[0];
         if (last) {
           // Check client-side state that may have recorded the routineId
           // while the workout was in-progress: `workout:state:{id}` or
@@ -385,7 +386,11 @@ export default function Dashboard() {
           if (candidateId) {
             const suggested = recommendNextRoutine(candidateId);
             if (suggested && suggested.routine)
-              return { routine: suggested.routine, label: suggested.label, title: "Next Up" };
+              return {
+                routine: suggested.routine,
+                label: suggested.label,
+                title: "Next Up",
+              };
           }
         }
       } catch (e) {}
