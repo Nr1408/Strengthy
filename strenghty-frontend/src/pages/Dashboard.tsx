@@ -545,8 +545,8 @@ export default function Dashboard() {
                     const isPast = pillDate < startOfToday();
 
                     const status = (() => {
+                      if (isDone) return "done"; // always show done if worked out, regardless of schedule
                       if (!scheduledDays.includes(dayOfWeek)) return "rest";
-                      if (isDone) return "done";
                       if (isToday) return "today";
                       if (isPast) return "missed";
                       return "upcoming";
