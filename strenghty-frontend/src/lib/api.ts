@@ -25,14 +25,6 @@ const SUPABASE_REST_BASE = SUPABASE_URL_ENV
   : "";
 const HAS_SUPABASE_CONFIG = !!(SUPABASE_URL_ENV && SUPABASE_ANON_ENV);
 
-// Initialize a single Supabase client for the module to keep auth state
-// consistent during the app session. Other modules (pages) may still
-// construct their own clients for specific flows, but central helpers
-// in this file will reuse `supabaseClient` when available.
-const supabaseClient = HAS_SUPABASE_CONFIG
-  ? createClient(SUPABASE_URL_ENV, SUPABASE_ANON_ENV)
-  : null;
-
 function decodeJwtPayload(token: string): any | null {
   try {
     const parts = token.split(".");
@@ -127,18 +119,58 @@ async function resolveSupabaseUserId(): Promise<string | null> {
 
 export async function refreshSupabaseToken(): Promise<boolean> {
   try {
-    if (!supabaseClient) return false;
-    // Use the native Supabase client to refresh the session. This delegates
-    // refresh logic to the SDK and its configured storage adapter.
-    // supabase.auth.refreshSession() returns { data, error }.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client: any = supabaseClient;
-    const resp = await client.auth.refreshSession();
-    const data = resp?.data;
-    const session = data?.session;
-    if (session?.access_token) {
+    const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/, "");
+    let refreshToken: string | null = null;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && /^sb-.+-auth-token$/.test(key)) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            refreshToken =
+              parsed?.refresh_token ?? parsed?.data?.refresh_token ?? null;
+          }
+          break;
+        }
+      }
+    } catch {}
+
+    if (!refreshToken) return false;
+
+    const res = await fetch(
+      `${supabaseBase}/auth/v1/token?grant_type=refresh_token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_ENV,
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      },
+    );
+
+    if (!res.ok) return false;
+
+    const data = await res.json();
+    if (data.access_token) {
+      setToken(data.access_token);
       try {
-        setToken(session.access_token);
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && /^sb-.+-auth-token$/.test(key)) {
+            const existing = JSON.parse(localStorage.getItem(key) || "{}");
+            localStorage.setItem(
+              key,
+              JSON.stringify({
+                ...existing,
+                access_token: data.access_token,
+                refresh_token: data.refresh_token || refreshToken,
+              }),
+            );
+            break;
+          }
+        }
       } catch {}
       return true;
     }
@@ -151,49 +183,22 @@ export async function refreshSupabaseToken(): Promise<boolean> {
 async function supabaseHeadersAsync(
   contentTypeJson = false,
 ): Promise<HeadersInit> {
-  if (!supabaseClient) {
-    throw new Error("Supabase is not configured.");
-  }
-  // Rely on the Supabase SDK's getSession() as the source of truth for
-  // the current session (it may perform refreshes internally depending on
-  // the configured storage/adapter). Keep legacy local `token` storage in
-  // sync when a session is returned.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const client: any = supabaseClient;
-  let token: string | null = null;
-  try {
-    const resp = await client.auth.getSession();
-    const session = resp?.data?.session;
-    const error = resp?.error;
-    if (session?.access_token) {
-      token = session.access_token;
+  const headers: Record<string, string> = { apikey: SUPABASE_ANON_ENV };
+  let token = getToken();
+
+  if (!isSupabaseJwtUsable(token)) {
+    const refreshed = await refreshSupabaseToken();
+    if (refreshed) {
+      token = getToken();
+    } else {
       try {
-        if (token !== getToken()) setToken(token);
+        clearToken();
       } catch {}
-    } else if (error) {
-      try {
-        // Log SDK-provided error for diagnostics but do not throw yet
-        // as we will handle missing token below.
-        // eslint-disable-next-line no-console
-        console.error("Supabase session error:", error?.message || error);
-      } catch {}
+      throw new Error("Session expired. Please log in again.");
     }
-  } catch (e) {
-    try {
-      // eslint-disable-next-line no-console
-      console.error("Auth retrieval failed", e);
-    } catch {}
   }
 
-  if (!token) {
-    try { clearToken(); } catch {}
-    throw new Error("Session expired. Please log in again.");
-  }
-
-  const headers: Record<string, string> = {
-    apikey: SUPABASE_ANON_ENV,
-    Authorization: `Bearer ${token}`,
-  };
+  if (token) headers.Authorization = `Bearer ${token}`;
   if (contentTypeJson) headers["Content-Type"] = "application/json";
   return headers;
 }
@@ -296,81 +301,6 @@ async function getSupabaseProfile() {
   if (!res.ok) return null;
   const rows = (await res.json()) as any[];
   return rows?.[0] ?? null;
-}
-
-export async function fetchAndPersistProfile(): Promise<boolean> {
-  try {
-    const t = getToken();
-    if (!t) return false;
-
-    const p = shouldUseSupabaseApi()
-      ? await getSupabaseProfile()
-      : await (async () => {
-          const r = await fetch(`${API_BASE}/profile/`, { headers: { ...authHeaders() } });
-          if (!r.ok) return null;
-          return await r.json();
-        })();
-
-    if (!p) return false;
-
-    // Don't overwrite a blank onboarding profile for brand-new users
-    // who were just created and haven't completed the onboarding flow yet.
-    try {
-      const isNewUser = localStorage.getItem("auth:isNewUser") === "1";
-      if (isNewUser) return true;
-    } catch {}
-
-    // Persist a minimal profile for display
-    try {
-      const profile = { name: p.full_name || p.name || p.username || null, email: p.email || null, avatar: p.avatar || null };
-      try { localStorage.setItem("user:profile", JSON.stringify(profile)); } catch (e) {}
-      try {
-        const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
-        if (isNative) {
-          const m = await import('@capacitor/preferences');
-          const Prefs = m.Preferences || m;
-          try { await Prefs.set({ key: 'user:profile', value: JSON.stringify(profile) }); } catch (e) {}
-        }
-      } catch (e) {}
-    } catch (e) {}
-
-    try {
-      // Map server profile fields into the onboarding shape expected by the
-      // onboarding flow. Ensure a single `goal` field exists (first goal)
-      // while keeping the original `goals` array for compatibility.
-      const firstGoal = Array.isArray(p.goals) ? (p.goals[0] || "") : (p.goals || "");
-      const monthly = p.monthly_workouts != null ? Number(p.monthly_workouts) : 12;
-
-      const onboarding = {
-        goal: String(firstGoal || ""),
-        goals: p.goals || [],
-        experience: p.experience || "",
-        equipment: p.equipment || "full-gym",
-        age: p.age != null ? String(p.age) : "",
-        height: p.height != null ? String(p.height) : "",
-        heightUnit: p.height_unit || "cm",
-        currentWeight: p.current_weight != null ? String(p.current_weight) : "",
-        goalWeight: p.goal_weight != null ? String(p.goal_weight) : "",
-        monthlyWorkouts: monthly,
-      };
-
-      try { localStorage.setItem("user:onboarding", JSON.stringify(onboarding)); } catch (e) {}
-      try { if (onboarding.monthlyWorkouts != null) localStorage.setItem('user:monthlyGoal', String(onboarding.monthlyWorkouts)); } catch (e) {}
-      try {
-        const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
-        if (isNative) {
-          const m = await import('@capacitor/preferences');
-          const Prefs = m.Preferences || m;
-          try { await Prefs.set({ key: 'user:onboarding', value: JSON.stringify(onboarding) }); } catch (e) {}
-          try { if (onboarding.monthlyWorkouts != null) await Prefs.set({ key: 'user:monthlyGoal', value: String(onboarding.monthlyWorkouts) }); } catch (e) {}
-        }
-      } catch (e) {}
-    } catch (e) {}
-
-    return true;
-  } catch (e) {
-    return false;
-  }
 }
 
 export async function upsertProfile(payload: {
@@ -1181,10 +1111,6 @@ export async function login(username: string, password: string) {
     }
     const data = await res.json();
     if (data.access_token) setToken(data.access_token);
-    try {
-      // Attempt to fetch and persist server profile/onboarding for recommender
-      try { await fetchAndPersistProfile(); } catch (e) {}
-    } catch {}
     return data;
   }
 
@@ -1209,7 +1135,6 @@ export async function login(username: string, password: string) {
   }
   const data = (await res.json()) as { token: string };
   setToken(data.token);
-  try { await fetchAndPersistProfile(); } catch (e) {}
   return data;
 }
 
@@ -1217,8 +1142,7 @@ export async function register(username: string, password: string) {
   if (USE_SUPABASE_AUTH) {
     // Use Supabase client signUp to allow setting email redirect options
     try {
-      if (!supabaseClient) throw new Error("Supabase auth not configured");
-      const supabase = supabaseClient;
+      const supabase = createClient(SUPABASE_URL_ENV, SUPABASE_ANON_ENV);
       const redirectTo = typeof window !== "undefined"
         ? `${window.location.origin}/verified`
         : "https://strengthy-strengthy-frontend.vercel.app/verified";
@@ -1281,53 +1205,6 @@ export async function updateAccount(params: {
     payload.password = params.newPassword;
   }
 
-  // If Supabase is configured, prefer using Supabase Auth endpoint
-  // which accepts PATCH to /auth/v1/user with the user's JWT.
-  if (shouldUseSupabaseApi() && SUPABASE_URL_ENV && SUPABASE_ANON_ENV) {
-    try {
-      const supabaseBase = SUPABASE_URL_ENV.replace(/\/+$/g, "");
-      const token = getToken();
-      if (!token) throw new Error("Session expired. Please sign in again.");
-
-      const supabasePayload: any = {};
-      if (params.newPassword) supabasePayload.password = params.newPassword;
-      // Supabase doesn't allow changing email via this endpoint in all setups;
-      // include username/email when provided — backend may ignore if not allowed.
-      if (params.email) {
-        supabasePayload.email = params.email;
-        supabasePayload.username = params.email;
-      }
-
-      const res = await fetchWithTimeout(`${supabaseBase}/auth/v1/user`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          apikey: SUPABASE_ANON_ENV,
-        },
-        body: JSON.stringify(supabasePayload),
-      });
-
-      if (!res.ok) {
-        let body = "";
-        try {
-          body = await res.text();
-        } catch {}
-        throw new Error(`Update account failed: ${res.status}${body ? ` ${body}` : ""}`);
-      }
-
-      const data = await res.json();
-      return { username: data?.email ?? data?.user?.email ?? "", email: data?.email ?? data?.user?.email ?? "" };
-    } catch (e: any) {
-      // Re-throw with a helpful message for network-level failures
-      if (e?.message && e.message.includes("Failed to fetch")) {
-        throw new Error("Network error updating account. Check your connection or backend availability.");
-      }
-      throw e;
-    }
-  }
-
-  // Fallback: legacy Django endpoint
   const res = await fetch(`${API_BASE}/auth/account/`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1370,21 +1247,14 @@ export async function deleteAccount() {
         method: "POST",
         headers,
       });
+
       if (!res.ok) {
-        // If the server specifically requires re-authentication, surface
-        // a clear message to the user so they can sign out/sign back in.
-        if (res.status === 401) {
-          throw new Error("Security check: Please log out and back in once more to delete your account.");
-        }
         let body = "";
         try {
           body = await res.text();
         } catch {}
-        throw new Error(`Delete failed (${res.status}): ${body}`);
+        throw new Error(`Delete account failed: ${res.status}${body ? ` ${body}` : ""}`);
       }
-
-      // On successful deletion, perform local cleanup and sign out.
-      try { await signOut(); } catch {}
       return;
     } catch (e: any) {
       const msg = e?.message || String(e || "Delete failed");
@@ -1405,12 +1275,10 @@ export async function deleteAccount() {
     } catch {
       // ignore
     }
-    throw new Error(`Delete account failed: ${res.status}${body ? ` ${body}` : ""}`);
+    throw new Error(
+      `Delete account failed: ${res.status}${body ? ` ${body}` : ""}`
+    );
   }
-
-  // On successful deletion (non-error path above), perform local cleanup.
-  try { await signOut(); } catch {}
-  return;
 }
 
 export async function loginWithGoogle(idToken: string) {
@@ -1945,8 +1813,9 @@ export async function createSet(params: { workoutId: string; exerciseId: string;
   }
 
   const createSetViaSupabaseRest = async (): Promise<UiWorkoutSet> => {
-    // `supabaseHeadersAsync` will validate/refresh the session and throw
-    // a clear error if the session is expired. No manual JWT checks here.
+    if (!isSupabaseJwtUsable(getToken())) {
+      throw new Error("Session expired. Please log in again.");
+    }
 
     const resolveNextSetNumber = async () => {
       const lastRes = await fetchWithTimeout(
