@@ -152,34 +152,41 @@ async function supabaseHeadersAsync(
   contentTypeJson = false,
 ): Promise<HeadersInit> {
   if (!supabaseClient) {
-    throw new Error("Session expired. Please log in again.");
+    throw new Error("Supabase is not configured.");
   }
-  // Use the SDK to get the current session. If absent, attempt to refresh
-  // via the SDK. If no session is available after refresh, surface a clear
-  // error so callers can prompt the user to reauthenticate.
+  // Rely on the Supabase SDK's getSession() as the source of truth for
+  // the current session (it may perform refreshes internally depending on
+  // the configured storage/adapter). Keep legacy local `token` storage in
+  // sync when a session is returned.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client: any = supabaseClient;
   let token: string | null = null;
   try {
-    const getResp = await client.auth.getSession();
-    const session = getResp?.data?.session;
+    const resp = await client.auth.getSession();
+    const session = resp?.data?.session;
+    const error = resp?.error;
     if (session?.access_token) {
       token = session.access_token;
-    } else {
-      const refreshResp = await client.auth.refreshSession();
-      const refreshedSession = refreshResp?.data?.session;
-      if (refreshedSession?.access_token) {
-        token = refreshedSession.access_token;
-      }
+      try {
+        if (token !== getToken()) setToken(token);
+      } catch {}
+    } else if (error) {
+      try {
+        // Log SDK-provided error for diagnostics but do not throw yet
+        // as we will handle missing token below.
+        // eslint-disable-next-line no-console
+        console.error("Supabase session error:", error?.message || error);
+      } catch {}
     }
-  } catch {
-    // fallthrough to error below
+  } catch (e) {
+    try {
+      // eslint-disable-next-line no-console
+      console.error("Auth retrieval failed", e);
+    } catch {}
   }
 
   if (!token) {
-    try {
-      clearToken();
-    } catch {}
+    try { clearToken(); } catch {}
     throw new Error("Session expired. Please log in again.");
   }
 
@@ -1347,14 +1354,21 @@ export async function deleteAccount() {
         method: "POST",
         headers,
       });
-
       if (!res.ok) {
+        // If the server specifically requires re-authentication, surface
+        // a clear message to the user so they can sign out/sign back in.
+        if (res.status === 401) {
+          throw new Error("Security check: Please log out and back in once more to delete your account.");
+        }
         let body = "";
         try {
           body = await res.text();
         } catch {}
-        throw new Error(`Delete account failed: ${res.status}${body ? ` ${body}` : ""}`);
+        throw new Error(`Delete failed (${res.status}): ${body}`);
       }
+
+      // On successful deletion, perform local cleanup and sign out.
+      try { await signOut(); } catch {}
       return;
     } catch (e: any) {
       const msg = e?.message || String(e || "Delete failed");
@@ -1375,10 +1389,12 @@ export async function deleteAccount() {
     } catch {
       // ignore
     }
-    throw new Error(
-      `Delete account failed: ${res.status}${body ? ` ${body}` : ""}`
-    );
+    throw new Error(`Delete account failed: ${res.status}${body ? ` ${body}` : ""}`);
   }
+
+  // On successful deletion (non-error path above), perform local cleanup.
+  try { await signOut(); } catch {}
+  return;
 }
 
 export async function loginWithGoogle(idToken: string) {
