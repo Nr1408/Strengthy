@@ -37,8 +37,8 @@ const ROUTINE_TAGS: Record<
   "r-full-a":                  { goals: ["hypertrophy", "calorie-burn"],  equipment: ["full-gym"],                  experience: ["beginner"],                             split: "full",   beginner: true  },
   "r-full-b":                  { goals: ["hypertrophy", "calorie-burn"],  equipment: ["full-gym"],                  experience: ["beginner", "intermediate"],             split: "full",   beginner: true  },
   "r-glutes-hamstrings":       { goals: ["hypertrophy", "calorie-burn"],  equipment: ["full-gym"],                              experience: ["beginner", "intermediate"],             split: "lower",  beginner: true  },
-  "r-arms-shoulders":          { goals: ["hypertrophy"],                  equipment: ["full-gym", "home-gym"],                  experience: ["beginner", "intermediate"],             split: "arms",   beginner: true  },
-  "r-conditioning-bodyweight": { goals: ["calorie-burn", "other"],        equipment: ["bodyweight", "home-gym", "full-gym"],    experience: ["beginner", "intermediate", "advanced"], split: "cardio", beginner: true  },
+  "r-arms-shoulders":          { goals: ["hypertrophy"],                  equipment: ["full-gym"],                                 experience: ["beginner", "intermediate"],             split: "arms",   beginner: true  },
+  "r-conditioning-bodyweight": { goals: ["calorie-burn", "other"],        equipment: ["bodyweight", "full-gym"],                 experience: ["beginner", "intermediate", "advanced"], split: "cardio", beginner: true  },
 
   // Home / bodyweight routines
   "r-home-push":         { goals: ["hypertrophy"],                  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "push",   beginner: true  },

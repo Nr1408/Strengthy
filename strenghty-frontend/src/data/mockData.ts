@@ -321,7 +321,7 @@ export const mockRoutines: Routine[] = [
       { id: 'r-cond-2', exercise: ex('Burpees'), targetSets: 3, targetReps: 15, order: 2 },
       { id: 'r-cond-3', exercise: ex('Mountain Climbers'), targetSets: 3, targetReps: 30, order: 3 },
       { id: 'r-cond-4', exercise: ex('Plank Jacks'), targetSets: 3, targetReps: 25, order: 4 },
-      { id: 'r-cond-5', exercise: ex('Rowing Machine'), targetSets: 3, targetReps: 500, order: 5 },
+      { id: 'r-cond-5', exercise: ex('Skaters'), targetSets: 3, targetReps: 20, order: 5 },
     ],
   },
 
