@@ -291,6 +291,65 @@ async function getSupabaseProfile() {
   return rows?.[0] ?? null;
 }
 
+export async function fetchAndPersistProfile(): Promise<boolean> {
+  try {
+    const t = getToken();
+    if (!t) return false;
+
+    const p = shouldUseSupabaseApi()
+      ? await getSupabaseProfile()
+      : await (async () => {
+          const r = await fetch(`${API_BASE}/profile/`, { headers: { ...authHeaders() } });
+          if (!r.ok) return null;
+          return await r.json();
+        })();
+
+    if (!p) return false;
+
+    // Persist a minimal profile for display
+    try {
+      const profile = { name: p.full_name || p.name || p.username || null, email: p.email || null, avatar: p.avatar || null };
+      try { localStorage.setItem("user:profile", JSON.stringify(profile)); } catch (e) {}
+      try {
+        const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
+        if (isNative) {
+          const m = await import('@capacitor/preferences');
+          const Prefs = m.Preferences || m;
+          try { await Prefs.set({ key: 'user:profile', value: JSON.stringify(profile) }); } catch (e) {}
+        }
+      } catch (e) {}
+    } catch (e) {}
+
+    try {
+      const onboarding = {
+        goals: p.goals || [],
+        age: p.age != null ? String(p.age) : "",
+        height: p.height != null ? String(p.height) : "",
+        heightUnit: p.height_unit || "cm",
+        currentWeight: p.current_weight != null ? String(p.current_weight) : "",
+        goalWeight: p.goal_weight != null ? String(p.goal_weight) : "",
+        experience: p.experience || "",
+        monthlyWorkouts: p.monthly_workouts != null ? String(p.monthly_workouts) : "",
+      };
+      try { localStorage.setItem("user:onboarding", JSON.stringify(onboarding)); } catch (e) {}
+      try { if (onboarding.monthlyWorkouts) localStorage.setItem('user:monthlyGoal', String(onboarding.monthlyWorkouts)); } catch (e) {}
+      try {
+        const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
+        if (isNative) {
+          const m = await import('@capacitor/preferences');
+          const Prefs = m.Preferences || m;
+          try { await Prefs.set({ key: 'user:onboarding', value: JSON.stringify(onboarding) }); } catch (e) {}
+          try { if (onboarding.monthlyWorkouts) await Prefs.set({ key: 'user:monthlyGoal', value: String(onboarding.monthlyWorkouts) }); } catch (e) {}
+        }
+      } catch (e) {}
+    } catch (e) {}
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export async function upsertProfile(payload: {
   goals?: string[];
   age?: number | null;
@@ -1099,6 +1158,10 @@ export async function login(username: string, password: string) {
     }
     const data = await res.json();
     if (data.access_token) setToken(data.access_token);
+    try {
+      // Attempt to fetch and persist server profile/onboarding for recommender
+      try { await fetchAndPersistProfile(); } catch (e) {}
+    } catch {}
     return data;
   }
 
@@ -1123,6 +1186,7 @@ export async function login(username: string, password: string) {
   }
   const data = (await res.json()) as { token: string };
   setToken(data.token);
+  try { await fetchAndPersistProfile(); } catch (e) {}
   return data;
 }
 

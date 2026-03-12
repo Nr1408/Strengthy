@@ -15,7 +15,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
 import { StatsCard } from "@/components/workout/StatsCard";
 import { useQuery } from "@tanstack/react-query";
-import { getSets, getWorkouts, getCardioSetsForWorkout } from "@/lib/api";
+import {
+  getSets,
+  getWorkouts,
+  getCardioSetsForWorkout,
+  fetchAndPersistProfile,
+} from "@/lib/api";
 import type { UiWorkoutSet, UiWorkout } from "@/lib/api";
 import { countPrTypesFromSet } from "@/lib/utils";
 import {
@@ -56,6 +61,9 @@ export default function Dashboard() {
     label: string;
   }>(null);
 
+  // Toggle to force re-evaluation when onboarding/profile is pulled from server
+  const [profileFetchToggle, setProfileFetchToggle] = useState(0);
+
   const location = useLocation();
 
   useEffect(() => {
@@ -75,6 +83,25 @@ export default function Dashboard() {
       setNextSuggested(null);
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    // If user has no completed workouts and onboarding is missing, try
+    // fetching their profile/onboarding from the server so the Blueprint
+    // banner can be shown after a re-login.
+    (async () => {
+      try {
+        if (completedWorkouts.length === 0) {
+          const onboardingRaw = localStorage.getItem("user:onboarding");
+          if (!onboardingRaw) {
+            const ok = await fetchAndPersistProfile();
+            if (ok) setProfileFetchToggle((n) => n + 1);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, [completedWorkouts.length]);
 
   // Date ranges
   const thisWeekRange = useMemo(() => {
