@@ -37,9 +37,16 @@ serve(async (req) => {
 
   const userToken = auth.split(" ")[1];
 
-  // Validate token and get user info
+  // Validate token and get user info. Use the client's provided `apikey`
+  // (the Supabase anon key) if present — do NOT send the user token as
+  // `apikey` (that results in an invalid JWT error). The frontend sends
+  // `apikey` via supabaseHeadersAsync; prefer that when available.
+  const clientApiKey = req.headers.get("apikey") || undefined;
   const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: { Authorization: `Bearer ${userToken}`, apikey: userToken },
+    headers: Object.fromEntries([
+      ["Authorization", `Bearer ${userToken}`],
+      ...(clientApiKey ? [["apikey", clientApiKey]] : []),
+    ]),
   });
 
   if (!userResp.ok) {
