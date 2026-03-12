@@ -185,6 +185,24 @@ async function supabaseHeadersAsync(
     } catch {}
   }
 
+  // If SDK session is missing, fall back to our legacy `token` stored in
+  // localStorage so a hard reload or redirect (common during email
+  // confirmation) doesn't immediately log users out. If the legacy token
+  // looks usable, rehydrate the Supabase client session as a best-effort.
+  if (!token) {
+    try {
+      const localToken = getToken();
+      if (localToken && isSupabaseJwtUsable(localToken)) {
+        token = localToken;
+        try {
+          // Best-effort: restore SDK session so future SDK calls work.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (client as any).auth.setSession({ access_token: localToken, refresh_token: "" });
+        } catch {}
+      }
+    } catch {}
+  }
+
   if (!token) {
     try { clearToken(); } catch {}
     throw new Error("Session expired. Please log in again.");
