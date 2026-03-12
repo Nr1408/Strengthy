@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Plus,
@@ -64,6 +64,8 @@ export default function Dashboard() {
   // Toggle to force re-evaluation when onboarding/profile is pulled from server
   const [profileFetchToggle, setProfileFetchToggle] = useState(0);
 
+  const prevCompletedCountRef = useRef<number | null>(null);
+
   const location = useLocation();
 
   useEffect(() => {
@@ -105,6 +107,17 @@ export default function Dashboard() {
 
   // After a workout is completed, rotate the "Next Up" suggestion
   useEffect(() => {
+    // Only rotate on actual new completion, not on initial mount/refresh
+    if (prevCompletedCountRef.current === null) {
+      prevCompletedCountRef.current = completedWorkouts.length;
+      return;
+    }
+    if (completedWorkouts.length <= prevCompletedCountRef.current) {
+      prevCompletedCountRef.current = completedWorkouts.length;
+      return;
+    }
+    prevCompletedCountRef.current = completedWorkouts.length;
+
     if (completedWorkouts.length === 0) return;
 
     try {
