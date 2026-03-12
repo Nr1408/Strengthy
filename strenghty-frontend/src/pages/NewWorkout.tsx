@@ -2695,6 +2695,28 @@ export default function NewWorkout() {
         }
       } catch (e) {}
 
+      // Rotate Next Up suggestion before navigating back to dashboard
+      try {
+        const routineId = fromRoutine?.id ?? (() => {
+          try {
+            const raw = localStorage.getItem(`workout:state:${persistedWorkoutId}`);
+            if (raw) return JSON.parse(raw)?.routineId ?? null;
+          } catch {}
+          return null;
+        })();
+        if (routineId) {
+          const suggested = recommendNextRoutine(routineId);
+          if (suggested?.routine && suggested.routine.id !== routineId) {
+            try {
+              localStorage.setItem("user:nextSuggestedRoutine", JSON.stringify({
+                id: suggested.routine.id,
+                label: suggested.label,
+              }));
+            } catch {}
+          }
+        }
+      } catch {}
+
       navigate("/workouts");
       try {
         localStorage.removeItem("workout:inProgress");
