@@ -1225,6 +1225,32 @@ export async function updateAccount(params: {
 }
 
 export async function deleteAccount() {
+  // If Supabase is configured, prefer calling a Supabase Edge Function
+  // (functions.v1) that performs admin deletion using the SERVICE_ROLE key.
+  if (shouldUseSupabaseApi() && SUPABASE_URL_ENV) {
+    try {
+      const fnBase = SUPABASE_URL_ENV.replace(/\/+$/g, "") + "/functions/v1";
+      const headers = await supabaseHeadersAsync(true);
+      const res = await fetch(`${fnBase}/delete-account`, {
+        method: "POST",
+        headers,
+      });
+
+      if (!res.ok) {
+        let body = "";
+        try {
+          body = await res.text();
+        } catch {}
+        throw new Error(`Delete account failed: ${res.status}${body ? ` ${body}` : ""}`);
+      }
+      return;
+    } catch (e: any) {
+      const msg = e?.message || String(e || "Delete failed");
+      throw new Error(msg);
+    }
+  }
+
+  // Fallback to legacy Django endpoint
   const res = await fetch(`${API_BASE}/auth/account/`, {
     method: "DELETE",
     headers: { ...authHeaders() },
