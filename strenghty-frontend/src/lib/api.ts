@@ -1229,7 +1229,19 @@ export async function deleteAccount() {
   // (functions.v1) that performs admin deletion using the SERVICE_ROLE key.
   if (shouldUseSupabaseApi() && SUPABASE_URL_ENV) {
     try {
-      const fnBase = SUPABASE_URL_ENV.replace(/\/+$/g, "") + "/functions/v1";
+      const supabaseClean = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+      let fnBase: string;
+      // If the provided Supabase URL is the project host (e.g. project.supabase.co),
+      // derive the functions host at project.functions.supabase.co. If the env
+      // already points at a functions host or custom functions domain, use it.
+      if (/\.functions\./i.test(supabaseClean)) {
+        fnBase = supabaseClean.replace(/\/+$/g, "");
+      } else if (/\.supabase\.co$/i.test(supabaseClean)) {
+        fnBase = supabaseClean.replace(/\.supabase\.co$/i, ".functions.supabase.co");
+      } else {
+        // fallback: append the standard functions path
+        fnBase = supabaseClean + "/functions/v1";
+      }
       const headers = await supabaseHeadersAsync(true);
       const res = await fetch(`${fnBase}/delete-account`, {
         method: "POST",

@@ -67,13 +67,20 @@ export default function AccountSettings() {
     (async () => {
       try {
         if (accountEmail) return;
-        const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
-        const supabaseAnon = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
+        const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? "")
+          .toString()
+          .trim();
+        const supabaseAnon = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "")
+          .toString()
+          .trim();
         const token = getToken();
         if (!supabaseUrl || !supabaseAnon || !token) return;
-        const res = await fetch(`${supabaseUrl.replace(/\/+$/g, "")}/auth/v1/user`, {
-          headers: { Authorization: `Bearer ${token}`, apikey: supabaseAnon },
-        });
+        const res = await fetch(
+          `${supabaseUrl.replace(/\/+$/g, "")}/auth/v1/user`,
+          {
+            headers: { Authorization: `Bearer ${token}`, apikey: supabaseAnon },
+          },
+        );
         if (!res.ok) return;
         const data = await res.json();
         if (data?.email) setAccountEmail(data.email);
@@ -275,7 +282,9 @@ export default function AccountSettings() {
                   />
                   <button
                     type="button"
-                    aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showCurrentPassword ? "Hide password" : "Show password"
+                    }
                     onClick={() => setShowCurrentPassword((s) => !s)}
                     className="ml-2 text-zinc-400 hover:text-zinc-200"
                   >
@@ -311,7 +320,9 @@ export default function AccountSettings() {
                   />
                   <button
                     type="button"
-                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showNewPassword ? "Hide password" : "Show password"
+                    }
                     onClick={() => setShowNewPassword((s) => !s)}
                     className="ml-2 text-zinc-400 hover:text-zinc-200"
                   >
@@ -347,7 +358,9 @@ export default function AccountSettings() {
                   />
                   <button
                     type="button"
-                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showConfirmPassword ? "Hide password" : "Show password"
+                    }
                     onClick={() => setShowConfirmPassword((s) => !s)}
                     className="ml-2 text-zinc-400 hover:text-zinc-200"
                   >
