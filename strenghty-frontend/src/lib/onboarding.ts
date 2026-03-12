@@ -67,21 +67,34 @@ const ROUTINE_TAGS: Record<
 function scoreRoutine(routineId: string, user: UserOnboardingData): number {
   const tags = ROUTINE_TAGS[routineId];
   if (!tags) return 0;
+  // Strict equipment filter: disqualify routines that require other equipment
+  // unless the routine is bodyweight-accessible.
+  const requiresUserEquipment = tags.equipment.includes(user.equipment);
+  const isBodyweightAccessible = tags.equipment.includes("bodyweight");
+  if (!requiresUserEquipment && !isBodyweightAccessible) {
+    return -1000; // massive negative score to disqualify
+  }
 
   let score = 0;
 
-  // Goal match (most important signal)
-  if (tags.goals.includes(user.goal)) score += 40;
+  // Scoring hierarchy
+  // 1) Goal match (highest weight)
+  if (tags.goals.includes(user.goal)) score += 50;
 
-  // Equipment match
-  if (tags.equipment.includes(user.equipment)) score += 30;
-  // Bodyweight routines are always accessible regardless of equipment
-  if (tags.equipment.includes("bodyweight") && user.equipment !== "bodyweight") score += 5;
+  // 2) Equipment preference
+  if (requiresUserEquipment) {
+    score += 30;
+  } else if (isBodyweightAccessible) {
+    // Bodyweight routines accessible to everyone but score lower than direct equipment matches
+    // If user explicitly chose bodyweight, treat as full equipment match
+    score += user.equipment === "bodyweight" ? 30 : 10;
+  }
 
-  // Experience match
+  // 3) Experience match
   if (tags.experience.includes(user.experience)) score += 20;
-  // Beginners always benefit from beginner-tagged routines
-  if (user.experience === "beginner" && tags.beginner) score += 10;
+
+  // Beginner safety: boost beginner-tagged routines for beginner users
+  if (user.experience === "beginner" && tags.beginner) score += 40;
 
   // Calorie-burn users benefit from full-body, lower-body, and cardio
   if (
@@ -94,20 +107,6 @@ function scoreRoutine(routineId: string, user: UserOnboardingData): number {
   // Core-only routines should never be recommended as a primary workout
   if (tags.split === "core") {
     score -= 40;
-  }
-
-  // Bodyweight-only users: heavily penalise gym-only routines
-  if (user.equipment === "bodyweight" && !tags.equipment.includes("bodyweight")) {
-    score -= 50;
-  }
-
-  // Home-gym users: penalise full-gym-only routines
-  if (
-    user.equipment === "home-gym" &&
-    tags.equipment.length === 1 &&
-    tags.equipment[0] === "full-gym"
-  ) {
-    score -= 20;
   }
 
   return score;
