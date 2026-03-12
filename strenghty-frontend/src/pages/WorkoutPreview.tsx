@@ -109,7 +109,21 @@ export default function WorkoutPreview() {
             variant="ghost"
             size="lg"
             className="w-full"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => {
+              try {
+                // Persist the suggested routine so the dashboard can show it
+                // as the "Next Up" recommendation after onboarding.
+                if (routine && routine.id) {
+                  try {
+                    localStorage.setItem(
+                      "user:nextSuggestedRoutine",
+                      JSON.stringify({ id: routine.id, label }),
+                    );
+                  } catch (e) {}
+                }
+              } catch (e) {}
+              navigate("/dashboard");
+            }}
           >
             Go to Dashboard
           </Button>

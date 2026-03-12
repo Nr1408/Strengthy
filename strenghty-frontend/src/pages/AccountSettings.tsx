@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -32,6 +32,9 @@ export default function AccountSettings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const currentPasswordRef = useRef<HTMLInputElement | null>(null);
+  const newPasswordRef = useRef<HTMLInputElement | null>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     try {
@@ -269,6 +272,7 @@ export default function AccountSettings() {
                 <div className="flex items-center">
                   <Input
                     id="current-password"
+                    ref={currentPasswordRef}
                     type={showCurrentPassword ? "text" : "password"}
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -285,7 +289,17 @@ export default function AccountSettings() {
                     aria-label={
                       showCurrentPassword ? "Hide password" : "Show password"
                     }
-                    onClick={() => setShowCurrentPassword((s) => !s)}
+                    onClick={() => {
+                      setShowCurrentPassword((s) => {
+                        const next = !s;
+                        try {
+                          if (currentPasswordRef.current) {
+                            currentPasswordRef.current.type = next ? "text" : "password";
+                          }
+                        } catch {}
+                        return next;
+                      });
+                    }}
                     className="ml-2 text-zinc-400 hover:text-zinc-200"
                   >
                     {showCurrentPassword ? (
@@ -306,6 +320,7 @@ export default function AccountSettings() {
                 <div className="flex items-center">
                   <Input
                     id="new-password"
+                    ref={newPasswordRef}
                     type={showNewPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -323,7 +338,17 @@ export default function AccountSettings() {
                     aria-label={
                       showNewPassword ? "Hide password" : "Show password"
                     }
-                    onClick={() => setShowNewPassword((s) => !s)}
+                    onClick={() => {
+                      setShowNewPassword((s) => {
+                        const next = !s;
+                        try {
+                          if (newPasswordRef.current) {
+                            newPasswordRef.current.type = next ? "text" : "password";
+                          }
+                        } catch {}
+                        return next;
+                      });
+                    }}
                     className="ml-2 text-zinc-400 hover:text-zinc-200"
                   >
                     {showNewPassword ? (
@@ -344,6 +369,7 @@ export default function AccountSettings() {
                 <div className="flex items-center">
                   <Input
                     id="confirm-password"
+                    ref={confirmPasswordRef}
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -361,7 +387,17 @@ export default function AccountSettings() {
                     aria-label={
                       showConfirmPassword ? "Hide password" : "Show password"
                     }
-                    onClick={() => setShowConfirmPassword((s) => !s)}
+                    onClick={() => {
+                      setShowConfirmPassword((s) => {
+                        const next = !s;
+                        try {
+                          if (confirmPasswordRef.current) {
+                            confirmPasswordRef.current.type = next ? "text" : "password";
+                          }
+                        } catch {}
+                        return next;
+                      });
+                    }}
                     className="ml-2 text-zinc-400 hover:text-zinc-200"
                   >
                     {showConfirmPassword ? (

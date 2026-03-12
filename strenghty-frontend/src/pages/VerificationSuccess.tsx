@@ -23,15 +23,13 @@ export default function VerificationSuccess() {
 
     setReady(true);
 
-    // If it's a new signup, auto-redirect to onboarding after a short delay
-    if (accessToken && type === "signup") {
-      const timer = setTimeout(() => navigate("/onboarding"), 3000);
-      return () => clearTimeout(timer);
-    }
+    // Do not auto-redirect after email verification. Let the user continue
+    // when they're ready (this avoids forcing the onboarding flow on link
+    // opens that may come from email clients or external contexts).
   }, [navigate]);
 
   const handleContinue = () => {
-    navigate("/onboarding");
+    navigate("/dashboard");
   };
 
   if (!ready) {
