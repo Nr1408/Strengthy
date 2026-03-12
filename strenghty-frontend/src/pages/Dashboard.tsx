@@ -332,6 +332,30 @@ export default function Dashboard() {
 
   const todayRoutineName = todayRoutine?.name ?? "Your workout";
 
+  // Banner data: show onboarding blueprint when user has no completed workouts,
+  // otherwise show the persisted 'nextSuggested' routine.
+  const bannerData = useMemo(() => {
+    try {
+      if (completedWorkouts.length === 0) {
+        const onboardingRaw = localStorage.getItem("user:onboarding");
+        if (onboardingRaw) {
+          const onboardingData = JSON.parse(onboardingRaw);
+          const bp = recommendFirstWorkout(onboardingData);
+          return { routine: bp.routine, label: bp.label, title: "Your Blueprint" };
+        }
+        return null;
+      }
+
+      if (nextSuggested?.id) {
+        const rt = mockRoutines.find((r) => r.id === nextSuggested.id) ?? null;
+        return { routine: rt, label: nextSuggested.label, title: "Next Up" };
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }, [completedWorkouts.length, nextSuggested]);
+
   const weeklyStreak = useMemo(() => {
     const wTarget = Math.min(7, Math.max(2, Math.floor(monthlyGoal / 4)));
     let streak = 0;
@@ -439,19 +463,17 @@ export default function Dashboard() {
 
         {/* Stats */}
         {/* Next Up (post-first-workout) */}
-        {/* Only show "Next Up" banner after at least one workout is logged */}
-        {completedWorkouts.length > 0 && nextSuggested &&
+        {/* Banner: show onboarding blueprint when no completed workouts, otherwise show Next Up */}
+        {bannerData &&
           (() => {
-            const rt = mockRoutines.find((r) => r.id === nextSuggested.id);
-            // Clean the label — strip "Next: " prefix if present
-            const routineName =
-              rt?.name || nextSuggested.label.replace(/^Next:\s*/i, "");
+            const rt = bannerData.routine;
+            const routineName = rt?.name || bannerData.label.replace(/^Next:\s*/i, "");
             const exerciseCount = rt?.exercises?.length ?? 0;
 
             return (
               <div className="rounded-2xl bg-gradient-to-r from-orange-500/10 to-orange-600/5 border border-orange-500/20 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-orange-400/70 mb-2">
-                  Next Up
+                  {bannerData.title}
                 </p>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -460,8 +482,7 @@ export default function Dashboard() {
                     </p>
                     {exerciseCount > 0 && (
                       <p className="text-xs text-zinc-400 mt-0.5">
-                        {exerciseCount} exercises · Recommended after your first
-                        workout
+                        {exerciseCount} exercises{completedWorkouts.length === 0 ? " · Recommended for your Blueprint" : " · Recommended after your first workout"}
                       </p>
                     )}
                   </div>
@@ -471,9 +492,15 @@ export default function Dashboard() {
                       onClick={() => {
                         try {
                           if (rt) {
-                            localStorage.removeItem(
-                              "user:nextSuggestedRoutine",
-                            );
+                            if (completedWorkouts.length === 0) {
+                              // starting from blueprint: don't remove nextSuggested
+                              navigate("/workouts/new", {
+                                state: { routine: rt, forceNew: true },
+                              });
+                              return;
+                            }
+                            // for Next Up, clear persisted suggestion and start
+                            localStorage.removeItem("user:nextSuggestedRoutine");
                             setNextSuggested(null);
                             navigate("/workouts/new", {
                               state: { routine: rt, forceNew: true },
