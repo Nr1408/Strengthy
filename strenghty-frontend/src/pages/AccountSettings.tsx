@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Eye, EyeOff } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,9 @@ export default function AccountSettings() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isGoogleAccount, setIsGoogleAccount] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     try {
@@ -58,6 +61,26 @@ export default function AccountSettings() {
         if (parsed.email) setAccountEmail(parsed.email);
       }
     } catch {}
+    // If we don't have an email in localStorage but Supabase env is available,
+    // try to fetch the user info from Supabase auth endpoint so email shows up
+    // in Account Settings even after email/password sign up.
+    (async () => {
+      try {
+        if (accountEmail) return;
+        const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").toString().trim();
+        const supabaseAnon = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").toString().trim();
+        const token = getToken();
+        if (!supabaseUrl || !supabaseAnon || !token) return;
+        const res = await fetch(`${supabaseUrl.replace(/\/+$/g, "")}/auth/v1/user`, {
+          headers: { Authorization: `Bearer ${token}`, apikey: supabaseAnon },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.email) setAccountEmail(data.email);
+      } catch {
+        // ignore
+      }
+    })();
   }, []);
 
   const handleUpdateAccount = async () => {
@@ -236,19 +259,33 @@ export default function AccountSettings() {
                 >
                   Current Password
                 </Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  disabled={isGoogleAccount}
-                  placeholder={
-                    isGoogleAccount ? "Not available for Google accounts" : ""
-                  }
-                  className={
-                    isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
-                  }
-                />
+                <div className="flex items-center">
+                  <Input
+                    id="current-password"
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    disabled={isGoogleAccount}
+                    placeholder={
+                      isGoogleAccount ? "Not available for Google accounts" : ""
+                    }
+                    className={
+                      isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
+                    }
+                  />
+                  <button
+                    type="button"
+                    aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowCurrentPassword((s) => !s)}
+                    className="ml-2 text-zinc-400 hover:text-zinc-200"
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label
@@ -257,20 +294,34 @@ export default function AccountSettings() {
                 >
                   New Password
                 </Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={6}
-                  disabled={isGoogleAccount}
-                  placeholder={
-                    isGoogleAccount ? "Not available for Google accounts" : ""
-                  }
-                  className={
-                    isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
-                  }
-                />
+                <div className="flex items-center">
+                  <Input
+                    id="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    minLength={6}
+                    disabled={isGoogleAccount}
+                    placeholder={
+                      isGoogleAccount ? "Not available for Google accounts" : ""
+                    }
+                    className={
+                      isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
+                    }
+                  />
+                  <button
+                    type="button"
+                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowNewPassword((s) => !s)}
+                    className="ml-2 text-zinc-400 hover:text-zinc-200"
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label
@@ -279,20 +330,34 @@ export default function AccountSettings() {
                 >
                   Confirm New Password
                 </Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  minLength={6}
-                  disabled={isGoogleAccount}
-                  placeholder={
-                    isGoogleAccount ? "Not available for Google accounts" : ""
-                  }
-                  className={
-                    isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
-                  }
-                />
+                <div className="flex items-center">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    minLength={6}
+                    disabled={isGoogleAccount}
+                    placeholder={
+                      isGoogleAccount ? "Not available for Google accounts" : ""
+                    }
+                    className={
+                      isGoogleAccount ? "opacity-50 cursor-not-allowed" : ""
+                    }
+                  />
+                  <button
+                    type="button"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowConfirmPassword((s) => !s)}
+                    className="ml-2 text-zinc-400 hover:text-zinc-200"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="flex justify-end pt-2 border-t border-border">
