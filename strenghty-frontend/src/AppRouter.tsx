@@ -186,12 +186,6 @@ const RequireOnboarding = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     try {
-      const token = getToken();
-      if (!token) {
-        navigate("/auth", { replace: true });
-        return;
-      }
-
       const raw = localStorage.getItem("user:onboarding");
       if (!raw) {
         navigate("/onboarding", { replace: true });
@@ -201,7 +195,12 @@ const RequireOnboarding = ({ children }: { children: React.ReactNode }) => {
       const onboarding = JSON.parse(raw);
       const hasGoal = !!String(onboarding?.goal || "").trim();
       const hasExperience = !!String(onboarding?.experience || "").trim();
-      if (!hasGoal || !hasExperience) {
+      const hasMonthly =
+        typeof onboarding?.monthlyWorkouts === "number" &&
+        onboarding.monthlyWorkouts > 0;
+
+      // Pass through when any meaningful onboarding data exists.
+      if (!hasGoal && !hasExperience && !hasMonthly) {
         navigate("/onboarding", { replace: true });
       }
     } catch {
