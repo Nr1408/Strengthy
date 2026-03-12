@@ -13,7 +13,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE, login, register, setToken, getToken, fetchAndPersistProfile } from "@/lib/api";
+import {
+  API_BASE,
+  login,
+  register,
+  setToken,
+  getToken,
+  fetchAndPersistProfile,
+} from "@/lib/api";
 import ConfirmEmailDialog from "@/components/ConfirmEmailDialog";
 import InvalidCredentialsDialog from "@/components/InvalidCredentialsDialog";
 import { createClient } from "@supabase/supabase-js";
@@ -147,7 +154,7 @@ export default function Auth({
   const shouldRouteToOnboarding = useCallback(
     async (accessToken: string): Promise<boolean> => {
       if (!SUPABASE_URL_ENV || !SUPABASE_ANON_KEY_ENV || !accessToken) {
-        return false;
+        return true; // default to onboarding-first when config or token missing
       }
 
       try {
@@ -155,7 +162,7 @@ export default function Auth({
           atob(accessToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
         );
         const userId = String(payload?.sub || "").trim();
-        if (!userId) return false;
+        if (!userId) return true;
 
         const base = SUPABASE_URL_ENV.replace(/\/+$/g, "");
         const res = await fetch(
@@ -168,25 +175,26 @@ export default function Auth({
           },
         );
 
-        if (!res.ok) return false;
+        // If the DB can't be reached, assume user needs onboarding
+        if (!res.ok) return true;
         const rows = (await res.json()) as Array<{
           goals?: string[] | null;
           experience?: string | null;
           monthly_workouts?: number | null;
         }>;
         const profile = rows?.[0];
+
+        // CRITICAL: If no profile exists yet, force onboarding
         if (!profile) return true;
 
         const hasGoals =
           Array.isArray(profile.goals) && profile.goals.length > 0;
         const hasExperience = !!String(profile.experience || "").trim();
-        const hasMonthlyWorkouts =
-          typeof profile.monthly_workouts === "number" &&
-          profile.monthly_workouts > 0;
 
-        return !(hasGoals || hasExperience || hasMonthlyWorkouts);
+        // Only skip onboarding when they have both goals AND experience
+        return !(hasGoals && hasExperience);
       } catch {
-        return false;
+        return true; // default to onboarding on error
       }
     },
     [],
@@ -251,7 +259,9 @@ export default function Auth({
       setIsLoading(true);
       try {
         setToken(accessToken);
-        try { await fetchAndPersistProfile(); } catch {}
+        try {
+          await fetchAndPersistProfile();
+        } catch {}
         try {
           let profileName: string | null = null;
           let profileEmail: string | null = null;
@@ -639,17 +649,17 @@ export default function Auth({
       if (showSignup) {
         // Create the account
         await register(formData.email, formData.password);
+        // Mark this as a fresh new user so the next sign-in can treat them
+        // as needing onboarding even if the DB is slow.
+        try {
+          localStorage.setItem("auth:isNewUser", "1");
+        } catch {}
         openConfirmEmailDialog(formData.email);
         toast({
           title: "Please confirm your email",
           description: "Check your inbox, then log in.",
         });
         setShowSignup(false);
-        // After signup, route new users into onboarding so they finish
-        // the setup flow before landing on the dashboard.
-        try {
-          navigate("/onboarding");
-        } catch {}
         return;
       }
 

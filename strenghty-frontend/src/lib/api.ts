@@ -328,25 +328,34 @@ export async function fetchAndPersistProfile(): Promise<boolean> {
     } catch (e) {}
 
     try {
+      // Map server profile fields into the onboarding shape expected by the
+      // onboarding flow. Ensure a single `goal` field exists (first goal)
+      // while keeping the original `goals` array for compatibility.
+      const firstGoal = Array.isArray(p.goals) ? (p.goals[0] || "") : (p.goals || "");
+      const monthly = p.monthly_workouts != null ? Number(p.monthly_workouts) : 12;
+
       const onboarding = {
+        goal: String(firstGoal || ""),
         goals: p.goals || [],
+        experience: p.experience || "",
+        equipment: p.equipment || "full-gym",
         age: p.age != null ? String(p.age) : "",
         height: p.height != null ? String(p.height) : "",
         heightUnit: p.height_unit || "cm",
         currentWeight: p.current_weight != null ? String(p.current_weight) : "",
         goalWeight: p.goal_weight != null ? String(p.goal_weight) : "",
-        experience: p.experience || "",
-        monthlyWorkouts: p.monthly_workouts != null ? String(p.monthly_workouts) : "",
+        monthlyWorkouts: monthly,
       };
+
       try { localStorage.setItem("user:onboarding", JSON.stringify(onboarding)); } catch (e) {}
-      try { if (onboarding.monthlyWorkouts) localStorage.setItem('user:monthlyGoal', String(onboarding.monthlyWorkouts)); } catch (e) {}
+      try { if (onboarding.monthlyWorkouts != null) localStorage.setItem('user:monthlyGoal', String(onboarding.monthlyWorkouts)); } catch (e) {}
       try {
         const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true;
         if (isNative) {
           const m = await import('@capacitor/preferences');
           const Prefs = m.Preferences || m;
           try { await Prefs.set({ key: 'user:onboarding', value: JSON.stringify(onboarding) }); } catch (e) {}
-          try { if (onboarding.monthlyWorkouts) await Prefs.set({ key: 'user:monthlyGoal', value: String(onboarding.monthlyWorkouts) }); } catch (e) {}
+          try { if (onboarding.monthlyWorkouts != null) await Prefs.set({ key: 'user:monthlyGoal', value: String(onboarding.monthlyWorkouts) }); } catch (e) {}
         }
       } catch (e) {}
     } catch (e) {}
