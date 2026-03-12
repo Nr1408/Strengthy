@@ -10,12 +10,17 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { mockRoutines } from "@/data/mockData";
-import { recommendFirstWorkout } from "@/lib/onboarding";
+import { recommendFirstWorkout, recommendNextRoutine } from "@/lib/onboarding";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
 import { StatsCard } from "@/components/workout/StatsCard";
 import { useQuery } from "@tanstack/react-query";
-import { getSets, getWorkouts, getCardioSetsForWorkout } from "@/lib/api";
+import {
+  getSets,
+  getWorkouts,
+  getCardioSetsForWorkout,
+  fetchAndPersistProfile,
+} from "@/lib/api";
 import type { UiWorkoutSet, UiWorkout } from "@/lib/api";
 import { countPrTypesFromSet } from "@/lib/utils";
 import {
@@ -56,6 +61,9 @@ export default function Dashboard() {
     label: string;
   }>(null);
 
+  // Toggle to force re-evaluation when onboarding/profile is pulled from server
+  const [profileFetchToggle, setProfileFetchToggle] = useState(0);
+
   const location = useLocation();
 
   useEffect(() => {
@@ -75,6 +83,25 @@ export default function Dashboard() {
       setNextSuggested(null);
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    // If user has no completed workouts and onboarding is missing, try
+    // fetching their profile/onboarding from the server so the Blueprint
+    // banner can be shown after a re-login.
+    (async () => {
+      try {
+        if (completedWorkouts.length === 0) {
+          const onboardingRaw = localStorage.getItem("user:onboarding");
+          if (!onboardingRaw) {
+            const ok = await fetchAndPersistProfile();
+            if (ok) setProfileFetchToggle((n) => n + 1);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, [completedWorkouts.length]);
 
   // Date ranges
   const thisWeekRange = useMemo(() => {
@@ -354,6 +381,47 @@ export default function Dashboard() {
         const rt = mockRoutines.find((r) => r.id === nextSuggested.id) ?? null;
         return { routine: rt, label: nextSuggested.label, title: "Next Up" };
       }
+      // Fallback: if we don't have a persisted next suggestion, try to
+      // derive the last-started routine id from localStorage for the
+      // most recent completed workout and ask the recommender.
+      try {
+        const last = [...completedWorkouts].sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+        )[0];
+        if (last) {
+          // Check client-side state that may have recorded the routineId
+          // while the workout was in-progress: `workout:state:{id}` or
+          // the generic `workout:inProgress` slot (fallback).
+          let candidateId: string | null = null;
+          try {
+            const stateRaw = localStorage.getItem(`workout:state:${last.id}`);
+            if (stateRaw) {
+              const parsed = JSON.parse(stateRaw as string);
+              if (parsed && parsed.routineId) candidateId = parsed.routineId;
+            }
+          } catch (e) {}
+          try {
+            if (!candidateId) {
+              const inProg = localStorage.getItem("workout:inProgress");
+              if (inProg) {
+                const p = JSON.parse(inProg as string);
+                if (p && p.routineId) candidateId = p.routineId;
+              }
+            }
+          } catch (e) {}
+
+          if (candidateId) {
+            const suggested = recommendNextRoutine(candidateId);
+            if (suggested && suggested.routine)
+              return {
+                routine: suggested.routine,
+                label: suggested.label,
+                title: "Next Up",
+              };
+          }
+        }
+      } catch (e) {}
+
       return null;
     } catch (e) {
       return null;
