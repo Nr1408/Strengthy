@@ -103,6 +103,68 @@ export default function Dashboard() {
     })();
   }, [completedWorkouts.length]);
 
+  // After a workout is completed, rotate the "Next Up" suggestion
+  useEffect(() => {
+    if (completedWorkouts.length === 0) return;
+
+    try {
+      const last = [...completedWorkouts].sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      )[0];
+      if (!last) return;
+
+      // Find which routine was just completed
+      let lastRoutineId: string | null = null;
+      try {
+        const stateRaw = localStorage.getItem(`workout:state:${last.id}`);
+        if (stateRaw) {
+          const parsed = JSON.parse(stateRaw as string);
+          if (parsed?.routineId) lastRoutineId = parsed.routineId;
+        }
+      } catch {}
+      try {
+        if (!lastRoutineId) {
+          const raw = localStorage.getItem("user:nextSuggestedRoutine");
+          if (raw) {
+            const parsed = JSON.parse(raw as string);
+            if (parsed?.id) lastRoutineId = parsed.id;
+          }
+        }
+      } catch {}
+
+      if (!lastRoutineId) return;
+
+      // Collect last 3 routine IDs to avoid immediate repeats
+      const recentIds: string[] = [];
+      try {
+        completedWorkouts
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, 3)
+          .forEach((w) => {
+            try {
+              const raw = localStorage.getItem(`workout:state:${w.id}`);
+              if (raw) {
+                const p = JSON.parse(raw);
+                if (p?.routineId) recentIds.push(p.routineId);
+              }
+            } catch {}
+          });
+      } catch {}
+
+      const suggested = recommendNextRoutine(lastRoutineId, recentIds);
+      if (suggested?.routine && suggested.routine.id !== lastRoutineId) {
+        const next = { id: suggested.routine.id, label: suggested.label };
+        try {
+          localStorage.setItem(
+            "user:nextSuggestedRoutine",
+            JSON.stringify(next),
+          );
+        } catch {}
+        setNextSuggested(next);
+      }
+    } catch {}
+  }, [completedWorkouts.length]);
+
   // Date ranges
   const thisWeekRange = useMemo(() => {
     const start = startOfWeek(new Date(), { weekStartsOn: 1 });
