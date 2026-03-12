@@ -177,6 +177,34 @@ export function recommendNextRoutine(currentRoutineId?: string) {
 
     const preferredSplits = complementMap[currentTags.split] ?? ["full"];
 
+    // If the current routine is a full-body split, try to prefer an alternate
+    // variation (e.g., r-full-b -> r-full-a) so users don't get the same
+    // template repeated.
+    if (currentTags.split === "full") {
+      // try simple partner swap: -b -> -a, -a -> -b
+      const partnerId = currentRoutineId.replace(/-(?:b|a)$/i, (m) =>
+        m.toLowerCase() === "-b" ? "-a" : "-b",
+      );
+      if (partnerId !== currentRoutineId && ROUTINE_TAGS[partnerId]) {
+        const partner = mockRoutines.find((r) => r.id === partnerId);
+        if (partner) {
+          return { routine: partner, label: `Next: ${partner.name}` };
+        }
+      }
+
+      // fallback: prefer another full split variation with same equipment
+      const otherFull = mockRoutines.find((r) => {
+        if (r.id === currentRoutineId) return false;
+        const t = ROUTINE_TAGS[r.id];
+        if (!t) return false;
+        if (t.split !== "full") return false;
+        // prefer same equipment pool
+        const overlap = t.equipment.some((e) => currentTags.equipment.includes(e));
+        return overlap;
+      });
+      if (otherFull) return { routine: otherFull, label: `Next: ${otherFull.name}` };
+    }
+
     // If the current routine is from a specific equipment pool (not full-gym),
     // restrict candidates to the same pool so home/dumbbell users don't get
     // gym suggestions as their next workout.
