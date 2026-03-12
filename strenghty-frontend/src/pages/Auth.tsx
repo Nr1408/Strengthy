@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE, login, register, setToken, getToken } from "@/lib/api";
+import { API_BASE, login, register, setToken, getToken, fetchAndPersistProfile } from "@/lib/api";
 import ConfirmEmailDialog from "@/components/ConfirmEmailDialog";
 import InvalidCredentialsDialog from "@/components/InvalidCredentialsDialog";
 import { createClient } from "@supabase/supabase-js";
@@ -251,6 +251,7 @@ export default function Auth({
       setIsLoading(true);
       try {
         setToken(accessToken);
+        try { await fetchAndPersistProfile(); } catch {}
         try {
           let profileName: string | null = null;
           let profileEmail: string | null = null;
@@ -644,6 +645,11 @@ export default function Auth({
           description: "Check your inbox, then log in.",
         });
         setShowSignup(false);
+        // After signup, route new users into onboarding so they finish
+        // the setup flow before landing on the dashboard.
+        try {
+          navigate("/onboarding");
+        } catch {}
         return;
       }
 
