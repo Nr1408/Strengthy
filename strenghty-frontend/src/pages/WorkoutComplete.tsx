@@ -128,13 +128,6 @@ export default function WorkoutComplete() {
           >
             Go to Dashboard
           </button>
-          <button
-            type="button"
-            onClick={() => navigate("/workouts")}
-            className="text-xs text-zinc-500 hover:text-zinc-400 transition-colors pt-1"
-          >
-            View workout history
-          </button>
         </div>
       </div>
     </div>
