@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState, useRef } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Plus,
   Calendar,
@@ -59,32 +59,24 @@ export default function Dashboard() {
   const [nextSuggested, setNextSuggested] = useState<null | {
     id: string;
     label: string;
-  }>(null);
+  }>(() => {
+    try {
+      const raw = localStorage.getItem("user:nextSuggestedRoutine");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.id) return parsed;
+      }
+    } catch {}
+    return null;
+  });
 
   // Toggle to force re-evaluation when onboarding/profile is pulled from server
   const [profileFetchToggle, setProfileFetchToggle] = useState(0);
 
   const prevCompletedCountRef = useRef<number | null>(null);
 
-  const location = useLocation();
-
-  useEffect(() => {
-    // Re-read the persisted next-suggestion whenever the dashboard
-    // becomes active (path changes) so navigating back from preview
-    // reliably shows the recently-saved suggestion.
-    try {
-      const raw = localStorage.getItem("user:nextSuggestedRoutine");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.id) setNextSuggested(parsed);
-        else setNextSuggested(null);
-      } else {
-        setNextSuggested(null);
-      }
-    } catch (e) {
-      setNextSuggested(null);
-    }
-  }, [location.pathname]);
+  // nextSuggested is initialized from localStorage to avoid races
+  // with the rotation effect that writes fresh suggestions.
 
   useEffect(() => {
     // If user has no completed workouts and onboarding is missing, try
