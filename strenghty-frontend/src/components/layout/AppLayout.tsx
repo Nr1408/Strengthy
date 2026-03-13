@@ -40,6 +40,14 @@ export function AppLayout({ children }: AppLayoutProps) {
     (location.pathname.startsWith("/workouts/") &&
       location.pathname.endsWith("/edit"));
 
+  const firstWorkoutDone = !!localStorage.getItem("user:firstWorkoutCompleted");
+  const isOnboardingRoutineView =
+    !firstWorkoutDone &&
+    location.pathname.startsWith("/routines/") &&
+    location.pathname.endsWith("/view");
+
+  const hideNav = isWorkoutBuilderRoute || isOnboardingRoutineView;
+
   // When navigating away from NewWorkout while a workout is in progress,
   // mark it paused and show a small dialog.
   useEffect(() => {
@@ -92,7 +100,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         style={{ backgroundColor: "#0E1115" }}
       />
       {/* Header (hidden on NewWorkout/EditWorkout where a custom bar is used) */}
-      {!isWorkoutBuilderRoute && (
+      {!hideNav && (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 relative h-16 flex items-center justify-center">
             <div
@@ -157,41 +165,43 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Mobile Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background rounded-t-2xl md:hidden">
-        <div className="flex items-center justify-around py-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.href;
-            const firstWorkoutDone = !!localStorage.getItem(
-              "user:firstWorkoutCompleted",
-            );
-            const isWorkoutsLocked =
-              item.href === "/workouts" && !firstWorkoutDone;
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  "flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-xs font-medium transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground",
-                  isWorkoutsLocked && "pointer-events-none opacity-40",
-                )}
-                aria-disabled={isWorkoutsLocked || undefined}
-                tabIndex={isWorkoutsLocked ? -1 : undefined}
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      {!hideNav && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background rounded-t-2xl md:hidden">
+          <div className="flex items-center justify-around py-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.href;
+              const firstWorkoutDone = !!localStorage.getItem(
+                "user:firstWorkoutCompleted",
+              );
+              const isWorkoutsLocked =
+                item.href === "/workouts" && !firstWorkoutDone;
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={cn(
+                    "flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-xs font-medium transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground",
+                    isWorkoutsLocked && "pointer-events-none opacity-40",
+                  )}
+                  aria-disabled={isWorkoutsLocked || undefined}
+                  tabIndex={isWorkoutsLocked ? -1 : undefined}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
 
       {/* Main Content */}
       <main
         className={cn(
           "w-full px-3 md:max-w-7xl md:mx-auto md:px-6 pb-24 md:pb-6",
-          isWorkoutBuilderRoute ? "pt-0" : "pt-[50px]",
+          hideNav ? "pt-0" : "pt-[50px]",
         )}
       >
         {children}
