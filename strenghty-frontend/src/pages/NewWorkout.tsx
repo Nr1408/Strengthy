@@ -2644,21 +2644,41 @@ export default function NewWorkout() {
         if (!firstDone || isFirstWorkoutFromState) {
           let suggested = null as any;
           try {
-            if (fromRoutine && fromRoutine.id) {
-              suggested = recommendNextRoutine(fromRoutine.id);
+            const routineId =
+              fromRoutine?.id ??
+              (() => {
+                try {
+                  const raw = localStorage.getItem(`workout:state:${persistedWorkoutId}`);
+                  if (raw) return JSON.parse(raw)?.routineId ?? null;
+                } catch {}
+                return null;
+              })();
+
+            // 1. Use routine-based next suggestion
+            if (routineId) {
+              suggested = recommendNextRoutine(routineId);
             }
-            // Fallback: if no next routine found, suggest the first available mockRoutine
-            if (!suggested) {
+
+            // 2. Fall back to onboarding-stored suggestion (same source as Dashboard Next Up)
+            if (!suggested?.routine) {
+              try {
+                const stored = localStorage.getItem("user:nextSuggestedRoutine");
+                if (stored) {
+                  const { id, label: storedLabel } = JSON.parse(stored);
+                  const { mockRoutines } = await import("@/data/mockData");
+                  const routine = mockRoutines.find((r: any) => r.id === id);
+                  if (routine) suggested = { routine, label: storedLabel };
+                }
+              } catch {}
+            }
+
+            // 3. Last resort
+            if (!suggested?.routine) {
               const { mockRoutines } = await import("@/data/mockData");
               const fallback =
                 mockRoutines.find((r: any) => r.id !== fromRoutine?.id) ??
                 mockRoutines[0];
-              if (fallback) {
-                suggested = {
-                  routine: fallback,
-                  label: `Next: ${fallback.name}`,
-                };
-              }
+              if (fallback) suggested = { routine: fallback, label: `Next: ${fallback.name}` };
             }
           } catch (e) {
             suggested = null;
