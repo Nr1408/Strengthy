@@ -945,7 +945,7 @@ export default function Onboarding() {
               onClick={stepPrev}
               disabled={currentStep === 0}
               className={cn(
-                "transition-opacity duration-300 text-white pl-0",
+                "transition-opacity duration-300 text-white",
                 currentStep === 0 && "opacity-0 pointer-events-none",
               )}
             >

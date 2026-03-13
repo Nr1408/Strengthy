@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { mockRoutines } from "@/data/mockData";
 import { recommendFirstWorkout, recommendNextRoutine } from "@/lib/onboarding";
 import { AppLayout } from "@/components/layout/AppLayout";
+import HideNextUpDialog from "@/components/layout/HideNextUpDialog";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
 import { StatsCard } from "@/components/workout/StatsCard";
 import { useQuery } from "@tanstack/react-query";
@@ -76,13 +77,15 @@ export default function Dashboard() {
   const prevCompletedCountRef = useRef<number | null>(null);
   // nextSuggested is initialized from localStorage to avoid races
   // with the rotation effect that writes fresh suggestions.
-  const [nextUpDismissed, setNextUpDismissed] = useState(() => {
+  const [nextUpHidden, setNextUpHidden] = useState(() => {
     try {
       return localStorage.getItem("user:hideNextUp") === "true";
     } catch {
       return false;
     }
   });
+  const [showHideDialog, setShowHideDialog] = useState(false);
+  const [sessionDismissed, setSessionDismissed] = useState(false);
 
   useEffect(() => {
     // If user has no completed workouts and onboarding is missing, try
@@ -634,7 +637,8 @@ export default function Dashboard() {
         {/* Next Up (post-first-workout) */}
         {/* Banner: show onboarding blueprint when no completed workouts, otherwise show Next Up */}
         {bannerData &&
-          !nextUpDismissed &&
+          !nextUpHidden &&
+          !sessionDismissed &&
           (() => {
             const rt = bannerData.routine;
             const routineName =
@@ -650,12 +654,7 @@ export default function Dashboard() {
                   {completedWorkouts.length >= 3 && (
                     <button
                       type="button"
-                      onClick={() => {
-                        try {
-                          localStorage.setItem("user:hideNextUp", "true");
-                        } catch {}
-                        setNextUpDismissed(true);
-                      }}
+                      onClick={() => setShowHideDialog(true)}
                       className="text-zinc-600 hover:text-zinc-400 transition-colors text-xs"
                       title="Hide suggestions"
                     >
@@ -984,6 +983,21 @@ export default function Dashboard() {
         open={showInProgressDialog}
         onOpenChange={setShowInProgressDialog}
         onResume={() => navigate("/workouts/new")}
+      />
+      <HideNextUpDialog
+        open={showHideDialog}
+        onKeep={() => setShowHideDialog(false)}
+        onSessionDismiss={() => {
+          setShowHideDialog(false);
+          setSessionDismissed(true);
+        }}
+        onTurnOff={() => {
+          try {
+            localStorage.setItem("user:hideNextUp", "true");
+          } catch {}
+          setNextUpHidden(true);
+          setShowHideDialog(false);
+        }}
       />
     </AppLayout>
   );
