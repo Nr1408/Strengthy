@@ -560,6 +560,46 @@ export const mockRoutines: Routine[] = [
       { id: 'r-ca-6', exercise: ex('Mountain Climbers'), targetSets: 3, targetReps: 30, order: 6 },
     ],
   },
+  // ── POWERLIFTING ROUTINES ───────────────────────────────────────────────
+  {
+    id: 'r-pl-squat',
+    name: 'Powerlifting — Squat Focus',
+    description: 'Strength focus • Heavy squat and lower body accessories',
+    createdAt: new Date('2024-01-01'),
+    exercises: [
+      { id: 'r-pls-1', exercise: ex('Barbell High Bar Back Squat'), targetSets: 5, targetReps: 5, order: 1 },
+      { id: 'r-pls-2', exercise: ex('Barbell Romanian Deadlift'), targetSets: 4, targetReps: 6, order: 2 },
+      { id: 'r-pls-3', exercise: ex('Leg Press Machine'), targetSets: 3, targetReps: 8, order: 3 },
+      { id: 'r-pls-4', exercise: ex('Barbell Good Morning'), targetSets: 3, targetReps: 8, order: 4 },
+      { id: 'r-pls-5', exercise: ex('Hanging Leg Raise'), targetSets: 3, targetReps: 12, order: 5 },
+    ],
+  },
+  {
+    id: 'r-pl-bench',
+    name: 'Powerlifting — Bench Focus',
+    description: 'Strength focus • Heavy bench and upper body accessories',
+    createdAt: new Date('2024-01-01'),
+    exercises: [
+      { id: 'r-plb-1', exercise: ex('Barbell Flat Bench Press'), targetSets: 5, targetReps: 5, order: 1 },
+      { id: 'r-plb-2', exercise: ex('Barbell Close-Grip Bench Press'), targetSets: 4, targetReps: 6, order: 2 },
+      { id: 'r-plb-3', exercise: ex('Barbell Bent-Over Row'), targetSets: 4, targetReps: 6, order: 3 },
+      { id: 'r-plb-4', exercise: ex('EZ-Bar Skull Crusher'), targetSets: 3, targetReps: 8, order: 4 },
+      { id: 'r-plb-5', exercise: ex('Barbell Bicep Curl'), targetSets: 3, targetReps: 8, order: 5 },
+    ],
+  },
+  {
+    id: 'r-pl-deadlift',
+    name: 'Powerlifting — Deadlift Focus',
+    description: 'Strength focus • Heavy deadlift and posterior chain',
+    createdAt: new Date('2024-01-01'),
+    exercises: [
+      { id: 'r-pld-1', exercise: ex('Barbell Stiff-Leg Deadlift'), targetSets: 5, targetReps: 5, order: 1 },
+      { id: 'r-pld-2', exercise: ex('Barbell High Bar Back Squat'), targetSets: 4, targetReps: 6, order: 2 },
+      { id: 'r-pld-3', exercise: ex('Barbell Bent-Over Row'), targetSets: 4, targetReps: 6, order: 3 },
+      { id: 'r-pld-4', exercise: ex('Barbell Good Morning'), targetSets: 3, targetReps: 8, order: 4 },
+      { id: 'r-pld-5', exercise: ex('Hanging Leg Raise'), targetSets: 3, targetReps: 12, order: 5 },
+    ],
+  },
 ];
 
 export const muscleGroupColors: Record<MuscleGroup, string> = {
