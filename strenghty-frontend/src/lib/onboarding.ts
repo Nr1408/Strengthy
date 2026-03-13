@@ -169,7 +169,7 @@ export function recommendNextRoutine(
 
     const complementMap: Record<string, Array<string>> = {
       upper:  ["lower"],
-      lower:  ["upper", "push", "pull"],
+      lower:  ["push", "upper", "pull"],
       push:   ["pull", "lower"],
       pull:   ["push", "lower"],
       full:   ["full"],
@@ -209,7 +209,8 @@ export function recommendNextRoutine(
       })
       .map((r) => {
         const tags = ROUTINE_TAGS[r.id];
-        const splitBonus = preferredSplits.includes(tags.split) ? 30 : 0;
+        const preferredIndex = preferredSplits.indexOf(tags.split);
+        const splitBonus = preferredIndex === 0 ? 40 : preferredIndex === 1 ? 20 : preferredIndex >= 0 ? 10 : 0;
         // Small deterministic jitter based on routine id to break ties differently each time
         const jitter = (r.id.charCodeAt(r.id.length - 1) % 10);
         return { routine: r, score: splitBonus + jitter };

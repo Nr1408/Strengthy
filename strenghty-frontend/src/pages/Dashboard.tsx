@@ -116,6 +116,13 @@ export default function Dashboard() {
       const last = [...completedWorkouts].sort(
         (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
       )[0];
+      const [nextUpDismissed, setNextUpDismissed] = useState(() => {
+        try {
+          return localStorage.getItem("user:hideNextUp") === "true";
+        } catch {
+          return false;
+        }
+      });
       if (!last) return;
 
       // Find which routine was just completed
@@ -646,13 +653,11 @@ export default function Dashboard() {
                     {exerciseCount > 0 && (
                       <p className="text-xs text-zinc-400 mt-0.5">
                         {exerciseCount} exercises
-                        {completedWorkouts.length === 0 ? (
-                          " · Recommended for your Blueprint"
-                        ) : completedWorkouts.length === 1 ? (
-                          " · Recommended after your first workout"
-                        ) : (
-                          " · Based on your last workout"
-                        )}
+                        {completedWorkouts.length === 0
+                          ? " · Recommended for your Blueprint"
+                          : completedWorkouts.length === 1
+                            ? " · Recommended after your first workout"
+                            : " · Based on your last workout"}
                       </p>
                     )}
                   </div>
