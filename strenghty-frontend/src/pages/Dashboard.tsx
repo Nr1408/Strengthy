@@ -74,9 +74,15 @@ export default function Dashboard() {
   const [profileFetchToggle, setProfileFetchToggle] = useState(0);
 
   const prevCompletedCountRef = useRef<number | null>(null);
-
   // nextSuggested is initialized from localStorage to avoid races
   // with the rotation effect that writes fresh suggestions.
+  const [nextUpDismissed, setNextUpDismissed] = useState(() => {
+    try {
+      return localStorage.getItem("user:hideNextUp") === "true";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     // If user has no completed workouts and onboarding is missing, try
@@ -116,13 +122,7 @@ export default function Dashboard() {
       const last = [...completedWorkouts].sort(
         (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
       )[0];
-      const [nextUpDismissed, setNextUpDismissed] = useState(() => {
-        try {
-          return localStorage.getItem("user:hideNextUp") === "true";
-        } catch {
-          return false;
-        }
-      });
+      if (!last) return;
       if (!last) return;
 
       // Find which routine was just completed
@@ -634,6 +634,7 @@ export default function Dashboard() {
         {/* Next Up (post-first-workout) */}
         {/* Banner: show onboarding blueprint when no completed workouts, otherwise show Next Up */}
         {bannerData &&
+          !nextUpDismissed &&
           (() => {
             const rt = bannerData.routine;
             const routineName =
@@ -642,9 +643,26 @@ export default function Dashboard() {
 
             return (
               <div className="rounded-2xl bg-gradient-to-r from-orange-500/10 to-orange-600/5 border border-orange-500/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-orange-400/70 mb-2">
-                  {bannerData.title}
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-400/70">
+                    {bannerData.title}
+                  </p>
+                  {completedWorkouts.length >= 3 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          localStorage.setItem("user:hideNextUp", "true");
+                        } catch {}
+                        setNextUpDismissed(true);
+                      }}
+                      className="text-zinc-600 hover:text-zinc-400 transition-colors text-xs"
+                      title="Hide suggestions"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-semibold text-white text-base truncate">

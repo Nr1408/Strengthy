@@ -171,7 +171,7 @@ export function recommendNextRoutine(
       upper:  ["lower"],
       lower:  ["push", "upper", "pull"],
       push:   ["pull", "lower"],
-      pull:   ["push", "lower"],
+      pull:   ["lower", "push"],
       full:   ["full"],
       cardio: ["upper", "lower", "full"],
       arms:   ["lower", "full"],
