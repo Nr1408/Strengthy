@@ -60,7 +60,9 @@ export default function WorkoutPreview() {
   };
 
   const onViewRoutine = () => {
-    navigate(`/routines/${routine.id}/view`, { state: { routine } });
+    navigate(`/routines/${routine.id}/view`, {
+      state: { routine, fromOnboarding: true },
+    });
   };
 
   return (

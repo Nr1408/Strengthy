@@ -88,6 +88,16 @@ export default function Dashboard() {
   const [sessionDismissed, setSessionDismissed] = useState(false);
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem("user:nextSuggestedRoutine");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.id) setNextSuggested(parsed);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     // If user has no completed workouts and onboarding is missing, try
     // fetching their profile/onboarding from the server so the Blueprint
     // banner can be shown after a re-login.
@@ -710,10 +720,17 @@ export default function Dashboard() {
                       type="button"
                       onClick={() => {
                         try {
-                          if (rt)
+                          if (rt) {
+                            const firstDone = !!localStorage.getItem(
+                              "user:firstWorkoutCompleted",
+                            );
                             navigate(`/routines/${rt.id}/view`, {
-                              state: { routine: rt },
+                              state: {
+                                routine: rt,
+                                fromOnboarding: !firstDone,
+                              },
                             });
+                          }
                         } catch (e) {}
                       }}
                       className="px-3 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 text-white text-sm font-semibold transition-colors"
