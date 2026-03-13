@@ -2738,7 +2738,7 @@ export default function NewWorkout() {
           })();
         if (routineId) {
           const suggested = recommendNextRoutine(routineId);
-          if (suggested?.routine && suggested.routine.id !== routineId) {
+          if (suggested?.routine) {
             try {
               localStorage.setItem(
                 "user:nextSuggestedRoutine",
