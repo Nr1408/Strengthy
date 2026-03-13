@@ -420,6 +420,37 @@ export default function Auth({
           return;
         }
 
+        // Handle email confirmation links (type=signup)
+        if (type === "signup" && accessToken) {
+          try {
+            setToken(accessToken);
+            if (supabase && refreshToken) {
+              await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+            }
+            // Clear onboarding state so they start fresh
+            try {
+              localStorage.removeItem("auth:isNewUser");
+              localStorage.removeItem("user:onboarding");
+              localStorage.removeItem("user:monthlyGoal");
+            } catch {}
+            // Clean up URL
+            try {
+              window.history.replaceState(
+                {},
+                document.title,
+                window.location.pathname,
+              );
+            } catch {}
+            navigate("/onboarding");
+          } catch {
+            navigate("/onboarding");
+          }
+          return;
+        }
+
         // If there is no access token, nothing to do here.
         if (!accessToken) return;
 
