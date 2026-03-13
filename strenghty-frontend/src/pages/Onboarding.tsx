@@ -161,6 +161,16 @@ export default function Onboarding() {
     monthlyWorkouts: 12,
   });
 
+  // Ensure onboarding starts with a clean local state for first-run flags
+  // so test accounts or reused browsers don't hide the banner or enable
+  // the nav prematurely.
+  useEffect(() => {
+    try {
+      localStorage.removeItem("user:hideNextUp");
+      localStorage.removeItem("user:firstWorkoutCompleted");
+    } catch (e) {}
+  }, []);
+
   // Helpers for unit conversion and simple formatting
   const convertHeight = (
     valueStr: string | undefined,
@@ -340,6 +350,12 @@ export default function Onboarding() {
     try {
       try {
         localStorage.setItem("user:firstWorkoutPreviewShown", "1");
+      } catch (e) {}
+      try {
+        // clear any persisted hide/first-workout flags now that onboarding
+        // completed and the user is about to see the preview/start flow.
+        localStorage.removeItem("user:hideNextUp");
+        localStorage.removeItem("user:firstWorkoutCompleted");
       } catch (e) {}
       navigate("/workouts/preview", {
         state: { routine: rec.routine, label: rec.label, firstTime: true },
