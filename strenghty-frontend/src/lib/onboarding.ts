@@ -45,8 +45,8 @@ const ROUTINE_TAGS: Record<
 
   // Home / bodyweight routines
   "r-home-push":         { goals: ["hypertrophy"],                  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "push",   beginner: true  },
-  "r-home-pull":         { goals: ["hypertrophy"],                  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "pull",   beginner: true  },
-  "r-home-legs":         { goals: ["hypertrophy", "calorie-burn"],  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "lower",  beginner: true  },
+  "r-home-pull":         { goals: ["hypertrophy", "powerlifting"],  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "pull",   beginner: true  },
+  "r-home-legs":         { goals: ["hypertrophy", "calorie-burn", "powerlifting"],  equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "lower",  beginner: true  },
   "r-home-full-a":       { goals: ["hypertrophy", "calorie-burn"],  equipment: ["bodyweight"],           experience: ["beginner"],                             split: "full",   beginner: true  },
   "r-home-full-b":       { goals: ["hypertrophy", "calorie-burn"],  equipment: ["bodyweight"],           experience: ["beginner", "intermediate"],             split: "full",   beginner: true  },
   "r-home-conditioning": { goals: ["calorie-burn", "other"],        equipment: ["bodyweight"],           experience: ["beginner", "intermediate", "advanced"], split: "cardio", beginner: true  },
@@ -57,12 +57,12 @@ const ROUTINE_TAGS: Record<
   "r-db-legs":   { goals: ["hypertrophy", "calorie-burn"],  equipment: ["home-gym"],  experience: ["beginner", "intermediate", "advanced"], split: "lower",  beginner: true  },
   "r-db-full-a": { goals: ["hypertrophy", "calorie-burn"],  equipment: ["home-gym"],  experience: ["beginner"],                             split: "full",   beginner: true  },
   "r-db-full-b": { goals: ["hypertrophy", "calorie-burn"],  equipment: ["home-gym"],  experience: ["beginner", "intermediate"],             split: "full",   beginner: true  },
-  "r-db-upper":  { goals: ["hypertrophy"],                  equipment: ["home-gym"],  experience: ["intermediate", "advanced"],             split: "upper",  beginner: false },
+  "r-db-upper":  { goals: ["hypertrophy", "powerlifting"],  equipment: ["home-gym"],  experience: ["intermediate", "advanced"],             split: "upper",  beginner: false },
 
   // Beginner / mixed
   "r-beginner-full":     { goals: ["hypertrophy", "calorie-burn", "other"], equipment: ["bodyweight"],  experience: ["beginner"],                             split: "full",   beginner: true  },
   "r-home-upper":        { goals: ["hypertrophy"],                          equipment: ["bodyweight"],  experience: ["beginner", "intermediate", "advanced"], split: "upper",  beginner: true  },
-  "r-db-lower-strength": { goals: ["powerlifting", "hypertrophy"],          equipment: ["home-gym"],    experience: ["intermediate", "advanced"],             split: "lower",  beginner: false },
+  "r-db-lower-strength": { goals: ["powerlifting", "hypertrophy"],          equipment: ["home-gym"],    experience: ["beginner", "intermediate", "advanced"],             split: "lower",  beginner: true  },
   "r-core-abs":          { goals: ["hypertrophy", "calorie-burn", "other"], equipment: ["bodyweight", "home-gym", "full-gym"], experience: ["beginner", "intermediate", "advanced"], split: "core", beginner: true },
 };
 
