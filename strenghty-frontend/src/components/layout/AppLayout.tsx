@@ -95,9 +95,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       {!isWorkoutBuilderRoute && (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 relative h-16 flex items-center justify-center">
-            <Link
-              to="/dashboard"
+            <div
               className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2"
+              role="presentation"
+              aria-hidden="true"
+              tabIndex={-1}
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg">
                 <img
@@ -109,7 +111,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <span className="font-heading text-xl font-bold text-white">
                 Strengthy
               </span>
-            </Link>
+            </div>
 
             <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {

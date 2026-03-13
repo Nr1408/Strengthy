@@ -2648,7 +2648,9 @@ export default function NewWorkout() {
               fromRoutine?.id ??
               (() => {
                 try {
-                  const raw = localStorage.getItem(`workout:state:${persistedWorkoutId}`);
+                  const raw = localStorage.getItem(
+                    `workout:state:${persistedWorkoutId}`,
+                  );
                   if (raw) return JSON.parse(raw)?.routineId ?? null;
                 } catch {}
                 return null;
@@ -2662,7 +2664,9 @@ export default function NewWorkout() {
             // 2. Fall back to onboarding-stored suggestion (same source as Dashboard Next Up)
             if (!suggested?.routine) {
               try {
-                const stored = localStorage.getItem("user:nextSuggestedRoutine");
+                const stored = localStorage.getItem(
+                  "user:nextSuggestedRoutine",
+                );
                 if (stored) {
                   const { id, label: storedLabel } = JSON.parse(stored);
                   const { mockRoutines } = await import("@/data/mockData");
@@ -2678,7 +2682,11 @@ export default function NewWorkout() {
               const fallback =
                 mockRoutines.find((r: any) => r.id !== fromRoutine?.id) ??
                 mockRoutines[0];
-              if (fallback) suggested = { routine: fallback, label: `Next: ${fallback.name}` };
+              if (fallback)
+                suggested = {
+                  routine: fallback,
+                  label: `Next: ${fallback.name}`,
+                };
             }
           } catch (e) {
             suggested = null;

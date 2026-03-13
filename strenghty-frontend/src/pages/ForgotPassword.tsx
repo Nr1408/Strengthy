@@ -58,7 +58,12 @@ export default function ForgotPassword() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border">
         <div className="flex h-16 items-center px-4">
-          <Link to="/" className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2"
+            role="presentation"
+            aria-hidden="true"
+            tabIndex={-1}
+          >
             <div className="flex h-9 w-9 items-center justify-center rounded-lg">
               <img
                 src="/icons/logo.png"
@@ -69,7 +74,7 @@ export default function ForgotPassword() {
             <span className="font-heading text-xl font-bold text-white">
               Strengthy
             </span>
-          </Link>
+          </div>
         </div>
       </header>
 

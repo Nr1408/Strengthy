@@ -646,9 +646,13 @@ export default function Dashboard() {
                     {exerciseCount > 0 && (
                       <p className="text-xs text-zinc-400 mt-0.5">
                         {exerciseCount} exercises
-                        {completedWorkouts.length === 0
-                          ? " · Recommended for your Blueprint"
-                          : " · Recommended after your first workout"}
+                        {completedWorkouts.length === 0 ? (
+                          " · Recommended for your Blueprint"
+                        ) : completedWorkouts.length === 1 ? (
+                          " · Recommended after your first workout"
+                        ) : (
+                          " · Based on your last workout"
+                        )}
                       </p>
                     )}
                   </div>
