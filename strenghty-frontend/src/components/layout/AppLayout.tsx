@@ -1,3 +1,4 @@
+import { deleteWorkout, getWorkouts } from "@/lib/api";
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -196,6 +197,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </nav>
       )}
+
 
       {/* Main Content */}
       <main
