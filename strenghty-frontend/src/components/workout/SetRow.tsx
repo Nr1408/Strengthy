@@ -344,7 +344,9 @@ export function SetRow({
     prLines,
   });
   const showTrophy =
-    (set.isPR || set.e1rmPR || set.volumePR || set.absWeightPR) && (readOnly || set.completed) && prLines.length > 0;
+    (set.isPR || set.e1rmPR || set.volumePR || set.absWeightPR) &&
+    (readOnly || set.completed) &&
+    prLines.length > 0;
 
   // For layout purposes, treat HIIT/bodyweight exercises as cardio-like so
   // they always use the HIIT grid and column semantics (time, reps, RPE)
@@ -600,24 +602,46 @@ export function SetRow({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors"
+                    className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 focus-visible:ring-1 focus-visible:ring-offset-0 transition-colors"
+                    aria-label="Change unit"
                   >
-                    {unit}
-                    <span className="text-[8px] opacity-50">▼</span>
+                    <span className="mr-1">{unit}</span>
+                    <span className="text-[8px] opacity-50">▾</span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-20 p-1">
+
+                <DropdownMenuContent
+                  className="w-24 p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
+                  style={{ transformOrigin: "top right" }}
+                >
                   <DropdownMenuItem
-                    className="text-white text-xs justify-center"
-                    onSelect={() => onUnitChange?.("lbs")}
+                    className={cn(
+                      "w-full text-center py-2 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                      unit === "lbs"
+                        ? "text-orange-500"
+                        : "text-muted-foreground",
+                    )}
+                    onClick={() => onUnitChange?.("lbs")}
                   >
-                    lbs
+                    {unit === "lbs" && (
+                      <Check className="h-4 w-4 text-orange-500" />
+                    )}
+                    <span>lbs</span>
                   </DropdownMenuItem>
+
                   <DropdownMenuItem
-                    className="text-white text-xs justify-center"
-                    onSelect={() => onUnitChange?.("kg")}
+                    className={cn(
+                      "w-full text-center py-2 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                      unit === "kg"
+                        ? "text-orange-500"
+                        : "text-muted-foreground",
+                    )}
+                    onClick={() => onUnitChange?.("kg")}
                   >
-                    kg
+                    {unit === "kg" && (
+                      <Check className="h-4 w-4 text-orange-500" />
+                    )}
+                    <span>kg</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
