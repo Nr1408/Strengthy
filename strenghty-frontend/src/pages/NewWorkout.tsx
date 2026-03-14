@@ -448,6 +448,7 @@ export default function NewWorkout() {
           workoutName,
           notes,
           startTime,
+          routineId: fromRoutine?.id ?? null,
         }),
       );
     } catch (e) {}
