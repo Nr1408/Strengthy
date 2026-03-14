@@ -2266,12 +2266,13 @@ export default function NewWorkout() {
       for (const ex of exercisesToPersist) {
         // determine if this exercise has appeared in any previously logged workout
         let hadPriorForExercise = false;
+        let priorSetsForExercise: any[] = [];
         try {
-          const priorSets = await getSetsForExercise(
+          priorSetsForExercise = await getSetsForExercise(
             String(ex.exercise.id),
             String(persistedWorkoutId),
           );
-          hadPriorForExercise = priorSets.length > 0;
+          hadPriorForExercise = priorSetsForExercise.length > 0;
         } catch (e) {
           hadPriorForExercise = false;
         }
@@ -2286,6 +2287,44 @@ export default function NewWorkout() {
               : (s.reps || 0) > 0 ||
                 (typeof s.weight === "number" && s.weight > 0);
           if (isPersisted || !shouldPersist) continue;
+
+          // If a matching set already exists on the server (created by a
+          // recent toggle) map the local set to the server id and skip
+          // creating a duplicate.
+          if (!isPersisted && priorSetsForExercise.length > 0) {
+            try {
+              const match = priorSetsForExercise.find((ps) => {
+                try {
+                  return (
+                    (ps.reps == null ? 0 : Number(ps.reps)) === (s.reps || 0) &&
+                    (ps.weight == null ? 0 : Number(ps.weight)) === (s.weight || 0)
+                  );
+                } catch (e) {
+                  return false;
+                }
+              });
+              if (match) {
+                // update UI state to reflect server id
+                try {
+                  setExercises((prev) =>
+                    prev.map((e) =>
+                      e.id !== ex.id
+                        ? e
+                        : {
+                            ...e,
+                            sets: e.sets.map((ss) =>
+                              ss.id === s.id ? { ...ss, id: match.id } : ss,
+                            ),
+                          },
+                    ),
+                  );
+                  // update local copy so subsequent logic treats it as persisted
+                  s.id = match.id;
+                } catch (e) {}
+                continue;
+              }
+            } catch (e) {}
+          }
 
           // Skip sets already saved by a concurrent toggleCardioSetComplete call
           // (race condition: checkmark tapped then Save clicked before state refresh).
