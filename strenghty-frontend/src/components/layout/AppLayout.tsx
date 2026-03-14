@@ -40,9 +40,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     (location.pathname.startsWith("/workouts/") &&
       location.pathname.endsWith("/edit"));
 
-  const firstWorkoutDone = !!localStorage.getItem("user:firstWorkoutCompleted");
   const isOnboardingRoutineView =
-    !firstWorkoutDone &&
+    !!(location.state as any)?.fromOnboarding &&
     location.pathname.startsWith("/routines/") &&
     location.pathname.endsWith("/view");
 

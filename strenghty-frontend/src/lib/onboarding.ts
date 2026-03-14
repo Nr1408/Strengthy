@@ -7,6 +7,8 @@ export type UserOnboardingData = {
   heightUnit: "cm" | "ft";
   weight: number | null;
   weightUnit: "kg" | "lbs";
+  goalWeight?: number | null;
+  goalWeightUnit?: "kg" | "lbs";
   equipment: "full-gym" | "home-gym" | "bodyweight" | "other";
   experience: "beginner" | "intermediate" | "advanced";
   monthlyWorkouts: number;
@@ -21,7 +23,7 @@ const ROUTINE_TAGS: Record<
     goals: Array<"hypertrophy" | "calorie-burn" | "powerlifting" | "other">;
     equipment: Array<"full-gym" | "home-gym" | "bodyweight" | "other">;
     experience: Array<"beginner" | "intermediate" | "advanced">;
-    split: "upper" | "lower" | "full" | "push" | "pull" | "cardio" | "arms";
+    split: "upper" | "lower" | "full" | "push" | "pull" | "cardio" | "arms" | "core";
     beginner: boolean;
   }
 > = {

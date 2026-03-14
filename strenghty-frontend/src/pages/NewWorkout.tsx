@@ -2269,7 +2269,7 @@ export default function NewWorkout() {
         try {
           const priorSets = await getSetsForExercise(
             String(ex.exercise.id),
-            String(wId),
+            String(persistedWorkoutId),
           );
           hadPriorForExercise = priorSets.length > 0;
         } catch (e) {
