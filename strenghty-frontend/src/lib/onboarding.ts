@@ -196,8 +196,8 @@ export function recommendNextRoutine(
     const currentEquipment = currentTags.equipment;
     const equipmentRestricted = !currentEquipment.includes("full-gym");
 
-    // Build excluded set: current + recently done
-    const excluded = new Set([currentRoutineId, ...recentRoutineIds]);
+    // Build excluded set: current + immediately previous only (allow older routines back)
+    const excluded = new Set([currentRoutineId, recentRoutineIds[0]].filter(Boolean) as string[]);
 
     const scored = mockRoutines
       .filter((r) => {
