@@ -793,7 +793,8 @@ export default function NewWorkout() {
   const startDateOptions: Date[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  for (let offset = -2; offset <= 2; offset += 1) {
+  // Provide a wider scrollable range (±30 days) for wheel-like selection
+  for (let offset = -30; offset <= 30; offset += 1) {
     const d = new Date(startTime);
     d.setDate(d.getDate() + offset);
     // Do not allow future dates beyond today
@@ -802,6 +803,32 @@ export default function NewWorkout() {
     if (candidate.getTime() > today.getTime()) continue;
     startDateOptions.push(d);
   }
+
+  const startDateListRef = useRef<HTMLDivElement | null>(null);
+  const startDateScrollTimeout = useRef<number | null>(null);
+
+  const onStartDateScroll = () => {
+    const el = startDateListRef.current;
+    if (!el) return;
+    if (startDateScrollTimeout.current) {
+      window.clearTimeout(startDateScrollTimeout.current);
+    }
+    // Debounce to avoid excessive updates while scrolling
+    startDateScrollTimeout.current = window.setTimeout(() => {
+      const rect = el.getBoundingClientRect();
+      const centerY = rect.top + el.clientHeight / 2;
+      const children = Array.from(el.children) as HTMLElement[];
+      for (let i = 0; i < children.length; i++) {
+        const c = children[i];
+        const cr = c.getBoundingClientRect();
+        if (centerY >= cr.top && centerY <= cr.bottom) {
+          const date = startDateOptions[i];
+          if (date) setStartDateOnly(date);
+          break;
+        }
+      }
+    }, 120) as unknown as number;
+  };
 
   const hourOptions = Array.from({ length: 24 }, (_, i) => i);
   const minuteOptions = Array.from({ length: 60 }, (_, i) => i);
@@ -3122,7 +3149,10 @@ export default function NewWorkout() {
                             <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
                               Hours
                             </span>
-                            <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                            <div
+                              className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide"
+                              style={{ WebkitOverflowScrolling: "touch" }}
+                            >
                               {hourOptions.map((h) => (
                                 <button
                                   key={h}
@@ -3146,7 +3176,10 @@ export default function NewWorkout() {
                             <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
                               Min
                             </span>
-                            <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                            <div
+                              className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide"
+                              style={{ WebkitOverflowScrolling: "touch" }}
+                            >
                               {minuteOptions.map((m) => (
                                 <button
                                   key={m}
@@ -3206,7 +3239,12 @@ export default function NewWorkout() {
                     </div>
                     {showStartDatePicker && (
                       <div className="relative mt-2 overflow-hidden rounded-2xl bg-white/[0.02]">
-                        <div className="relative max-h-40 overflow-y-auto py-2 scrollbar-hide">
+                        <div
+                          ref={startDateListRef}
+                          onScroll={onStartDateScroll}
+                          className="relative max-h-40 overflow-y-auto py-2 scrollbar-hide"
+                          style={{ WebkitOverflowScrolling: "touch" }}
+                        >
                           {startDateOptions.map((date) => (
                             <button
                               key={date.toISOString()}
@@ -3231,7 +3269,10 @@ export default function NewWorkout() {
                             <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
                               Hr
                             </span>
-                            <div className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide">
+                            <div
+                              className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide"
+                              style={{ WebkitOverflowScrolling: "touch" }}
+                            >
                               {startHour12Options.map((h) => (
                                 <button
                                   key={`start-hour-${h}`}
@@ -3258,7 +3299,10 @@ export default function NewWorkout() {
                             <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
                               Min
                             </span>
-                            <div className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide">
+                            <div
+                              className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide"
+                              style={{ WebkitOverflowScrolling: "touch" }}
+                            >
                               {startMinuteOptions.map((m) => (
                                 <button
                                   key={`start-minute-${m}`}
@@ -3285,7 +3329,10 @@ export default function NewWorkout() {
                             <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
                               AM/PM
                             </span>
-                            <div className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide">
+                            <div
+                              className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide"
+                              style={{ WebkitOverflowScrolling: "touch" }}
+                            >
                               {meridiemOptions.map((mer) => (
                                 <button
                                   key={`start-meridiem-${mer}`}

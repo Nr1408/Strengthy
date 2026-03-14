@@ -427,21 +427,7 @@ export default function AccountSettings() {
               </Button>
             </div>
             <div className="pt-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  try {
-                    localStorage.removeItem("user:hideNextUp");
-                  } catch {}
-                  toast({
-                    title: "Suggestions re-enabled",
-                    description: "Next Up suggestions will be shown again.",
-                  });
-                }}
-              >
-                Re-enable Next Up suggestions
-              </Button>
+              {/* Next Up suggestions button moved to Settings */}
             </div>
           </div>
         </section>

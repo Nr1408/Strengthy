@@ -3079,7 +3079,10 @@ export default function EditWorkout() {
                         <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
                           Hours
                         </span>
-                        <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                        <div
+                          className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide"
+                          style={{ WebkitOverflowScrolling: "touch" }}
+                        >
                           {Array.from({ length: 24 }, (_, i) => i).map((h) => (
                             <button
                               key={h}
@@ -3103,7 +3106,10 @@ export default function EditWorkout() {
                         <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
                           Min
                         </span>
-                        <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                        <div
+                          className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide"
+                          style={{ WebkitOverflowScrolling: "touch" }}
+                        >
                           {Array.from({ length: 60 }, (_, i) => i).map((m) => (
                             <button
                               key={m}
@@ -3164,7 +3170,10 @@ export default function EditWorkout() {
                 </div>
                 {showStartDatePicker && (
                   <div className="relative mt-2 overflow-hidden rounded-2xl bg-white/[0.02]">
-                    <div className="relative max-h-40 overflow-y-auto py-2 scrollbar-hide">
+                    <div
+                      className="relative max-h-40 overflow-y-auto py-2 scrollbar-hide"
+                      style={{ WebkitOverflowScrolling: "touch" }}
+                    >
                       {startDateOptions.map((date) => (
                         <button
                           key={date.toISOString()}
@@ -3189,7 +3198,10 @@ export default function EditWorkout() {
                         <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
                           Hr
                         </span>
-                        <div className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide">
+                        <div
+                          className="relative h-32 w-full overflow-y-auto py-1 scrollbar-hide"
+                          style={{ WebkitOverflowScrolling: "touch" }}
+                        >
                           {startHour12Options.map((h) => (
                             <button
                               key={`start-hour-${h}`}

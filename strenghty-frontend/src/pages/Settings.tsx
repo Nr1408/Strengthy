@@ -7,9 +7,11 @@ import {
   type UserSettings,
   type UnitsPreference,
 } from "@/lib/settings";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
+  const { toast } = useToast();
 
   useEffect(() => {
     saveSettings(settings);
@@ -21,7 +23,7 @@ export default function Settings() {
 
   const setUnit = (
     field: keyof UnitsPreference,
-    value: UnitsPreference[keyof UnitsPreference]
+    value: UnitsPreference[keyof UnitsPreference],
   ) => {
     setSettings((prev) => ({
       ...prev,
@@ -52,7 +54,9 @@ export default function Settings() {
             <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
               <div className="flex items-center justify-between px-5 py-4">
                 <div>
-                  <p className="text-sm font-semibold text-white">Notifications</p>
+                  <p className="text-sm font-semibold text-white">
+                    Notifications
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Show reminders and important updates.
                   </p>
@@ -84,11 +88,26 @@ export default function Settings() {
             </h2>
             <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
               {[
-                { label: "Weight", field: "weight" as const, options: ["kg", "lbs"] as const },
-                { label: "Distance", field: "distance" as const, options: ["kilometers", "miles"] as const },
-                { label: "Body measurements", field: "body" as const, options: ["cm", "in"] as const },
+                {
+                  label: "Weight",
+                  field: "weight" as const,
+                  options: ["kg", "lbs"] as const,
+                },
+                {
+                  label: "Distance",
+                  field: "distance" as const,
+                  options: ["kilometers", "miles"] as const,
+                },
+                {
+                  label: "Body measurements",
+                  field: "body" as const,
+                  options: ["cm", "in"] as const,
+                },
               ].map(({ label, field, options }) => (
-                <div key={field} className="flex items-center justify-between px-5 py-4">
+                <div
+                  key={field}
+                  className="flex items-center justify-between px-5 py-4"
+                >
                   <p className="text-sm font-semibold text-white">{label}</p>
                   <div className="flex rounded-lg bg-zinc-900 border border-white/10 p-1">
                     {options.map((u) => (
@@ -108,6 +127,40 @@ export default function Settings() {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* Next Up Suggestions */}
+          <section className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+              Suggestions
+            </h2>
+            <div className="rounded-2xl bg-card border border-border overflow-hidden">
+              <div className="flex flex-col gap-3 px-5 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    Next Up suggestions
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Show workout recommendations on your dashboard.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.removeItem("user:hideNextUp");
+                    } catch {}
+                    toast({
+                      title: "Suggestions re-enabled",
+                      description: "Next Up suggestions will be shown again.",
+                    });
+                  }}
+                  className="self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/15 text-orange-400 text-xs font-semibold border border-orange-500/25 hover:bg-orange-500/25 transition-colors"
+                >
+                  Re-enable suggestions
+                </button>
+              </div>
             </div>
           </section>
 
