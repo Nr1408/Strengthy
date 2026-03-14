@@ -491,47 +491,6 @@ export default function Dashboard() {
         const rt = mockRoutines.find((r) => r.id === nextSuggested.id) ?? null;
         return { routine: rt, label: nextSuggested.label, title: "Next Up" };
       }
-      // Fallback: if we don't have a persisted next suggestion, try to
-      // derive the last-started routine id from localStorage for the
-      // most recent completed workout and ask the recommender.
-      try {
-        const last = [...completedWorkouts].sort(
-          (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-        )[0];
-        if (last) {
-          // Check client-side state that may have recorded the routineId
-          // while the workout was in-progress: `workout:state:{id}` or
-          // the generic `workout:inProgress` slot (fallback).
-          let candidateId: string | null = null;
-          try {
-            const stateRaw = localStorage.getItem(`workout:state:${last.id}`);
-            if (stateRaw) {
-              const parsed = JSON.parse(stateRaw as string);
-              if (parsed && parsed.routineId) candidateId = parsed.routineId;
-            }
-          } catch (e) {}
-          try {
-            if (!candidateId) {
-              const inProg = localStorage.getItem("workout:inProgress");
-              if (inProg) {
-                const p = JSON.parse(inProg as string);
-                if (p && p.routineId) candidateId = p.routineId;
-              }
-            }
-          } catch (e) {}
-
-          if (candidateId) {
-            const suggested = recommendNextRoutine(candidateId);
-            if (suggested && suggested.routine)
-              return {
-                routine: suggested.routine,
-                label: suggested.label,
-                title: "Next Up",
-              };
-          }
-        }
-      } catch (e) {}
-
       return null;
     } catch (e) {
       return null;
