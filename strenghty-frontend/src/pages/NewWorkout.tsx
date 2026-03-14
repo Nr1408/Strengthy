@@ -2297,7 +2297,8 @@ export default function NewWorkout() {
                 try {
                   return (
                     (ps.reps == null ? 0 : Number(ps.reps)) === (s.reps || 0) &&
-                    (ps.weight == null ? 0 : Number(ps.weight)) === (s.weight || 0)
+                    (ps.weight == null ? 0 : Number(ps.weight)) ===
+                      (s.weight || 0)
                   );
                 } catch (e) {
                   return false;
