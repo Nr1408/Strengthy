@@ -172,6 +172,7 @@ export default function Onboarding() {
   }, []);
 
   // Helpers for unit conversion and simple formatting
+  // force rebuild
   const convertHeight = (
     valueStr: string | undefined,
     from: "cm" | "ft",
