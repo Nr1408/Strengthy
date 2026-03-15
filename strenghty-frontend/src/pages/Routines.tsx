@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-// Helper to read routines from storage
+// Helper to read routines from localStorage
 const readRoutinesFromStorage = (): Routine[] => {
   try {
     const raw = localStorage.getItem("user:routines");
@@ -36,16 +36,18 @@ export default function Routines() {
     readRoutinesFromStorage(),
   );
 
+  // Re-read routines whenever the page gains focus (same-tab navigation back
+  // from NewWorkout) or when another tab writes to localStorage.
   useEffect(() => {
     const refresh = () => setMyRoutines(readRoutinesFromStorage());
 
-    // Fires when user navigates back to this tab (same-tab navigation from /workouts/new)
+    // Fires when this tab regains focus (e.g. user navigates back from /workouts/new)
     window.addEventListener("focus", refresh);
 
-    // Fires for same-tab writes dispatched by NewWorkout via custom event
+    // Fires for same-tab writes via a custom event dispatched by NewWorkout/Routines
     window.addEventListener("routines:updated", refresh);
 
-    // Fires for cross-tab localStorage writes
+    // Fires for cross-tab localStorage writes (StorageEvent only crosses tab boundaries)
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "user:routines" || e.key === "user:routines:updated") {
         refresh();
@@ -53,7 +55,7 @@ export default function Routines() {
     };
     window.addEventListener("storage", handleStorage);
 
-    // Refresh immediately on mount in case we just navigated back
+    // Also refresh immediately on mount in case we navigated back
     refresh();
 
     return () => {
@@ -62,6 +64,7 @@ export default function Routines() {
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -71,11 +74,10 @@ export default function Routines() {
     description: "",
   });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("user:routines", JSON.stringify(myRoutines));
-    } catch {}
-  }, [myRoutines]);
+  // NOTE: No reactive useEffect writes myRoutines back to localStorage.
+  // Each mutation (create, delete) writes directly instead.
+  // A reactive write here races with NewWorkout's exercise saves and
+  // would overwrite the routine with 0 exercises before the state flushes.
 
   const handleCreateRoutine = () => {
     if (!newRoutine.name) {
@@ -95,22 +97,20 @@ export default function Routines() {
       exercises: [],
     };
 
+    // Immediately save to localStorage and update state so the card appears
+    // right away when the user returns from the workout builder.
     try {
       const stored = readRoutinesFromStorage();
       const updated = [...stored, routine];
       localStorage.setItem("user:routines", JSON.stringify(updated));
       localStorage.setItem("user:routines:updated", Date.now().toString());
-      window.dispatchEvent(new Event("routines:updated")); // notify same-tab listeners
-      setMyRoutines(updated); // update state directly so UI is instant
+      // Notify same-tab listeners (focus event won't fire if tab never lost focus)
+      window.dispatchEvent(new Event("routines:updated"));
+      setMyRoutines(updated);
     } catch {}
 
     setNewRoutine({ name: "", description: "" });
     setIsDialogOpen(false);
-
-    toast({
-      title: "Routine builder started",
-      description: "Finish this workout to save it as a routine.",
-    });
 
     try {
       const inProg = localStorage.getItem("workout:inProgress");
@@ -166,6 +166,39 @@ export default function Routines() {
       return updated;
     });
     toast({ title: "Routine deleted" });
+    try {
+      // If the deleted routine was cached in the workout builder or currentRoutine
+      // storage, remove those entries to avoid stale restores.
+      const currentRaw = localStorage.getItem("workout:currentRoutine");
+      if (currentRaw) {
+        try {
+          const parsed = JSON.parse(currentRaw);
+          if (parsed && parsed.id === id) {
+            try {
+              localStorage.removeItem("workout:currentRoutine");
+            } catch {}
+            try {
+              localStorage.removeItem("workout:isRoutineBuilder");
+            } catch {}
+          }
+        } catch {}
+      }
+
+      const builderRaw = localStorage.getItem("workout:routineBuilder");
+      if (builderRaw) {
+        try {
+          const parsed = JSON.parse(builderRaw);
+          if (parsed && parsed.routineId === id) {
+            try {
+              localStorage.removeItem("workout:routineBuilder");
+            } catch {}
+            try {
+              localStorage.removeItem("workout:inProgress");
+            } catch {}
+          }
+        } catch {}
+      }
+    } catch (e) {}
   };
 
   return (
@@ -213,6 +246,7 @@ export default function Routines() {
                   key={routine.id}
                   routine={routine}
                   onStart={() => handleStartRoutine(routine)}
+                  onDelete={() => handleDeleteRoutine(routine.id)}
                   onClick={() =>
                     navigate(`/routines/${routine.id}/view`, {
                       state: { routine },
@@ -240,8 +274,6 @@ export default function Routines() {
             </div>
           )}
         </div>
-
-        {/* Explore Routines moved to /routines/explore */}
 
         {/* Create Routine Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

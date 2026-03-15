@@ -1,20 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogPortal,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,13 +17,15 @@ import MuscleTag from "@/components/workout/MuscleTag";
 import ExerciseHeader from "@/components/workout/ExerciseHeader";
 import { SetRow } from "@/components/workout/SetRow";
 import { muscleGroupColors } from "@/data/mockData";
+import { getUnit } from "@/lib/utils";
+import { getCardioMode, SetsHeader } from "@/components/workout/SetsHeader";
+import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle,
   Trophy,
   Clock,
-  Save,
   ChevronDown,
   Trash2,
   Plus,
@@ -53,46 +47,26 @@ import {
   getCardioSetsForWorkout,
   getExercises,
   getSetsForExercise,
-  getWorkouts,
   createExercise,
   getToken,
 } from "@/lib/api";
-import { recommendNextRoutine } from "@/lib/onboarding";
-import { triggerHaptic } from "@/lib/haptics";
-import { getUnit, setUnit, countPrTypesFromSet } from "@/lib/utils";
-import { libraryExercises as staticLibraryExercises } from "@/data/libraryExercises";
-import { CreateExerciseDialog } from "@/components/workout/CreateExerciseDialog";
 import type {
-  Exercise,
-  MuscleGroup,
   Routine,
+  Exercise,
   WorkoutExercise,
   WorkoutSet,
 } from "@/types/workout";
-import {
-  SetsHeader,
-  isHiitExerciseName,
-  getCardioMode,
-} from "@/components/workout/SetsHeader";
 
-// consistent friendly muscle ordering used across library and create dialogs
-const allMusclesOrder: MuscleGroup[] = [
-  "chest",
-  "back",
-  "shoulders",
-  "biceps",
-  "triceps",
-  "forearms",
-  "quads",
-  "hamstrings",
-  "calves",
-  "core",
-  "cardio",
-];
+import type {
+  Routine,
+  Exercise,
+  WorkoutExercise,
+  WorkoutSet,
+} from "@/types/workout";
 
 export default function NewWorkout() {
   const navigate = useNavigate();
-  const location = useLocation() as {
+  const location = useLocation() as ReturnType<typeof useLocation> & {
     state?: {
       routine?: Routine;
       fromNewRoutine?: boolean;
@@ -105,11 +79,52 @@ export default function NewWorkout() {
       exerciseToReplace?: string | null;
     };
   };
-  const fromRoutine = location.state?.routine;
+  // Persist routine to localStorage so it survives navigation away and back
+  // (e.g. browsing exercise info from the picker resets location.state)
+  const fromRoutine =
+    location.state?.routine ??
+    (() => {
+      try {
+        const raw = localStorage.getItem("workout:currentRoutine");
+        if (raw) return JSON.parse(raw) as Routine;
+      } catch {}
+      return undefined;
+    })();
+
+  // Restore fromNewRoutine flag from localStorage if location.state lost it
+  const fromNewRoutineFlag =
+    location.state?.fromNewRoutine ??
+    (() => {
+      try {
+        return localStorage.getItem("workout:isRoutineBuilder") === "1";
+      } catch {}
+      return false;
+    })();
+
   const originPath = location.state?.originPath;
   const originState = location.state?.originState ?? null;
-  const isNewRoutineTemplate = !!location.state?.fromNewRoutine;
-  const isRoutineBuilder = !!location.state?.fromNewRoutine;
+  const isNewRoutineTemplate = !!fromNewRoutineFlag;
+  const isRoutineBuilder = !!fromNewRoutineFlag;
+  // Persist routine identity to localStorage so it survives navigation
+  // away and back (e.g. viewing exercise info resets location.state)
+  useEffect(() => {
+    if (fromRoutine) {
+      try {
+        localStorage.setItem(
+          "workout:currentRoutine",
+          JSON.stringify(fromRoutine),
+        );
+      } catch {}
+    }
+    // Only persist the builder flag if it came from an actual navigation
+    // state (location.state), not from a stale localStorage fallback.
+    if (location.state?.fromNewRoutine) {
+      try {
+        localStorage.setItem("workout:isRoutineBuilder", "1");
+      } catch {}
+    }
+    // run once on mount only
+  }, []);
   const isFirstWorkout =
     !!(location.state as any)?.firstTime ||
     !!(location.state as any)?.isFirstWorkout;
@@ -195,6 +210,7 @@ export default function NewWorkout() {
     !!fromRoutine || !!location.state?.fromNewRoutine,
   );
   const seededFromRoutineRef = useRef(false);
+  const isNavigatingAway = useRef(false);
 
   const getEmptySetMessage = (err: any) => {
     const text = String(err?.message || err || "").trim();
@@ -334,14 +350,23 @@ export default function NewWorkout() {
           const saved = localStorage.getItem(`workout:state:${obj.id}`);
           if (saved) {
             const parsed = JSON.parse(saved);
-            if (parsed.exercises) setExercises(parsed.exercises);
+            // ALWAYS restore exercises if they exist in localStorage
+            if (
+              parsed.exercises &&
+              Array.isArray(parsed.exercises) &&
+              parsed.exercises.length > 0
+            ) {
+              setExercises(parsed.exercises);
+            }
             if (typeof parsed.elapsedSec === "number")
               setElapsedSec(parsed.elapsedSec);
             if (parsed.startTime) {
               const dt = new Date(parsed.startTime);
               if (!isNaN(dt.getTime())) setStartTime(dt);
             }
-            if (parsed.workoutName) setWorkoutName(parsed.workoutName);
+            // Don't overwrite the routine name if we started from a routine
+            if (parsed.workoutName && !fromRoutine)
+              setWorkoutName(parsed.workoutName);
             if (parsed.notes) setNotes(parsed.notes);
           }
           try {
@@ -354,8 +379,6 @@ export default function NewWorkout() {
               } catch (e) {}
               setPaused(false);
             } else {
-              // Keep restored workouts paused when the app is restarted or reopened
-              // so the user returns to the same state they left (require explicit resume).
               try {
                 localStorage.setItem("workout:paused", "1");
               } catch (e) {}
@@ -368,15 +391,26 @@ export default function NewWorkout() {
     } catch (e) {}
 
     if (!workoutId) {
+      // Save routine so it survives navigate-away-and-back
+      if (fromRoutine) {
+        try {
+          localStorage.setItem(
+            "workout:currentRoutine",
+            JSON.stringify(fromRoutine),
+          );
+        } catch {}
+      }
+      if (location.state?.fromNewRoutine) {
+        try {
+          localStorage.setItem("workout:isRoutineBuilder", "1");
+        } catch {}
+      }
       // Always use the routine name if present
       createWorkoutMutation.mutate(fromRoutine?.name || workoutName);
     }
   }, [workoutId, workoutName, isRoutineBuilder]);
 
   // Handle returning from ExerciseInfo page (opened via fromPicker flow).
-  // MUST run after the restore effect above so that addExercise's functional
-  // updater (prev => [...prev, newEx]) chains on top of the restored exercises
-  // rather than an empty array.
   useEffect(() => {
     const state = location.state;
     if (!state) return;
@@ -402,6 +436,14 @@ export default function NewWorkout() {
     if (!fromRoutine || isRoutineBuilder) return;
     if (seededFromRoutineRef.current) return;
     if (exercises.length > 0) return;
+    // Don't reseed if an in-progress workout exists — the restore useEffect will populate exercises
+    try {
+      const inProg = localStorage.getItem("workout:inProgress");
+      if (inProg) {
+        seededFromRoutineRef.current = true;
+        return;
+      }
+    } catch {}
 
     const routineExercises = Array.isArray(fromRoutine.exercises)
       ? fromRoutine.exercises
@@ -444,11 +486,132 @@ export default function NewWorkout() {
     });
 
     setExercises(seeded);
+    // If this routine is a user-created/custom routine, try to prefill
+    // suggested weight/reps from the user's most recent sets for each
+    // exercise so the routine view isn't full of zeros.
+    (async () => {
+      try {
+        const isUserRoutine = (() => {
+          try {
+            const raw = localStorage.getItem("user:routines");
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                return parsed.some(
+                  (r) => String(r.id) === String(fromRoutine?.id),
+                );
+              }
+            }
+          } catch (e) {}
+          // Fallback: treat locally-created ids as "my-..." as user routines
+          return String(fromRoutine?.id || "").startsWith("my-");
+        })();
+
+        if (!isUserRoutine) return;
+
+        const updated = await Promise.all(
+          seeded.map(async (ex) => {
+            try {
+              const prior = await getSetsForExercise(String(ex.exercise.id));
+              if (prior && prior.length > 0) {
+                const recent = prior[0];
+                const suggestedWeight =
+                  typeof recent.weight === "number" && recent.weight > 0
+                    ? recent.weight
+                    : undefined;
+                const suggestedReps =
+                  typeof recent.reps === "number" && recent.reps > 0
+                    ? recent.reps
+                    : undefined;
+                if (
+                  suggestedWeight ||
+                  suggestedReps ||
+                  typeof recent.rpe === "number" ||
+                  (recent.halfReps || 0) > 0
+                ) {
+                  const suggestedRpe =
+                    typeof recent.rpe === "number" ? recent.rpe : undefined;
+                  const suggestedHalf =
+                    typeof recent.halfReps === "number" && recent.halfReps > 0
+                      ? recent.halfReps
+                      : undefined;
+                  return {
+                    ...ex,
+                    sets: ex.sets.map((s: any) => ({
+                      ...s,
+                      // Attach suggestion metadata - SetRow will render these
+                      // greyed when the actual value is empty/zero.
+                      _suggestedWeight: suggestedWeight,
+                      _suggestedReps: suggestedReps,
+                      _suggestedRpe: suggestedRpe,
+                      _suggestedHalfReps: suggestedHalf,
+                    })),
+                  };
+                }
+              }
+            } catch (e) {}
+            return ex;
+          }),
+        );
+        setExercises(updated);
+      } catch (e) {
+        // ignore
+      }
+    })();
     seededFromRoutineRef.current = true;
   }, [fromRoutine, isRoutineBuilder, exercises.length]);
 
   useEffect(() => {
-    if (!workoutId || isRoutineBuilder) return;
+    console.log("[Save Check]", {
+      isRoutineBuilder,
+      exercisesLength: exercises.length,
+      exercises: exercises.map((e) => e.exercise.name),
+      pathname: location.pathname,
+      isNavigatingAway: isNavigatingAway.current,
+    });
+
+    // In routine builder mode, save to a different key
+    if (isRoutineBuilder) {
+      // Don't save empty routines
+      if (exercises.length === 0) {
+        console.log("[Save] Skipping - no exercises to save");
+        return;
+      }
+
+      // Don't save if we're navigating away
+      if (isNavigatingAway.current) {
+        console.log("[Save] Skipping - navigating away");
+        return;
+      }
+
+      console.log("[Save] Saving to localStorage:", {
+        exercisesLength: exercises.length,
+        exercises: exercises.map((e) => e.exercise.name),
+      });
+
+      try {
+        localStorage.setItem(
+          "workout:routineBuilder",
+          JSON.stringify({
+            exercises,
+            workoutName,
+            notes,
+            routineId: fromRoutine?.id ?? null,
+          }),
+        );
+        console.log("[Save] Saved successfully");
+      } catch (e) {
+        console.error("[Save] Failed:", e);
+      }
+      return;
+    }
+
+    // Normal workout mode - save as before
+    if (!workoutId) return;
+    if (isNavigatingAway.current) {
+      console.log("[Save] Skipping - navigating away");
+      return;
+    }
     try {
       localStorage.setItem(
         `workout:state:${workoutId}`,
@@ -462,7 +625,88 @@ export default function NewWorkout() {
         }),
       );
     } catch (e) {}
-  }, [exercises, elapsedSec, workoutId, workoutName, notes, isRoutineBuilder]);
+  }, [
+    exercises,
+    elapsedSec,
+    workoutId,
+    workoutName,
+    notes,
+    isRoutineBuilder,
+    fromRoutine?.id,
+    location.pathname,
+  ]);
+
+  // Reset navigating flag when pathname changes (component remounts or route changes)
+  useEffect(() => {
+    isNavigatingAway.current = false;
+  }, [location.pathname]);
+
+  // Restore exercises in routine builder mode
+  useEffect(() => {
+    console.log("[Restore Check]", {
+      isRoutineBuilder,
+      exercisesLength: exercises.length,
+      pathname: location.pathname,
+    });
+
+    if (!isRoutineBuilder) {
+      console.log("[Restore] Skipping - not in routine builder mode");
+      return;
+    }
+
+    if (exercises.length > 0) {
+      console.log("[Restore] Skipping - already have exercises");
+      return;
+    }
+
+    try {
+      // If caller explicitly requested a fresh builder, clear any saved builder state
+      if (location.state?.forceNew) {
+        try {
+          localStorage.removeItem("workout:routineBuilder");
+        } catch {}
+        return;
+      }
+
+      const saved = localStorage.getItem("workout:routineBuilder");
+      console.log("[Restore] localStorage value:", saved);
+
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        console.log("[Restore] Parsed:", parsed);
+
+        // Only restore if the saved builder matches the current routine context.
+        // This prevents carrying over exercises between different routine builds
+        // or between distinct "new routine" sessions.
+        const savedRoutineId = parsed?.routineId ?? null;
+        const currentRoutineId = fromRoutine?.id ?? null;
+        if (String(savedRoutineId) !== String(currentRoutineId)) {
+          try {
+            localStorage.removeItem("workout:routineBuilder");
+          } catch {}
+          console.log(
+            "[Restore] Skipping - stored routineBuilder belongs to a different routine",
+          );
+          return;
+        }
+
+        if (
+          parsed.exercises &&
+          Array.isArray(parsed.exercises) &&
+          parsed.exercises.length > 0
+        ) {
+          console.log(
+            "Restoring",
+            parsed.exercises.length,
+            "exercises from routine builder storage",
+          );
+          setExercises(parsed.exercises);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore routine builder exercises:", e);
+    }
+  }, [location.pathname, isRoutineBuilder]);
 
   useEffect(() => {
     if (isRoutineBuilder) return;
@@ -491,6 +735,39 @@ export default function NewWorkout() {
     return () => window.removeEventListener("storage", onStorage);
   }, [isRoutineBuilder]);
 
+  // Restore exercises when returning from navigation (e.g., from ExerciseInfo)
+  useEffect(() => {
+    // Skip if we're in routine builder mode or don't have a workoutId yet
+    if (isRoutineBuilder || !workoutId) return;
+
+    // Skip if we already have exercises - don't overwrite them
+    if (exercises.length > 0) return;
+
+    // Try to restore from localStorage
+    try {
+      const saved = localStorage.getItem(`workout:state:${workoutId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (
+          parsed.exercises &&
+          Array.isArray(parsed.exercises) &&
+          parsed.exercises.length > 0
+        ) {
+          // eslint-disable-next-line no-console
+          console.log(
+            "Restoring",
+            parsed.exercises.length,
+            "exercises from localStorage",
+          );
+          setExercises(parsed.exercises);
+        }
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to restore exercises:", e);
+    }
+  }, [location.pathname, workoutId, isRoutineBuilder]);
+
   useEffect(() => {
     if (!workoutId || isRoutineBuilder) return;
     if (paused) return;
@@ -498,7 +775,6 @@ export default function NewWorkout() {
     return () => clearInterval(t);
   }, [workoutId, paused, isRoutineBuilder]);
 
-  // Sync dialog controls with current elapsed time when opened
   useEffect(() => {
     if (!isDurationDialogOpen) return;
     const total = elapsedSec;
@@ -506,7 +782,6 @@ export default function NewWorkout() {
     const m = Math.floor((total % 3600) / 60);
     setAdjustHours(h);
     setAdjustMinutes(m);
-    // Initialize start time input from current startTime
     const dt = startTime;
     const pad = (n: number) => String(n).padStart(2, "0");
     const value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(
@@ -529,13 +804,32 @@ export default function NewWorkout() {
             routineId: fromRoutine?.id ?? null,
           }),
         );
-        // If this session was started from a routine, keep it paused; otherwise clear paused flag
         if (!startedFromRoutine) {
           localStorage.removeItem("workout:paused");
         }
       } catch (e) {}
     }
   }, [workoutId, isRoutineBuilder]);
+
+  // When building a routine, mark it as an in-progress special workout so
+  // other parts of the app (dashboard/dialog) can detect and resume it.
+  useEffect(() => {
+    try {
+      if (isRoutineBuilder && exercises.length > 0) {
+        localStorage.setItem(
+          "workout:inProgress",
+          JSON.stringify({
+            id: "routine-builder",
+            startedAt: new Date().toISOString(),
+            routineId: fromRoutine?.id ?? null,
+            isRoutineBuilder: true,
+          }),
+        );
+      } else if (isRoutineBuilder && exercises.length === 0) {
+        localStorage.removeItem("workout:inProgress");
+      }
+    } catch (e) {}
+  }, [isRoutineBuilder, exercises.length, fromRoutine?.id]);
 
   const [filterMuscle, setFilterMuscle] = useState<"all" | string>("all");
   const [filterEquipment, setFilterEquipment] = useState<"all" | string>("all");
@@ -610,7 +904,6 @@ export default function NewWorkout() {
         n.includes("skater")
       );
     };
-    // Debug: log equipment filter and sample mismatches when a non-'all' filter is active
     if (filterEquipment !== "all") {
       try {
         const normalize = (s: string) =>
@@ -639,9 +932,6 @@ export default function NewWorkout() {
 
     return allExercises.filter((exercise) => {
       if (filterMuscle !== "all") {
-        // When filtering for cardio, also include HIIT/bodyweight exercises
-        // whose muscleGroup might not be labeled as "cardio" but are
-        // commonly used as HIIT (burpees, mountain climbers, etc.).
         if (
           !(
             exercise.muscleGroup === filterMuscle ||
@@ -670,7 +960,6 @@ export default function NewWorkout() {
     });
   }, [exerciseSearch, allExercises, filterMuscle, filterEquipment]);
 
-  // PR banner queue handling (mirrors EditWorkout/Workouts)
   useEffect(() => {
     if (!prVisible && !prBanner && prQueue.length > 0) {
       const [next, ...rest] = prQueue;
@@ -740,9 +1029,7 @@ export default function NewWorkout() {
     try {
       await updateWorkout(String(workoutId), { date: toLocalWorkoutDate(d) });
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
-    } catch (e) {
-      // Keep editing flow resilient; failed date sync should not block UI.
-    }
+    } catch (e) {}
   };
 
   const setStartDateOnly = (date: Date) => {
@@ -803,11 +1090,9 @@ export default function NewWorkout() {
   const startDateOptions: Date[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  // Provide a wider scrollable range (±30 days) for wheel-like selection
   for (let offset = -30; offset <= 30; offset += 1) {
     const d = new Date(startTime);
     d.setDate(d.getDate() + offset);
-    // Do not allow future dates beyond today
     const candidate = new Date(d);
     candidate.setHours(0, 0, 0, 0);
     if (candidate.getTime() > today.getTime()) continue;
@@ -823,7 +1108,6 @@ export default function NewWorkout() {
     if (startDateScrollTimeout.current) {
       window.clearTimeout(startDateScrollTimeout.current);
     }
-    // Debounce to avoid excessive updates while scrolling
     startDateScrollTimeout.current = window.setTimeout(() => {
       const rect = el.getBoundingClientRect();
       const centerY = rect.top + el.clientHeight / 2;
@@ -885,8 +1169,6 @@ export default function NewWorkout() {
     setExercises((prev) =>
       prev.map((we) => {
         if (we.id !== workoutExerciseId) return we;
-        // Keep the same number of sets but reset them so the user
-        // re-enters weight/reps for the new exercise.
         const resetSets: WorkoutSet[] = we.sets.map(() => ({
           id: crypto.randomUUID(),
           reps: 0,
@@ -1030,7 +1312,6 @@ export default function NewWorkout() {
     const nowCompleted = !set.completed;
     if (!nowCompleted) return;
 
-    // Hoist currentWorkoutCompletedSets so it's available for localRepPR logic
     const currentWorkoutCompletedSets = ex.sets
       .filter(
         (s2) =>
@@ -1100,179 +1381,86 @@ export default function NewWorkout() {
         }
       }
 
+      const mode =
+        set.cardioMode || getCardioMode(ex.exercise.name) || "treadmill";
+
       const isPersisted = /^\d+$/.test(String(set.id));
-      const payload = {
-        reps: set.reps,
-        halfReps: (set as any).halfReps || 0,
-        weight: set.weight,
-        unit: set.unit || getUnit(),
-        type: set.type,
-        rpe: set.rpe,
-      } as const;
 
-      // Check whether user has prior logged sets for this exercise
-      // and compute their strongest historical sets for "unusual" detection.
-      let hadPrior = false;
-      let best1rmKg = 0;
-      let bestVolumeKg = 0;
-      let bestWeightKg = 0;
-      // map of rounded kg -> max reps at that weight (for local rep-PR detection)
-      const priorRepsAtWeight: Record<number, number> = {};
-      try {
-        const priorSets = await getSetsForExercise(
-          backendExerciseId,
-          String(wId),
-        );
-        // Use hoisted currentWorkoutCompletedSets here
-        const completedSets = [...priorSets, ...currentWorkoutCompletedSets];
-        hadPrior = priorSets.length > 0;
+      const durationSeconds = set.cardioDurationSeconds ?? 0;
+      const rawDistance = set.cardioDistance;
+      const rawStatBase = set.cardioStat ?? 0;
 
-        const LBS_PER_KG = 2.20462;
-        for (const ps of completedSets) {
-          const w = typeof ps.weight === "number" ? ps.weight : 0;
-          const r = ps.reps;
-          if (!(w > 0 && r > 0)) continue;
-          const kg =
-            (ps.unit as "lbs" | "kg" | undefined) === "kg" ? w : w / LBS_PER_KG;
-          if (kg > bestWeightKg) bestWeightKg = kg;
-          const vol = kg * r;
-          if (vol > bestVolumeKg) bestVolumeKg = vol;
-          if (r > 0) {
-            // Use Epley formula (matches api.ts) for 1RM estimation so
-            // comparisons are consistent even for large rep counts.
-            const est = kg * (1 + r / 30);
-            if (est > best1rmKg) best1rmKg = est;
-          }
-          // record max reps at this rounded kg
-          try {
-            const key = Math.round(kg * 100) / 100; // round to 2 decimals
-            const prev = priorRepsAtWeight[key];
-            if (prev == null || r > prev) priorRepsAtWeight[key] = r;
-          } catch (e) {}
+      const isHiitName = (ex.exercise.name || "")
+        .toLowerCase()
+        .match(/burpee|mountain|climb|jump squat|plank jack|skater/);
+      const rawStat = isHiitName ? set.reps || 0 : rawStatBase;
+      const distanceUnit =
+        (set as any).cardioDistanceUnit === "mile"
+          ? "mile"
+          : (set as any).cardioDistanceUnit === "m"
+            ? "m"
+            : (set as any).cardioDistanceUnit === "flr"
+              ? "flr"
+              : "km";
+
+      let distance: number | undefined;
+      let floors: number | undefined;
+      let level: number | undefined;
+      let splitSeconds: number | undefined;
+
+      if (mode === "stairs") {
+        const distUnit = (set as any).cardioDistanceUnit === "m" ? "m" : "flr";
+        if (distUnit === "m") {
+          distance = rawDistance || undefined;
+        } else {
+          floors = rawDistance || undefined;
         }
-      } catch (e) {
-        hadPrior = false;
-      }
-
-      // Compute new-set metrics and determine whether to show the
-      // confirmation dialog. Relative comparison remains the primary
-      // trigger (requires prior history and not forced). Absolute
-      // thresholds are a fail-safe and should trigger regardless of
-      // history.
-      {
-        const LBS_PER_KG = 2.20462;
-        const newWeight =
-          typeof set.weight === "number" && !isNaN(set.weight) ? set.weight : 0;
-        const newReps =
-          typeof set.reps === "number" && !isNaN(set.reps) ? set.reps : 0;
-
-        const newUnit = (payload.unit as "lbs" | "kg" | undefined) || getUnit();
-        const newKg = newUnit === "kg" ? newWeight : newWeight / LBS_PER_KG;
-        const newVolumeKg = newKg > 0 && newReps > 0 ? newKg * newReps : 0;
-        const new1rmKg =
-          newKg > 0 && newReps > 0 ? newKg * (1 + newReps / 30) : 0;
-
-        const ratio1rm =
-          best1rmKg > 0 && new1rmKg > 0 ? new1rmKg / best1rmKg : 1;
-        const ratioVol =
-          bestVolumeKg > 0 && newVolumeKg > 0 ? newVolumeKg / bestVolumeKg : 1;
-        const ratio = Math.max(ratio1rm, ratioVol);
-
-        const UNUSUAL_THRESHOLD = 3; // 3x or more vs previous best
-
-        const relativeTrigger =
-          hadPrior && !force && ratio >= UNUSUAL_THRESHOLD;
-
-        // Absolute thresholds act as a secondary safety layer. They do not
-        // replace the relative comparison; they only trigger the same
-        // confirmation dialog when an entry is implausibly large.
-        const absoluteWeightTrigger = newKg > 500; // kg per set
-        const absoluteVolumeTrigger = newVolumeKg > 10000; // kg * reps per set
-        const absoluteTrigger = absoluteWeightTrigger || absoluteVolumeTrigger;
-
-        // Temporary debug logs to validate values during testing.
-        // Remove these once verified.
-        // eslint-disable-next-line no-console
-        console.log("unusual-set-check", {
-          weightKg: newKg,
-          reps: newReps,
-          setVolume: newVolumeKg,
-          relativeTrigger,
-          absoluteTrigger,
-        });
-
-        const shouldShowDialog = (relativeTrigger || absoluteTrigger) && !force;
-
-        if (shouldShowDialog) {
-          // If the user recently forced this set (confirmed), do not re-open the dialog.
-          if (recentForced.current.has(setId)) {
-            // clear the marker and continue saving
-            recentForced.current.delete(setId);
+        level = rawStat || undefined;
+      } else {
+        const distanceMeters =
+          rawDistance && distanceUnit === "mile"
+            ? Math.round(rawDistance * 1609.34)
+            : rawDistance
+              ? Math.round(rawDistance * 1000)
+              : undefined;
+        if (mode === "row") {
+          distance = distanceMeters || undefined;
+          splitSeconds = rawStat || undefined;
+        } else {
+          distance = distanceMeters || undefined;
+          if (isHiitName) {
+            floors = set.reps || 0 || undefined;
+            level = undefined;
           } else {
-            // Revert the optimistic completion toggle so the user stays in edit mode.
-            setExercises((prev) =>
-              prev.map((e) =>
-                e.id === exerciseId
-                  ? {
-                      ...e,
-                      sets: e.sets.map((s) =>
-                        s.id === setId ? { ...s, completed: false } : s,
-                      ),
-                    }
-                  : e,
-              ),
-            );
-
-            const prevSummary =
-              bestVolumeKg > 0
-                ? `${bestVolumeKg.toFixed(1)} kg volume (approx.)`
-                : best1rmKg > 0
-                  ? `${best1rmKg.toFixed(1)} kg est. 1RM`
-                  : null;
-
-            const newSummary =
-              newKg > 0 && newReps > 0
-                ? `${newKg.toFixed(1)} kg x ${newReps} reps`
-                : "Current entry has no load/reps";
-
-            // Branch the dialog type in the validation layer:
-            // history-based anomaly when previous data exists
-            // first-time extreme entry when no prior data is available
-            if (hadPrior) {
-              setUnusualSet({
-                type: "history",
-                exerciseId,
-                setId,
-                previousBestText: prevSummary ?? "Previous best unknown",
-                newSetText: newSummary,
-                ratio: Math.round(ratio * 10) / 10,
-              });
-            } else {
-              setUnusualSet({
-                type: "firstTime",
-                exerciseId,
-                setId,
-                previousBestText: null,
-                newSetText: newSummary,
-                weightKg: newKg,
-                reps: newReps,
-              });
-            }
-
-            return;
+            level = rawStat || undefined;
           }
         }
       }
 
       let saved;
       try {
-        saved = isPersisted
-          ? await updateSet(String(set.id), payload)
-          : await createSet({
-              workoutId: String(wId),
-              exerciseId: backendExerciseId,
-              ...payload,
-            });
+        if (isPersisted) {
+          saved = await updateSet(String(set.id), {
+            reps: set.reps,
+            halfReps: (set as any).halfReps || 0,
+            weight: set.weight,
+            unit: set.unit || getUnit(),
+            type: set.type,
+            rpe: set.rpe,
+          });
+        } else {
+          saved = await createSet({
+            workoutId: String(wId),
+            exerciseId: backendExerciseId,
+            setNumber: ex.sets.indexOf(set) + 1,
+            reps: set.reps,
+            halfReps: (set as any).halfReps || 0,
+            weight: set.weight,
+            unit: set.unit || getUnit(),
+            type: set.type,
+            rpe: set.rpe,
+          });
+        }
       } catch (err: any) {
         const text = String(err || "").toLowerCase();
         const mentionsInvalidPk =
@@ -1310,68 +1498,20 @@ export default function NewWorkout() {
             wId = w.id;
           }
 
-          // retry once
+          // Retry by creating a strength set (server will resolve set number)
           saved = await createSet({
             workoutId: String(wId),
             exerciseId: backendExerciseId,
-            ...payload,
+            setNumber: ex.sets.indexOf(set) + 1,
+            reps: set.reps,
+            halfReps: (set as any).halfReps || 0,
+            weight: set.weight,
+            unit: set.unit || getUnit(),
+            type: set.type,
+            rpe: set.rpe,
           });
         } else {
           throw err;
-        }
-      }
-
-      // Client-side fallback: if the server didn't mark e1rm/volume PRs but
-      // local history shows this set exceeds previous bests, mark them locally
-      // so the UI can show trophies/banners immediately.
-      try {
-        const LBS_PER_KG = 2.20462;
-        const weightNum = typeof saved.weight === "number" ? saved.weight : 0;
-        const repsNum = typeof saved.reps === "number" ? saved.reps : 0;
-        const weightKg =
-          saved.unit === "kg" ? weightNum : weightNum / LBS_PER_KG;
-        const localE1rm =
-          weightKg > 0 && repsNum > 0 ? weightKg * (1 + repsNum / 30) : 0;
-        const localVol = weightKg > 0 && repsNum > 0 ? weightKg * repsNum : 0;
-        if (!saved.e1rmPR && localE1rm > best1rmKg) saved.e1rmPR = true;
-        if (!saved.volumePR && localVol > bestVolumeKg) saved.volumePR = true;
-        if (!saved.absWeightPR && weightKg > bestWeightKg)
-          saved.absWeightPR = true;
-        if (
-          !saved.isPR &&
-          (saved.e1rmPR || saved.volumePR || saved.absWeightPR)
-        )
-          saved.isPR = true;
-      } catch (e) {}
-
-      // Suppress PR if a within-workout set already beats or equals this one
-      let suppressedBySession = false;
-      if (currentWorkoutCompletedSets.length > 0) {
-        const savedKg =
-          saved.unit === "kg"
-            ? saved.weight || 0
-            : (saved.weight || 0) / 2.20462;
-        const savedReps = saved.reps || 0;
-        {
-          const savedVolume = savedKg * (saved.reps || 0);
-          const saved1rm =
-            savedKg > 0 && (saved.reps || 0) > 0
-              ? savedKg * (1 + (saved.reps || 0) / 30)
-              : 0;
-
-          suppressedBySession = currentWorkoutCompletedSets.some((ws) => {
-            const wsKg =
-              (ws.unit as string) === "kg"
-                ? ws.weight || 0
-                : (ws.weight || 0) / 2.20462;
-            const wsReps = ws.reps || 0;
-            const ws1rm = wsKg > 0 && wsReps > 0 ? wsKg * (1 + wsReps / 30) : 0;
-            const wsVolume = wsKg * wsReps;
-
-            // Suppress only if a sibling set beats BOTH 1RM and volume
-            // (prevents a normal set from suppressing a very high-rep set)
-            return ws1rm >= saved1rm && wsVolume >= savedVolume && ws1rm > 0;
-          });
         }
       }
 
@@ -1383,227 +1523,220 @@ export default function NewWorkout() {
                 ...e,
                 sets: e.sets.map((s) =>
                   s.id === setId
-                    ? (() => {
-                        // local rep-PR detection: compare rounded kg against prior map
-                        let localRepPR = false;
-                        try {
-                          const newWeight =
-                            typeof saved.weight === "number" ? saved.weight : 0;
-                          const newReps =
-                            typeof saved.reps === "number" ? saved.reps : 0;
-                          const newKg =
-                            (saved.unit === "kg"
-                              ? newWeight
-                              : newWeight / 2.20462) || 0;
-                          const key = Math.round(newKg * 100) / 100;
-                          const hist = priorRepsAtWeight[key];
-                          if (hadPrior) {
-                            // server logic treats missing exact-weight history as a rep-PR
-                            if (typeof hist === "undefined" || newReps > hist)
-                              localRepPR = true;
-                          }
-                          // Suppress if a within-workout set already has >= reps at same weight
-                          if (localRepPR) {
-                            const beaten = currentWorkoutCompletedSets.some(
-                              (ws) => {
-                                const wsKg =
-                                  (ws.unit as string) === "kg"
-                                    ? ws.weight || 0
-                                    : (ws.weight || 0) / 2.20462;
-                                const wsKey = Math.round(wsKg * 100) / 100;
-                                return (
-                                  wsKey === key && (ws.reps || 0) >= newReps
-                                );
-                              },
-                            );
-                            if (beaten) localRepPR = false;
-                          }
-                        } catch (e) {}
-
-                        const isPRFlag = hadPrior
-                          ? saved.isPR ||
-                            saved.e1rmPR ||
-                            saved.volumePR ||
-                            saved.absWeightPR ||
-                            localRepPR
-                          : false;
-                        return {
-                          ...s,
-                          id: saved.id,
-                          isPR: isPRFlag,
-                          absWeightPR: hadPrior ? saved.absWeightPR : false,
-                          e1rmPR: hadPrior ? saved.e1rmPR : false,
-                          volumePR: hadPrior ? saved.volumePR : false,
-                          unit: saved.unit || s.unit,
-                        };
-                      })()
+                    ? {
+                        ...s,
+                        id: saved.id,
+                        isPR: saved.isPR ?? false,
+                        absWeightPR: saved.absWeightPR ?? false,
+                        e1rmPR: saved.e1rmPR ?? false,
+                        volumePR: saved.volumePR ?? false,
+                        repPR: saved.repPR ?? false,
+                        unit: saved.unit ?? s.unit,
+                        weight:
+                          typeof (saved as any).weight === "number"
+                            ? (saved as any).weight
+                            : s.weight,
+                        reps:
+                          typeof (saved as any).reps === "number"
+                            ? (saved as any).reps
+                            : s.reps,
+                        halfReps:
+                          typeof (saved as any).halfReps === "number"
+                            ? (saved as any).halfReps
+                            : (s as any).halfReps,
+                      }
                     : s,
                 ),
               },
         ),
       );
 
-      // Capture sibling state BEFORE demotion to know what changed
-      const preDemotionSets =
-        exercises.find((e) => e.id === exerciseId)?.sets ?? [];
-
-      // Retroactively demote sibling sets that are now outperformed by the saved set
-      const savedKgFinal =
-        saved.unit === "kg" ? saved.weight || 0 : (saved.weight || 0) / 2.20462;
-      const savedRepsFinal = saved.reps || 0;
-      const savedE1rmFinal =
-        savedKgFinal > 0 && savedRepsFinal > 0
-          ? savedKgFinal * (1 + savedRepsFinal / 30)
-          : 0;
-      const savedVolFinal = savedKgFinal * savedRepsFinal;
-
-      setExercises((prev) =>
-        prev.map((e) => {
-          if (e.id !== exerciseId) return e;
-          return {
-            ...e,
-            sets: e.sets.map((s2) => {
-              if (s2.id === setId || !s2.completed) return s2;
-              const s2Kg =
-                s2.unit === "kg" ? s2.weight || 0 : (s2.weight || 0) / 2.20462;
-              const s2Reps = s2.reps || 0;
-              const s2E1rm =
-                s2Kg > 0 && s2Reps > 0 ? s2Kg * (1 + s2Reps / 30) : 0;
-              const s2Vol = s2Kg * s2Reps;
-
-              const newE1rmPR = s2.e1rmPR && !(savedE1rmFinal > s2E1rm);
-              const newVolumePR = s2.volumePR && !(savedVolFinal > s2Vol);
-              const newAbsWeightPR = s2.absWeightPR && !(savedKgFinal > s2Kg);
-              const newIsPR =
-                newE1rmPR || newVolumePR || newAbsWeightPR || !!s2.repPR;
-
-              if (
-                newE1rmPR === s2.e1rmPR &&
-                newVolumePR === s2.volumePR &&
-                newAbsWeightPR === s2.absWeightPR
-              ) {
-                return s2;
-              }
-
-              return {
-                ...s2,
-                isPR: newIsPR,
-                e1rmPR: newE1rmPR,
-                volumePR: newVolumePR,
-                absWeightPR: newAbsWeightPR,
-              };
-            }),
-          };
-        }),
-      );
-
-      // Persist sibling PR demotion to DB
-      for (const sibling of preDemotionSets) {
-        if (sibling.id === saved.id || !sibling.completed) continue;
-        const lostE1rm =
-          !!saved.e1rmPR &&
-          !!sibling.e1rmPR &&
-          savedE1rmFinal >
-            (() => {
-              const kg =
-                sibling.unit === "kg"
-                  ? sibling.weight || 0
-                  : (sibling.weight || 0) / 2.20462;
-              const r = sibling.reps || 0;
-              return kg > 0 && r > 0 ? kg * (1 + r / 30) : 0;
-            })();
-        const lostVolume =
-          !!saved.volumePR &&
-          !!sibling.volumePR &&
-          savedVolFinal >
-            (() => {
-              const kg =
-                sibling.unit === "kg"
-                  ? sibling.weight || 0
-                  : (sibling.weight || 0) / 2.20462;
-              return kg * (sibling.reps || 0);
-            })();
-        if (lostE1rm || lostVolume) {
-          const newE1rm = lostE1rm ? false : !!sibling.e1rmPR;
-          const newVol = lostVolume ? false : !!sibling.volumePR;
-          const stillPR = !!(
-            sibling.absWeightPR ||
-            newE1rm ||
-            newVol ||
-            sibling.repPR
-          );
-          patchSetPrFlags(sibling.id, {
-            is_pr: stillPR,
-            is_e1rm_pr: newE1rm,
-            is_volume_pr: newVol,
-          }).catch(() => {});
-        }
-      }
-
-      // If server reported a PR, or our local detection found one, enqueue banners
-      let localDetectedPR = false;
-      try {
-        const newWeight = typeof saved.weight === "number" ? saved.weight : 0;
-        const newReps = typeof saved.reps === "number" ? saved.reps : 0;
-        const newKg =
-          (saved.unit === "kg" ? newWeight : newWeight / 2.20462) || 0;
-        const key = Math.round(newKg * 100) / 100;
-        const hist = priorRepsAtWeight[key];
-        if (hadPrior) {
-          if (typeof hist === "undefined" || newReps > hist)
-            localDetectedPR = true;
-        }
-      } catch (e) {}
-      if (
-        hadPrior &&
-        (saved.isPR ||
-          saved.e1rmPR ||
-          saved.volumePR ||
-          saved.absWeightPR ||
-          localDetectedPR)
-      ) {
-        const unit = (saved.unit as "lbs" | "kg" | undefined) || getUnit();
-        const weight = typeof saved.weight === "number" ? saved.weight : 0;
-        const reps = saved.reps;
-
+      if (saved.isPR) {
         const banners: PrBanner[] = [];
-
-        if (saved.absWeightPR && weight > 0) {
+        const isHiitCardio = !!(ex.exercise.name || "")
+          .toLowerCase()
+          .match(/burpee|mountain|climb|jump squat|plank jack|skater/);
+        if (isHiitCardio) {
+          const repsValue =
+            typeof saved.floors === "number" && saved.floors > 0
+              ? Math.round(saved.floors)
+              : typeof set.reps === "number" && set.reps > 0
+                ? Math.round(set.reps)
+                : 0;
           banners.push({
             exerciseName: ex.exercise.name,
-            label: "Heaviest Weight",
-            value: `${weight.toFixed(1)} ${unit}`,
+            label: "Most no of reps",
+            value: String(repsValue),
+          });
+        } else if (saved.distancePR) {
+          let disp = "";
+          try {
+            if (typeof saved.distance === "number") {
+              if (distanceUnit === "mile") {
+                disp = `${(saved.distance / 1609.34).toFixed(2)} mi`;
+              } else {
+                disp = `${(saved.distance / 1000).toFixed(2)} km`;
+              }
+            } else if (saved.distance != null) {
+              disp = String(saved.distance);
+            }
+          } catch (e) {
+            disp = saved.distance != null ? String(saved.distance) : "";
+          }
+          banners.push({
+            exerciseName: ex.exercise.name,
+            label: "Distance PR",
+            value: disp,
           });
         }
+        // Strength PR banners (heaviest / 1RM / volume)
+        const isStrengthLike = ex.exercise.muscleGroup !== "cardio";
+        if (!isHiitCardio && isStrengthLike) {
+          const unit = (saved.unit as "lbs" | "kg" | undefined) || getUnit();
+          const weight = typeof saved.weight === "number" ? saved.weight : 0;
+          const reps = typeof saved.reps === "number" ? saved.reps : 0;
 
-        if (saved.e1rmPR && weight > 0 && reps > 0) {
-          const LBS_PER_KG = 2.20462;
-          // Compute a robust estimated 1RM that works for large rep counts.
-          // Use an Epley-like conversion in kg and convert back to user unit for display.
-          const weightKg = unit === "kg" ? weight : weight / LBS_PER_KG;
-          const est1rmKg = weightKg * (1 + reps / 30);
-          const estDisplay = unit === "kg" ? est1rmKg : est1rmKg * LBS_PER_KG;
+          if (saved.absWeightPR && weight > 0) {
+            banners.push({
+              exerciseName: ex.exercise.name,
+              label: "Heaviest Weight",
+              value: `${weight.toFixed(1)} ${unit}`,
+            });
+          }
+
+          if (saved.e1rmPR && weight > 0 && reps > 0 && reps < 37) {
+            const est1rm = (weight * 36) / (37 - reps);
+            banners.push({
+              exerciseName: ex.exercise.name,
+              label: "Best 1RM",
+              value: `${est1rm.toFixed(1)} ${unit}`,
+            });
+          }
+
+          if (saved.volumePR && weight > 0 && reps > 0) {
+            const LBS_PER_KG = 2.20462;
+            const volumeKg =
+              unit === "kg" ? weight * reps : (weight / LBS_PER_KG) * reps;
+            banners.push({
+              exerciseName: ex.exercise.name,
+              label: "Best Set Volume",
+              value: `${volumeKg.toFixed(1)} kg`,
+            });
+          }
+        }
+        if (!isHiitCardio && saved.pacePR) {
+          const formatMmSs = (seconds: number) => {
+            const total = Math.max(0, Math.round(seconds));
+            const mins = Math.floor(total / 60);
+            const secs = total % 60;
+            return `${mins}:${String(secs).padStart(2, "0")}`;
+          };
+
+          const computeRowPacePerKm = (
+            splitSeconds: number | null | undefined,
+            durationSeconds: number | null | undefined,
+            distanceRaw: number | null | undefined,
+          ): number | null => {
+            if (typeof splitSeconds === "number" && splitSeconds > 0) {
+              return splitSeconds * 2;
+            }
+            if (
+              typeof durationSeconds !== "number" ||
+              durationSeconds <= 0 ||
+              typeof distanceRaw !== "number" ||
+              distanceRaw <= 0
+            ) {
+              return null;
+            }
+
+            const distanceKm =
+              distanceRaw > 50 ? distanceRaw / 1000 : distanceRaw;
+            if (distanceKm <= 0) return null;
+
+            const pacePerKm = durationSeconds / distanceKm;
+            return pacePerKm >= 20 ? pacePerKm : null;
+          };
+
+          let paceValue = "";
+          if (mode === "row") {
+            const pacePerKm =
+              computeRowPacePerKm(
+                saved.splitSeconds,
+                saved.durationSeconds,
+                saved.distance,
+              ) ??
+              computeRowPacePerKm(
+                set.cardioStat,
+                set.cardioDurationSeconds,
+                set.cardioDistance,
+              );
+            if (typeof pacePerKm === "number" && pacePerKm > 0) {
+              paceValue = `${formatMmSs(pacePerKm)} /km`;
+            }
+          } else if (
+            mode === "treadmill" ||
+            mode === "bike" ||
+            mode === "elliptical"
+          ) {
+            if (
+              typeof saved.durationSeconds === "number" &&
+              saved.durationSeconds > 0 &&
+              typeof saved.distance === "number" &&
+              saved.distance > 0
+            ) {
+              if (distanceUnit === "mile") {
+                const distanceMi = saved.distance / 1609.34;
+                const pacePerMi = saved.durationSeconds / distanceMi;
+                if (pacePerMi >= 20) paceValue = `${formatMmSs(pacePerMi)} /mi`;
+              } else {
+                const distanceKm = saved.distance / 1000;
+                const pacePerKm = saved.durationSeconds / distanceKm;
+                if (pacePerKm >= 20) paceValue = `${formatMmSs(pacePerKm)} /km`;
+              }
+            }
+          }
           banners.push({
             exerciseName: ex.exercise.name,
-            label: "Best 1RM",
-            value: `${estDisplay.toFixed(1)} ${unit}`,
+            label: mode === "stairs" ? "Intensity PR" : "Pace PR",
+            value: paceValue,
           });
         }
-
-        if (saved.volumePR && weight > 0 && reps > 0) {
-          const LBS_PER_KG = 2.20462;
-          const volumeKg =
-            unit === "kg" ? weight * reps : (weight / LBS_PER_KG) * reps;
+        if (!isHiitCardio && saved.ascentPR) {
           banners.push({
             exerciseName: ex.exercise.name,
-            label: "Best Set Volume",
-            value: `${volumeKg.toFixed(1)} kg`,
+            label: "Ascent PR",
+            value: saved.floors != null ? `${saved.floors} floors` : "",
+          });
+        }
+        if (!isHiitCardio && saved.intensityPR) {
+          banners.push({
+            exerciseName: ex.exercise.name,
+            label: "Intensity PR",
+            value:
+              saved.level != null
+                ? String(saved.level)
+                : saved.spm != null
+                  ? `${saved.spm} spm`
+                  : saved.floors != null
+                    ? `${saved.floors} reps`
+                    : "",
+          });
+        }
+        if (!isHiitCardio && saved.splitPR) {
+          banners.push({
+            exerciseName: ex.exercise.name,
+            label: "Best Split",
+            value: saved.splitSeconds != null ? `${saved.splitSeconds}s` : "",
           });
         }
 
         if (banners.length > 0) {
           setPrQueue((prev) => [...prev, ...banners]);
         }
+
+        try {
+          triggerHaptic();
+        } catch (e) {}
       }
     } catch (err) {
       const emptyMessage = getEmptySetMessage(err);
@@ -1627,17 +1760,11 @@ export default function NewWorkout() {
 
     const isStrengthLike = ex.exercise.muscleGroup !== "cardio";
 
-    // For non-cardio exercises, delegate to the regular strength logging path
-    // so sets are stored via createSet/updateSet. Cardio (including HIIT
-    // bodyweight cardio) uses the dedicated cardio endpoints so duration is
-    // always persisted.
     if (isStrengthLike) {
       await toggleSetComplete(exerciseId, setId);
       return;
     }
 
-    // Pure cardio flow: optimistically toggle locally, then persist via
-    // cardio endpoints once the set is marked complete.
     setExercises((prev) =>
       prev.map((ex) => {
         if (ex.id === exerciseId) {
@@ -1722,8 +1849,6 @@ export default function NewWorkout() {
       const rawDistance = set.cardioDistance;
       const rawStatBase = set.cardioStat ?? 0;
 
-      // For HIIT/bodyweight cardio, treat the generic "stat" field as reps so
-      // we can persist rep counts via the cardio schema.
       const isHiitName = (ex.exercise.name || "")
         .toLowerCase()
         .match(/burpee|mountain|climb|jump squat|plank jack|skater/);
@@ -1737,7 +1862,6 @@ export default function NewWorkout() {
               ? "flr"
               : "km";
 
-      // Map generic UI stats to backend metrics per mode
       let distance: number | undefined;
       let floors: number | undefined;
       let level: number | undefined;
@@ -1752,7 +1876,6 @@ export default function NewWorkout() {
         }
         level = rawStat || undefined;
       } else {
-        // Convert user-entered distance (km or miles) into meters for the API.
         const distanceMeters =
           rawDistance && distanceUnit === "mile"
             ? Math.round(rawDistance * 1609.34)
@@ -1764,10 +1887,6 @@ export default function NewWorkout() {
           splitSeconds = rawStat || undefined;
         } else {
           distance = distanceMeters || undefined;
-          // For HIIT/bodyweight cardio, stash reps in the `floors` field so
-          // we avoid DecimalField limits on `level` while still persisting
-          // large rep counts. The treadmill/bike/elliptical PR logic ignores
-          // `floors`, so this is safe.
           if (isHiitName) {
             floors = set.reps || 0 || undefined;
             level = undefined;
@@ -1789,7 +1908,6 @@ export default function NewWorkout() {
             splitSeconds,
           });
         } else {
-          // compute next set number for this workout+exercise to avoid uniqueness errors
           let setNumberToUse: number | undefined = undefined;
           try {
             const existing = await getCardioSetsForWorkout(String(wId));
@@ -1860,7 +1978,6 @@ export default function NewWorkout() {
             wId = w.id;
           }
 
-          // compute next set number for this workout+exercise to avoid duplicates
           let setNumberToUseFallback: number | undefined = undefined;
           try {
             const existing = await getCardioSetsForWorkout(String(wId));
@@ -1911,7 +2028,6 @@ export default function NewWorkout() {
                         id: saved.id,
                         cardioMode: mode,
                         cardioDurationSeconds: saved.durationSeconds,
-                        // Backend returns distance in meters; convert back to user-facing unit
                         cardioDistance:
                           typeof saved.distance === "number"
                             ? distanceUnit === "mile"
@@ -1939,14 +2055,16 @@ export default function NewWorkout() {
 
       if (saved.isPR) {
         const banners: PrBanner[] = [];
-        const isHiitCardio = isHiitExerciseName(ex.exercise.name);
+        const isHiitCardio = !!(ex.exercise.name || "")
+          .toLowerCase()
+          .match(/burpee|mountain|climb|jump squat|plank jack|skater/);
 
         if (isHiitCardio) {
           const repsValue =
             typeof saved.floors === "number" && saved.floors > 0
               ? Math.round(saved.floors)
-              : typeof s.reps === "number" && s.reps > 0
-                ? Math.round(s.reps)
+              : typeof set.reps === "number" && set.reps > 0
+                ? Math.round(set.reps)
                 : 0;
           banners.push({
             exerciseName: ex.exercise.name,
@@ -1954,7 +2072,6 @@ export default function NewWorkout() {
             value: String(repsValue),
           });
         } else if (saved.distancePR) {
-          // Backend returns distance in meters; convert to user-facing unit
           let disp = "";
           try {
             if (typeof saved.distance === "number") {
@@ -2005,7 +2122,6 @@ export default function NewWorkout() {
             if (distanceKm <= 0) return null;
 
             const pacePerKm = durationSeconds / distanceKm;
-            // Guard against clearly invalid values (e.g. 0:00 from unit mismatch)
             return pacePerKm >= 20 ? pacePerKm : null;
           };
 
@@ -2018,9 +2134,9 @@ export default function NewWorkout() {
                 saved.distance,
               ) ??
               computeRowPacePerKm(
-                s.cardioStat,
-                s.cardioDurationSeconds,
-                s.cardioDistance,
+                set.cardioStat,
+                set.cardioDurationSeconds,
+                set.cardioDistance,
               );
             if (typeof pacePerKm === "number" && pacePerKm > 0) {
               paceValue = `${formatMmSs(pacePerKm)} /km`;
@@ -2134,8 +2250,16 @@ export default function NewWorkout() {
     setIsSavingWorkout(true);
 
     try {
-      // If this workout was started from a routine, always update the routine in localStorage with the actual exercises/sets
+      // --- Ensure workout name matches routine name if started from a routine ---
+      // Compute effectiveWorkoutName FIRST so all subsequent logic uses it.
+      let effectiveWorkoutName = workoutName;
       if (fromRoutine) {
+        effectiveWorkoutName = fromRoutine.name;
+        setWorkoutName(fromRoutine.name);
+      }
+
+      // If we're in the routine builder flow, persist all sets for the new workout
+      if (isRoutineBuilder) {
         try {
           const templateExercises = exercises.map((ex, index) => ({
             id: ex.id,
@@ -2146,9 +2270,9 @@ export default function NewWorkout() {
           }));
 
           const newTemplate: Routine = {
-            id: fromRoutine.id,
-            name: fromRoutine.name,
-            description: fromRoutine.description,
+            id: fromRoutine?.id ?? `my-${crypto.randomUUID()}`,
+            name: effectiveWorkoutName,
+            description: fromRoutine?.description ?? undefined,
             createdAt: new Date(),
             exercises: templateExercises,
           };
@@ -2164,27 +2288,69 @@ export default function NewWorkout() {
             stored = [];
           }
 
-          // Overwrite the existing routine with the new one (with exercises)
           const withoutOld = stored.filter((r) => r.id !== newTemplate.id);
           const updated = [...withoutOld, newTemplate];
           localStorage.setItem("user:routines", JSON.stringify(updated));
-          // Trigger a reload in other tabs/components
           localStorage.setItem("user:routines:updated", Date.now().toString());
           window.dispatchEvent(new Event("routines:updated"));
-          window.dispatchEvent(new Event("routines:updated"));
+
+          // Create a workout record and persist all sets for each exercise
+          let logged;
+          try {
+            logged = await createWorkout(effectiveWorkoutName, "", new Date());
+            // Persist all sets for each exercise
+            for (const ex of exercises) {
+              let backendExerciseId = String(ex.exercise.id);
+              if (!/^[0-9]+$/.test(backendExerciseId)) {
+                // Fallback: use the exercise id as is (for custom, not-yet-saved exercises)
+                backendExerciseId = ex.exercise.id;
+              }
+              let setNumber = 1;
+              for (const set of ex.sets) {
+                try {
+                  await createSet({
+                    workoutId: String(logged.id),
+                    exerciseId: backendExerciseId,
+                    setNumber,
+                    reps: set.reps,
+                    halfReps: set.halfReps || 0,
+                    weight: set.weight,
+                    unit: set.unit,
+                    type: set.type,
+                    rpe: set.rpe,
+                  });
+                  setNumber++;
+                } catch (e) {
+                  // Ignore set errors, continue with others
+                }
+              }
+            }
+            try {
+              await finishWorkout(String(logged.id));
+            } catch (e) {}
+          } catch (e) {}
+
+          // Cleanup builder-specific storage
+          try {
+            localStorage.removeItem("workout:inProgress");
+            localStorage.removeItem("workout:currentRoutine");
+            localStorage.removeItem("workout:isRoutineBuilder");
+            localStorage.removeItem("workout:routineBuilder");
+            localStorage.removeItem("workout:paused");
+          } catch (e) {}
+
+          toast({ title: "Routine saved" });
+          setIsSavingWorkout(false);
+          navigate(isRoutineBuilder ? "/routines" : "/workouts");
+          return;
         } catch (e) {
-          // ignore routine update errors
+          // fall through to normal save error handling
         }
       }
 
-      // --- Ensure workout name matches routine name if started from a routine ---
-      let effectiveWorkoutName = workoutName;
-      if (fromRoutine) {
-        effectiveWorkoutName = fromRoutine.name;
-        setWorkoutName(fromRoutine.name);
-      }
-
-      // Ensure we have a workout on the backend before persisting sets
+      // Ensure we have a workout on the backend before persisting sets.
+      // If one already exists but was created with the wrong name (e.g. stale
+      // "Workout" default), patch it to the correct routine name.
       if (!workoutId) {
         try {
           const w = await createWorkout(effectiveWorkoutName, notes, startTime);
@@ -2196,6 +2362,15 @@ export default function NewWorkout() {
             variant: "destructive",
           });
           return;
+        }
+      } else if (fromRoutine) {
+        // Workout was pre-created on mount — patch its name to the routine name
+        try {
+          await updateWorkout(String(workoutId), {
+            name: effectiveWorkoutName,
+          });
+        } catch (e) {
+          // non-fatal — name patch failure shouldn't block saving
         }
       }
 
@@ -2254,13 +2429,7 @@ export default function NewWorkout() {
       let createdPrCount = 0;
       let persistedWorkoutId = workoutId!;
 
-      // Prefetch existing cardio sets for this workout so we can allocate
-      // monotonically increasing set numbers per exercise locally. This
-      // prevents races/duplicates when creating multiple cardio sets
-      // in the same save flow.
       const cardioMaxByExercise: Record<string, number> = {};
-      // Map of existing DB sets per exercise, used to deduplicate sets already
-      // created by an in-flight toggleCardioSetComplete call (race condition).
       const existingCardioByExercise: Record<string, any[]> = {};
       try {
         const existingCardio = await getCardioSetsForWorkout(
@@ -2277,13 +2446,8 @@ export default function NewWorkout() {
             existingCardioByExercise[exId] = [];
           existingCardioByExercise[exId].push(c);
         });
-      } catch (e) {
-        // ignore and start counters at 0
-      }
+      } catch (e) {}
 
-      // For each cardio exercise, compute how many non-persisted local sets
-      // are already covered by DB sets (created by checkmark toggles whose
-      // React state update hasn't flushed yet). These should be skipped.
       const cardioSkipCountByExercise: Record<string, number> = {};
       for (const ex of exercisesToPersist) {
         if (ex.exercise.muscleGroup !== "cardio") continue;
@@ -2299,7 +2463,6 @@ export default function NewWorkout() {
       }
 
       for (const ex of exercisesToPersist) {
-        // determine if this exercise has appeared in any previously logged workout
         let hadPriorForExercise = false;
         let priorSetsForExercise: any[] = [];
         try {
@@ -2323,9 +2486,6 @@ export default function NewWorkout() {
                 (typeof s.weight === "number" && s.weight > 0);
           if (isPersisted || !shouldPersist) continue;
 
-          // If a matching set already exists on the server (created by a
-          // recent toggle) map the local set to the server id and skip
-          // creating a duplicate.
           if (!isPersisted && priorSetsForExercise.length > 0) {
             try {
               const match = priorSetsForExercise.find((ps) => {
@@ -2340,7 +2500,6 @@ export default function NewWorkout() {
                 }
               });
               if (match) {
-                // update UI state to reflect server id
                 try {
                   setExercises((prev) =>
                     prev.map((e) =>
@@ -2354,7 +2513,6 @@ export default function NewWorkout() {
                           },
                     ),
                   );
-                  // update local copy so subsequent logic treats it as persisted
                   s.id = match.id;
                 } catch (e) {}
                 continue;
@@ -2362,8 +2520,6 @@ export default function NewWorkout() {
             } catch (e) {}
           }
 
-          // Skip sets already saved by a concurrent toggleCardioSetComplete call
-          // (race condition: checkmark tapped then Save clicked before state refresh).
           if (ex.exercise.muscleGroup === "cardio") {
             const exId = String(ex.exercise.id);
             if ((cardioSkipCountByExercise[exId] ?? 0) > 0) {
@@ -2373,13 +2529,9 @@ export default function NewWorkout() {
           }
 
           try {
-            // Debug: log API target and ids to help diagnose invalid-PK errors
             try {
               // eslint-disable-next-line no-console
               console.info("saveWorkout: creating set", {
-                apiBase: (window as any)?.API_BASE || undefined,
-                frontendApiBase: undefined,
-                token: localStorage.getItem("token") ? "present" : "missing",
                 persistedWorkoutId,
                 exerciseId: ex.exercise.id,
                 setNumber: i + 1,
@@ -2413,17 +2565,15 @@ export default function NewWorkout() {
                       : "km";
 
               if (mode === "stairs") {
-                // For stairs, allow floors (count) or meters (vertical meters)
                 const distUnit =
                   (s as any).cardioDistanceUnit === "m" ? "m" : "flr";
                 if (distUnit === "m") {
-                  distance = rawDistance || undefined; // already in meters
+                  distance = rawDistance || undefined;
                 } else {
-                  floors = rawDistance || undefined; // floor count
+                  floors = rawDistance || undefined;
                 }
                 level = rawStat || undefined;
               } else {
-                // Convert user-facing km/miles to meters for the API
                 const distanceMeters =
                   rawDistance && distanceUnit === "mile"
                     ? Math.round(rawDistance * 1609.34)
@@ -2435,8 +2585,6 @@ export default function NewWorkout() {
                   splitSeconds = rawStat || undefined;
                 } else {
                   distance = distanceMeters || undefined;
-                  // For HIIT cardio, stash reps in `floors` so we avoid
-                  // DecimalField limits on `level`.
                   if (isHiitName) {
                     floors = s.reps || 0 || undefined;
                     level = undefined;
@@ -2446,7 +2594,6 @@ export default function NewWorkout() {
                 }
               }
 
-              // allocate a set number from our local per-exercise counter
               const exKey = String(ex.exercise.id);
               const next = (cardioMaxByExercise[exKey] || 0) + 1;
               cardioMaxByExercise[exKey] = next;
@@ -2463,8 +2610,6 @@ export default function NewWorkout() {
               };
               payload.setNumber = next;
 
-              // If the exercise name is a HIIT/bodyweight type and the set has reps,
-              // create a strength set so reps/RPE persist and are visible in the UI.
               const created: any = await createCardioSet(payload);
               if (hadPriorForExercise) {
                 createdPrCount += countPrTypesFromSet(created);
@@ -2517,7 +2662,11 @@ export default function NewWorkout() {
               }
 
               if (mentionsWorkout || mentionsInvalidPk) {
-                const w = await createWorkout(workoutName, notes, startTime);
+                const w = await createWorkout(
+                  effectiveWorkoutName,
+                  notes,
+                  startTime,
+                );
                 persistedWorkoutId = w.id;
                 setWorkoutId(w.id);
               }
@@ -2548,7 +2697,6 @@ export default function NewWorkout() {
                   const distUnit =
                     (s as any).cardioDistanceUnit === "m" ? "m" : "flr";
                   if (distUnit === "m") {
-                    // rawDistance is already meters
                     distance = rawDistance || undefined;
                   } else {
                     floors = rawDistance || undefined;
@@ -2570,7 +2718,6 @@ export default function NewWorkout() {
                   }
                 }
 
-                // allocate the retry set number from our local counter as well
                 const exKeyRetry = String(ex.exercise.id);
                 const nextRetry = (cardioMaxByExercise[exKeyRetry] || 0) + 1;
                 cardioMaxByExercise[exKeyRetry] = nextRetry;
@@ -2613,10 +2760,11 @@ export default function NewWorkout() {
         }
       }
 
-      // Optionally save a routine template when originating from a routine template creation flow
-      if (fromRoutine && isNewRoutineTemplate) {
+      // Save routine to localStorage with full exercise list.
+      // We do this ONCE after all sets are persisted, then dispatch a single event.
+      if (fromRoutine) {
         try {
-          const templateExercises = nonEmptyExercises.map((ex, index) => ({
+          const templateExercises = exercises.map((ex, index) => ({
             id: ex.id,
             exercise: ex.exercise,
             targetSets: ex.sets.length,
@@ -2646,46 +2794,27 @@ export default function NewWorkout() {
           const withoutOld = stored.filter((r) => r.id !== newTemplate.id);
           const updated = [...withoutOld, newTemplate];
           localStorage.setItem("user:routines", JSON.stringify(updated));
-          // Trigger a reload in other tabs/components
           localStorage.setItem("user:routines:updated", Date.now().toString());
-        } catch {
-          // ignore
+          // Single dispatch after the full routine (with exercises) is saved
+          window.dispatchEvent(new Event("routines:updated"));
+          // If this save originated from the routine builder, also create a
+          // minimal finished workout entry so the routine appears in the
+          // Workouts list as a completed workout with the routine name.
+          if (isRoutineBuilder) {
+            try {
+              const logged = await createWorkout(
+                newTemplate.name,
+                "",
+                new Date(),
+              );
+              try {
+                await finishWorkout(String(logged.id));
+              } catch (e) {}
+            } catch (e) {}
+          }
+        } catch (e) {
+          // ignore routine update errors
         }
-      }
-
-      // --- If workout was started from a routine, ensure the routine is saved in my routines ---
-      if (fromRoutine && !isNewRoutineTemplate) {
-        try {
-          let stored: Routine[] = [];
-          try {
-            const raw = localStorage.getItem("user:routines");
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed)) stored = parsed as Routine[];
-            }
-          } catch {
-            stored = [];
-          }
-          const alreadySaved = stored.some((r) => r.id === fromRoutine.id);
-          if (!alreadySaved) {
-            const templateExercises = fromRoutine.exercises || [];
-            const newTemplate: Routine = {
-              id: fromRoutine.id,
-              name: fromRoutine.name,
-              description: fromRoutine.description,
-              createdAt: new Date(),
-              exercises: templateExercises,
-            };
-            const updated = [...stored, newTemplate];
-            localStorage.setItem("user:routines", JSON.stringify(updated));
-            // Trigger a reload in other tabs/components
-            localStorage.setItem(
-              "user:routines:updated",
-              Date.now().toString(),
-            );
-            window.dispatchEvent(new Event("routines:updated"));
-          }
-        } catch {}
       }
 
       // Mark workout as finished so it appears in the logged workouts list
@@ -2695,24 +2824,17 @@ export default function NewWorkout() {
           triggerHaptic();
         } catch (e) {}
       } catch (finishErr) {
-        // non-fatal: still show a success toast below, but log the finish error
         console.error("finishWorkout failed", finishErr);
       }
 
-      // Persist a client-side duration override so UI shows the adjusted
-      // timer value the user set (backend computes duration from server
-      // timestamps which may not reflect user-modified start times).
       try {
         const minutes = Math.max(1, Math.round(elapsedSec / 60));
         localStorage.setItem(
           `workout:durationOverride:${persistedWorkoutId}`,
           String(minutes),
         );
-      } catch (e) {
-        // non-fatal
-      }
+      } catch (e) {}
 
-      // Persist per-exercise notes locally keyed by workout and exercise name
       try {
         const notesMap: Record<string, string> = {};
         for (const ex of exercisesToPersist) {
@@ -2728,16 +2850,11 @@ export default function NewWorkout() {
         } else {
           localStorage.removeItem(storageKey);
         }
-      } catch (e) {
-        // non-fatal if notes persistence fails
-      }
+      } catch (e) {}
 
-      // Invalidate workouts cache so the Workouts page refreshes
       try {
         queryClient.invalidateQueries({ queryKey: ["workouts"] });
-      } catch (iqe) {
-        // ignore
-      }
+      } catch (iqe) {}
 
       const totalPRs = createdPrCount;
       toast({
@@ -2749,7 +2866,6 @@ export default function NewWorkout() {
         }`,
       });
 
-      // Post-workout first-time completion flow
       try {
         const firstDone = localStorage.getItem("user:firstWorkoutCompleted");
         const isFirstWorkoutFromState = !!(location.state as any)
@@ -2769,12 +2885,10 @@ export default function NewWorkout() {
                 return null;
               })();
 
-            // 1. Use routine-based next suggestion
             if (routineId) {
               suggested = recommendNextRoutine(routineId);
             }
 
-            // 2. Fall back to onboarding-stored suggestion (same source as Dashboard Next Up)
             if (!suggested?.routine) {
               try {
                 const stored = localStorage.getItem(
@@ -2789,7 +2903,6 @@ export default function NewWorkout() {
               } catch {}
             }
 
-            // 3. Last resort
             if (!suggested?.routine) {
               const { mockRoutines } = await import("@/data/mockData");
               const fallback =
@@ -2820,6 +2933,15 @@ export default function NewWorkout() {
           try {
             localStorage.setItem("user:firstWorkoutCompleted", "1");
             localStorage.removeItem("workout:inProgress");
+            try {
+              localStorage.removeItem("workout:currentRoutine");
+            } catch {}
+            try {
+              localStorage.removeItem("workout:isRoutineBuilder");
+            } catch {}
+            try {
+              localStorage.removeItem("workout:routineBuilder");
+            } catch {}
             localStorage.removeItem("workout:paused");
             navigate("/workouts/complete", {
               state: {
@@ -2829,14 +2951,12 @@ export default function NewWorkout() {
             });
             return;
           } catch (e) {
-            // fallback to normal workouts page if navigate fails
             navigate("/workouts");
             return;
           }
         }
       } catch (e) {}
 
-      // Rotate Next Up suggestion before navigating back to dashboard
       try {
         const routineId =
           fromRoutine?.id ??
@@ -2868,10 +2988,17 @@ export default function NewWorkout() {
       navigate("/workouts");
       try {
         localStorage.removeItem("workout:inProgress");
+        try {
+          localStorage.removeItem("workout:currentRoutine");
+        } catch {}
+        try {
+          localStorage.removeItem("workout:isRoutineBuilder");
+        } catch {}
+        try {
+          localStorage.removeItem("workout:routineBuilder");
+        } catch {}
         localStorage.removeItem("workout:paused");
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     } catch (e) {
       toast({
         title: "Failed to save workout",
@@ -2904,7 +3031,7 @@ export default function NewWorkout() {
 
   return (
     <AppLayout>
-      {/* PR banner (stays below fixed action bar) */}
+      {/* PR banner */}
       <div
         className="pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 flex justify-center w-full px-4"
         style={{ top: "calc(var(--workout-header-h, 64px) + 28px)" }}
@@ -2938,7 +3065,7 @@ export default function NewWorkout() {
         />
       </div>
 
-      {/* Fixed top action bar for Cancel / Save (replaces global header) */}
+      {/* Fixed top action bar */}
       <div
         ref={headerRef}
         className="fixed top-0 left-0 right-0 z-40 bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2"
@@ -2948,12 +3075,44 @@ export default function NewWorkout() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() =>
+              onClick={() => {
+                try {
+                  localStorage.removeItem("workout:currentRoutine");
+                } catch {}
+                try {
+                  localStorage.removeItem("workout:isRoutineBuilder");
+                } catch {}
+                // Clean up the in-progress flag when canceling
+                if (isRoutineBuilder) {
+                  try {
+                    localStorage.removeItem("workout:inProgress");
+                    localStorage.removeItem("workout:routineBuilder");
+                    // IMPORTANT: Remove the routine from user:routines if it was auto-saved
+                    if (fromRoutine?.id) {
+                      const stored = localStorage.getItem("user:routines");
+                      if (stored) {
+                        const routines = JSON.parse(stored);
+                        const filtered = routines.filter(
+                          (r: any) => r.id !== fromRoutine.id,
+                        );
+                        localStorage.setItem(
+                          "user:routines",
+                          JSON.stringify(filtered),
+                        );
+                        localStorage.setItem(
+                          "user:routines:updated",
+                          Date.now().toString(),
+                        );
+                        window.dispatchEvent(new Event("routines:updated"));
+                      }
+                    }
+                  } catch {}
+                }
                 navigate(
                   originPath || (isRoutineBuilder ? "/routines" : "/workouts"),
                   { state: originState ?? undefined },
-                )
-              }
+                );
+              }}
             >
               Cancel
             </Button>
@@ -3006,7 +3165,6 @@ export default function NewWorkout() {
                           {unusualSet.previousBestText}
                         </dd>
                       </div>
-
                       <div className="flex flex-col">
                         <dt className="text-xs font-medium text-muted-foreground">
                           Current entry
@@ -3039,7 +3197,6 @@ export default function NewWorkout() {
                         onClick={() => {
                           if (!unusualSet) return;
                           const { exerciseId, setId } = unusualSet;
-                          // mark this set as recently forced so detection won't re-open
                           recentForced.current.add(setId);
                           setTimeout(
                             () => recentForced.current.delete(setId),
@@ -3160,7 +3317,6 @@ export default function NewWorkout() {
               }}
             >
               <DialogContent className="max-w-[360px] rounded-[28px] bg-neutral-950 border border-neutral-800/40 text-white pb-4 pt-2">
-                {/* Drag handle */}
                 <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-neutral-800" />
                 <DialogHeader className="items-center text-center pb-1">
                   <DialogTitle className="font-heading text-base font-semibold tracking-tight">
@@ -3168,7 +3324,6 @@ export default function NewWorkout() {
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 pt-1">
-                  {/* Duration summary row (tap to expand picker) */}
                   <button
                     type="button"
                     onClick={() => setShowDurationPicker((v) => !v)}
@@ -3182,7 +3337,6 @@ export default function NewWorkout() {
                     </span>
                   </button>
 
-                  {/* Wheel-style duration inputs (shown on tap) */}
                   {showDurationPicker && (
                     <div className="space-y-2">
                       <div className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
@@ -3496,6 +3650,7 @@ export default function NewWorkout() {
                               muscleGroup={workoutExercise.exercise.muscleGroup}
                               onClick={() => {
                                 try {
+                                  isNavigatingAway.current = true;
                                   const exId = String(
                                     workoutExercise.exercise.id,
                                   );
@@ -3505,6 +3660,13 @@ export default function NewWorkout() {
                                         workoutExercise.exercise.name,
                                       muscleGroup:
                                         workoutExercise.exercise.muscleGroup,
+                                      // ensure caller context is preserved so returning
+                                      // back to the workout retains routine and picker state
+                                      fromPicker: false,
+                                      returnRoute: "/workouts/new",
+                                      routine: fromRoutine ?? undefined,
+                                      fromNewRoutine:
+                                        fromNewRoutineFlag ?? undefined,
                                     },
                                   });
                                 } catch (e) {}
@@ -3526,7 +3688,6 @@ export default function NewWorkout() {
                           </div>
                         </div>
                       </div>
-                      {/** moved chevron into ExerciseHeader trailing prop */}
                     </div>
                   </div>
                   <Button
@@ -3539,7 +3700,6 @@ export default function NewWorkout() {
                   </Button>
                 </div>
 
-                {/* Exercise notes (moved just under exercise header) */}
                 <div className="mt-2">
                   <textarea
                     placeholder="Enter notes"
@@ -3559,7 +3719,6 @@ export default function NewWorkout() {
                   />
                 </div>
 
-                {/* Sets Header */}
                 <SetsHeader
                   muscleGroup={workoutExercise.exercise.muscleGroup}
                   exerciseName={workoutExercise.exercise.name}
@@ -3572,8 +3731,8 @@ export default function NewWorkout() {
                       exerciseName={workoutExercise.exercise.name}
                       unit={set.unit || getUnit()}
                       setNumber={index + 1}
-                      readOnly={isRoutineBuilder}
-                      unitInteractiveWhenReadOnly={isRoutineBuilder}
+                      readOnly={false}
+                      unitInteractiveWhenReadOnly={false}
                       onUpdate={(updates) =>
                         updateSetLocal(workoutExercise.id, set.id, updates)
                       }
@@ -3649,7 +3808,6 @@ export default function NewWorkout() {
             hideClose
             className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[450px] max-h-[92vh] flex flex-col rounded-[32px] bg-zinc-900/90 backdrop-blur-xl border border-white/10 text-white px-6 pb-6 overflow-hidden"
           >
-            {/* Grab handle */}
             <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mt-3 mb-2" />
 
             <div className="sticky top-0 z-10 bg-transparent pt-1">
@@ -3727,9 +3885,7 @@ export default function NewWorkout() {
                       >
                         <DialogPortal>
                           <DialogContent
-                            style={{
-                              zIndex: 2147483647,
-                            }}
+                            style={{ zIndex: 2147483647 }}
                             className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto flex max-h-[65vh] w-[calc(100%-32px)] max-w-[480px] flex-col overflow-hidden px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 backdrop-blur-none border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                           >
                             <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
@@ -3791,11 +3947,7 @@ export default function NewWorkout() {
                                 return (
                                   <button
                                     key={opt}
-                                    className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
-                                      isSelected
-                                        ? "bg-white/5 text-white"
-                                        : "text-zinc-300 hover:bg-white/3"
-                                    }`}
+                                    className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${isSelected ? "bg-white/5 text-white" : "text-zinc-300 hover:bg-white/3"}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setFilterEquipment(opt as any);
@@ -3803,7 +3955,6 @@ export default function NewWorkout() {
                                     }}
                                   >
                                     <div className="flex items-center gap-3 min-w-0">
-                                      {/* equipment icon */}
                                       <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
                                         <img
                                           src={((): string => {
@@ -3874,9 +4025,7 @@ export default function NewWorkout() {
                       >
                         <DialogPortal>
                           <DialogContent
-                            style={{
-                              zIndex: 2147483647,
-                            }}
+                            style={{ zIndex: 2147483647 }}
                             className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto flex max-h-[65vh] w-[calc(100%-32px)] max-w-[480px] flex-col overflow-hidden px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 backdrop-blur-none border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                           >
                             <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
@@ -3896,11 +4045,7 @@ export default function NewWorkout() {
                             </div>
                             <div className="mt-4 flex min-h-0 flex-1 flex-col space-y-1.5 overflow-y-auto bg-neutral-950">
                               <button
-                                className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
-                                  filterMuscle === "all"
-                                    ? "bg-white/5 text-white"
-                                    : "text-zinc-300 hover:bg-white/3"
-                                }`}
+                                className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${filterMuscle === "all" ? "bg-white/5 text-white" : "text-zinc-300 hover:bg-white/3"}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setFilterMuscle("all");
@@ -3941,11 +4086,7 @@ export default function NewWorkout() {
                                   return (
                                     <button
                                       key={opt}
-                                      className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
-                                        isSelected
-                                          ? "bg-white/5 text-white"
-                                          : "text-zinc-300 hover:bg-white/3"
-                                      }`}
+                                      className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${isSelected ? "bg-white/5 text-white" : "text-zinc-300 hover:bg-white/3"}`}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setFilterMuscle(opt);
@@ -4073,7 +4214,6 @@ export default function NewWorkout() {
           </DialogContent>
         </Dialog>
 
-        {/* Create Exercise dialog (global for this page) */}
         {isCreateExerciseOpen && (
           <div
             className="fixed inset-0"
@@ -4144,9 +4284,7 @@ export default function NewWorkout() {
                   >
                     <DialogPortal>
                       <DialogContent
-                        style={{
-                          zIndex: 2147483647,
-                        }}
+                        style={{ zIndex: 2147483647 }}
                         className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto flex max-h-[65vh] w-[calc(100%-32px)] max-w-[480px] flex-col overflow-hidden px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 backdrop-blur-none border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                       >
                         <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
@@ -4290,9 +4428,7 @@ export default function NewWorkout() {
                   >
                     <DialogPortal>
                       <DialogContent
-                        style={{
-                          zIndex: 2147483647,
-                        }}
+                        style={{ zIndex: 2147483647 }}
                         className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 mx-auto flex max-h-[65vh] w-[calc(100%-32px)] max-w-[480px] flex-col overflow-hidden px-4 pt-4 pb-5 rounded-3xl bg-neutral-950 backdrop-blur-none border border-white/10 shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
                       >
                         <div className="sticky top-0 z-30 bg-neutral-950 border-b border-white/10 pt-3 pb-3">
@@ -4418,7 +4554,6 @@ export default function NewWorkout() {
           </DialogContent>
         </Dialog>
 
-        {/* Validation dialog shown when required create fields missing */}
         <Dialog
           open={isCreateValidationOpen}
           onOpenChange={(o) => setIsCreateValidationOpen(o)}

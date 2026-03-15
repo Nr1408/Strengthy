@@ -92,6 +92,8 @@ export default function ExerciseInfo() {
     | string
     | undefined;
   const exerciseToReplace = (location as any)?.state?.exerciseToReplace;
+  const routineFromState = (location as any)?.state?.routine;
+  const fromNewRoutineFromState = (location as any)?.state?.fromNewRoutine;
   const nameFromState =
     (location?.state?.exerciseName as string | undefined) || "";
   const muscleFromState =
@@ -362,12 +364,24 @@ export default function ExerciseInfo() {
         state: {
           reopenExerciseDialog: true,
           exerciseToReplace: exerciseToReplace || null,
+          routine: routineFromState ?? undefined,
+          fromNewRoutine: fromNewRoutineFromState ?? undefined,
         },
       });
       return;
     }
     if (openedFromExercises) {
       navigate("/exercises", { state: { showLibrary: returnShowLibrary } });
+      return;
+    }
+    // Opened from workout exercise card — returnRoute is set, pass routine state back
+    if (returnRoute) {
+      navigate(returnRoute, {
+        state: {
+          routine: routineFromState ?? undefined,
+          fromNewRoutine: fromNewRoutineFromState ?? undefined,
+        },
+      });
       return;
     }
     navigate(-1);
@@ -399,6 +413,8 @@ export default function ExerciseInfo() {
                       muscleGroup: selectedExercise.muscleGroup,
                     },
                     exerciseToReplace: exerciseToReplace || null,
+                    routine: routineFromState ?? undefined,
+                    fromNewRoutine: fromNewRoutineFromState ?? undefined,
                   },
                 })
               }

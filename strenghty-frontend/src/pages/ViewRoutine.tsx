@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Trophy, ArrowLeft, AlertTriangle } from "lucide-react";
@@ -9,6 +9,7 @@ import { SetRow } from "@/components/workout/SetRow";
 import { SetsHeader, getCardioMode } from "@/components/workout/SetsHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { mockRoutines } from "@/data/mockData";
+import { getSetsForExercise } from "@/lib/api";
 import { getUnit } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import ExerciseHeader from "@/components/workout/ExerciseHeader";
@@ -67,6 +68,63 @@ export default function ViewRoutine() {
       }),
     }));
   }, [routine]);
+
+  const [viewExercises, setViewExercises] = useState(() => exercises);
+
+  useEffect(() => setViewExercises(exercises), [exercises]);
+
+  // If this is a user routine, fetch the user's most recent sets for each
+  // exercise and attach suggestions to the local sets so they render greyed.
+  useEffect(() => {
+    if (!isUserRoutine || !routine) return;
+    (async () => {
+      try {
+        const updated = await Promise.all(
+          exercises.map(async (ex) => {
+            try {
+              const prior = await getSetsForExercise(String(ex.exercise.id));
+              if (prior && prior.length > 0) {
+                const recent = prior[0];
+                const suggestedWeight =
+                  typeof recent.weight === "number" && recent.weight > 0
+                    ? recent.weight
+                    : undefined;
+                const suggestedReps =
+                  typeof recent.reps === "number" && recent.reps > 0
+                    ? recent.reps
+                    : undefined;
+                if (
+                  suggestedWeight ||
+                  suggestedReps ||
+                  typeof recent.rpe === "number" ||
+                  (recent.halfReps || 0) > 0
+                ) {
+                  const suggestedRpe =
+                    typeof recent.rpe === "number" ? recent.rpe : undefined;
+                  const suggestedHalf =
+                    typeof recent.halfReps === "number" && recent.halfReps > 0
+                      ? recent.halfReps
+                      : undefined;
+                  return {
+                    ...ex,
+                    sets: ex.sets.map((s: any) => ({
+                      ...s,
+                      _suggestedWeight: suggestedWeight,
+                      _suggestedReps: suggestedReps,
+                      _suggestedRpe: suggestedRpe,
+                      _suggestedHalfReps: suggestedHalf,
+                    })),
+                  };
+                }
+              }
+            } catch (e) {}
+            return ex;
+          }),
+        );
+        setViewExercises(updated);
+      } catch (e) {}
+    })();
+  }, [isUserRoutine, routine]);
 
   return (
     <AppLayout>
@@ -128,7 +186,7 @@ export default function ViewRoutine() {
         </div>
 
         <div className="space-y-6">
-          {exercises.map((we: any) => (
+          {viewExercises.map((we: any) => (
             <Card key={we.id} className="rounded-2xl overflow-hidden">
               <CardContent className="px-1 py-4 sm:p-4 overflow-hidden">
                 <div className="mb-3">
