@@ -1719,7 +1719,7 @@ export default function NewWorkout() {
       const isPersisted = /^\d+$/.test(String(set.id));
 
       const durationSeconds = set.cardioDurationSeconds ?? 0;
-      const rawDistance = set.cardioDistance ?? 0;
+      const rawDistance = set.cardioDistance;
       const rawStatBase = set.cardioStat ?? 0;
 
       // For HIIT/bodyweight cardio, treat the generic "stat" field as reps so
@@ -1845,10 +1845,7 @@ export default function NewWorkout() {
               setExercises((prev) =>
                 prev.map((e) =>
                   e.id === exerciseId
-                    ? {
-                        ...e,
-                        exercise: { ...e.exercise, id: createdEx.id },
-                      }
+                    ? { ...e, exercise: { ...e.exercise, id: createdEx.id } }
                     : e,
                 ),
               );
@@ -2173,6 +2170,8 @@ export default function NewWorkout() {
           localStorage.setItem("user:routines", JSON.stringify(updated));
           // Trigger a reload in other tabs/components
           localStorage.setItem("user:routines:updated", Date.now().toString());
+          window.dispatchEvent(new Event("routines:updated"));
+          window.dispatchEvent(new Event("routines:updated"));
         } catch (e) {
           // ignore routine update errors
         }
@@ -2684,6 +2683,7 @@ export default function NewWorkout() {
               "user:routines:updated",
               Date.now().toString(),
             );
+            window.dispatchEvent(new Event("routines:updated"));
           }
         } catch {}
       }
@@ -3934,14 +3934,12 @@ export default function NewWorkout() {
                                         w.slice(1).toLowerCase(),
                                     )
                                     .join(" ");
-                                  const color =
-                                    (muscleGroupColors as any)[opt as any] ||
-                                    "bg-slate-500/20 text-slate-400";
+                                  const isSelected = filterMuscle === opt;
                                   return (
                                     <button
                                       key={opt}
                                       className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
-                                        filterMuscle === opt
+                                        isSelected
                                           ? "bg-white/5 text-white"
                                           : "text-zinc-300 hover:bg-white/3"
                                       }`}
@@ -3959,7 +3957,7 @@ export default function NewWorkout() {
                                           {label}
                                         </span>
                                       </div>
-                                      {filterMuscle === opt ? (
+                                      {isSelected ? (
                                         <span className="ml-3 text-zinc-200">
                                           ✓
                                         </span>
