@@ -117,9 +117,18 @@ export default function NewWorkout() {
   const queryClient = useQueryClient();
 
   const [workoutId, setWorkoutId] = useState<string | null>(null);
+  // Always use the routine name if present, even in builder flow
   const [workoutName, setWorkoutName] = useState<string>(
-    fromRoutine?.name || "Workout",
+    fromRoutine?.name ? fromRoutine.name : "Workout",
   );
+
+  // Always keep workoutName in sync with routine name if started from a routine
+  useEffect(() => {
+    if (fromRoutine && workoutName !== fromRoutine.name) {
+      setWorkoutName(fromRoutine.name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromRoutine?.name]);
   const [notes, setNotes] = useState("");
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [startTime, setStartTime] = useState<Date>(() => new Date());
@@ -359,7 +368,8 @@ export default function NewWorkout() {
     } catch (e) {}
 
     if (!workoutId) {
-      createWorkoutMutation.mutate(workoutName);
+      // Always use the routine name if present
+      createWorkoutMutation.mutate(fromRoutine?.name || workoutName);
     }
   }, [workoutId, workoutName, isRoutineBuilder]);
 
@@ -2127,8 +2137,8 @@ export default function NewWorkout() {
     setIsSavingWorkout(true);
 
     try {
-      // Pure routine builder mode: save template locally and return.
-      if (isRoutineBuilder && fromRoutine) {
+      // If this workout was started from a routine, always update the routine in localStorage with the actual exercises/sets
+      if (fromRoutine) {
         try {
           const templateExercises = exercises.map((ex, index) => ({
             id: ex.id,
@@ -2140,7 +2150,7 @@ export default function NewWorkout() {
 
           const newTemplate: Routine = {
             id: fromRoutine.id,
-            name: workoutName || fromRoutine.name,
+            name: fromRoutine.name,
             description: fromRoutine.description,
             createdAt: new Date(),
             exercises: templateExercises,
@@ -2157,29 +2167,28 @@ export default function NewWorkout() {
             stored = [];
           }
 
+          // Overwrite the existing routine with the new one (with exercises)
           const withoutOld = stored.filter((r) => r.id !== newTemplate.id);
           const updated = [...withoutOld, newTemplate];
           localStorage.setItem("user:routines", JSON.stringify(updated));
-
-          toast({
-            title: "Routine saved!",
-            description: `${templateExercises.length} exercises added to routine.`,
-          });
-          navigate("/routines");
+          // Trigger a reload in other tabs/components
+          localStorage.setItem("user:routines:updated", Date.now().toString());
         } catch (e) {
-          toast({
-            title: "Failed to save routine",
-            description: String(e),
-            variant: "destructive",
-          });
+          // ignore routine update errors
         }
-        return;
+      }
+
+      // --- Ensure workout name matches routine name if started from a routine ---
+      let effectiveWorkoutName = workoutName;
+      if (fromRoutine) {
+        effectiveWorkoutName = fromRoutine.name;
+        setWorkoutName(fromRoutine.name);
       }
 
       // Ensure we have a workout on the backend before persisting sets
       if (!workoutId) {
         try {
-          const w = await createWorkout(workoutName, notes, startTime);
+          const w = await createWorkout(effectiveWorkoutName, notes, startTime);
           setWorkoutId(w.id);
         } catch (e) {
           toast({
@@ -2638,9 +2647,45 @@ export default function NewWorkout() {
           const withoutOld = stored.filter((r) => r.id !== newTemplate.id);
           const updated = [...withoutOld, newTemplate];
           localStorage.setItem("user:routines", JSON.stringify(updated));
+          // Trigger a reload in other tabs/components
+          localStorage.setItem("user:routines:updated", Date.now().toString());
         } catch {
           // ignore
         }
+      }
+
+      // --- If workout was started from a routine, ensure the routine is saved in my routines ---
+      if (fromRoutine && !isNewRoutineTemplate) {
+        try {
+          let stored: Routine[] = [];
+          try {
+            const raw = localStorage.getItem("user:routines");
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) stored = parsed as Routine[];
+            }
+          } catch {
+            stored = [];
+          }
+          const alreadySaved = stored.some((r) => r.id === fromRoutine.id);
+          if (!alreadySaved) {
+            const templateExercises = fromRoutine.exercises || [];
+            const newTemplate: Routine = {
+              id: fromRoutine.id,
+              name: fromRoutine.name,
+              description: fromRoutine.description,
+              createdAt: new Date(),
+              exercises: templateExercises,
+            };
+            const updated = [...stored, newTemplate];
+            localStorage.setItem("user:routines", JSON.stringify(updated));
+            // Trigger a reload in other tabs/components
+            localStorage.setItem(
+              "user:routines:updated",
+              Date.now().toString(),
+            );
+          }
+        } catch {}
       }
 
       // Mark workout as finished so it appears in the logged workouts list

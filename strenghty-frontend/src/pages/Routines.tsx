@@ -30,6 +30,27 @@ export default function Routines() {
       return [];
     }
   });
+
+  // Listen for localStorage changes and reload routines
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "user:routines" || e.key === "user:routines:updated") {
+        try {
+          const raw = localStorage.getItem("user:routines");
+          if (!raw) {
+            setMyRoutines([]);
+            return;
+          }
+          const parsed = JSON.parse(raw) as Routine[];
+          setMyRoutines(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          setMyRoutines([]);
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -63,7 +84,20 @@ export default function Routines() {
       exercises: [],
     };
 
-    // Close dialog and start a new workout based on this draft routine.
+    // Immediately save the routine to localStorage so it appears in My Routines
+    try {
+      let stored: Routine[] = [];
+      const raw = localStorage.getItem("user:routines");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) stored = parsed as Routine[];
+      }
+      const updated = [...stored, routine];
+      localStorage.setItem("user:routines", JSON.stringify(updated));
+      // Trigger a reload in other tabs/components
+      localStorage.setItem("user:routines:updated", Date.now().toString());
+    } catch {}
+
     setNewRoutine({ name: "", description: "" });
     setIsDialogOpen(false);
 
@@ -180,7 +214,9 @@ export default function Routines() {
                 <FolderOpen className="h-5 w-5 text-muted-foreground" />
               </div>
               <p className="text-white font-semibold">No routines yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Create your first routine to save time</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Create your first routine to save time
+              </p>
               <button
                 type="button"
                 onClick={() => setIsDialogOpen(true)}
