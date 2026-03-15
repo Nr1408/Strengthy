@@ -3935,6 +3935,9 @@ export default function NewWorkout() {
                                     )
                                     .join(" ");
                                   const isSelected = filterMuscle === opt;
+                                  const color =
+                                    (muscleGroupColors as any)[opt as any] ||
+                                    "bg-slate-500/20 text-slate-400";
                                   return (
                                     <button
                                       key={opt}
