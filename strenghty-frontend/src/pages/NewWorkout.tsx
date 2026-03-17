@@ -211,6 +211,10 @@ export default function NewWorkout() {
   );
   const seededFromRoutineRef = useRef(false);
   const isNavigatingAway = useRef(false);
+  const pendingReplaceRef = useRef<{
+    workoutExerciseId: string;
+    newExercise: Exercise;
+  } | null>(null);
 
   const getEmptySetMessage = (err: any) => {
     const text = String(err?.message || err || "").trim();
@@ -357,6 +361,42 @@ export default function NewWorkout() {
               parsed.exercises.length > 0
             ) {
               setExercises(parsed.exercises);
+
+              // Apply any pending replace after exercises are restored
+              if (pendingReplaceRef.current) {
+                const { workoutExerciseId, newExercise } =
+                  pendingReplaceRef.current;
+                pendingReplaceRef.current = null;
+                const isCardio = newExercise.muscleGroup === "cardio";
+                const cardioMode = isCardio
+                  ? getCardioMode(newExercise.name)
+                  : undefined;
+                setExercises((prev) =>
+                  prev.map((we) => {
+                    if (we.id !== workoutExerciseId) return we;
+                    return {
+                      ...we,
+                      exercise: newExercise,
+                      sets: we.sets.map(() => ({
+                        id: crypto.randomUUID(),
+                        reps: 0,
+                        halfReps: 0,
+                        weight: 0,
+                        unit: getUnit(),
+                        isPR: false,
+                        completed: false,
+                        type: "S" as const,
+                        rpe: undefined,
+                        cardioMode,
+                        cardioDistanceUnit: isCardio ? "km" : undefined,
+                        cardioDurationSeconds: isCardio ? 0 : undefined,
+                        cardioDistance: isCardio ? 0 : undefined,
+                        cardioStat: isCardio ? 0 : undefined,
+                      })),
+                    };
+                  }),
+                );
+              }
             }
             if (typeof parsed.elapsedSec === "number")
               setElapsedSec(parsed.elapsedSec);
@@ -411,14 +451,45 @@ export default function NewWorkout() {
   }, [workoutId, workoutName, isRoutineBuilder]);
 
   // Handle returning from ExerciseInfo page (opened via fromPicker flow).
+  // Handle returning from ExerciseInfo page (opened via fromPicker flow).
   useEffect(() => {
     const state = location.state;
+    console.log("[Return from info] state:", JSON.stringify(state));
     if (!state) return;
     if (state.addExerciseFromInfo && state.exercisePayload) {
+      console.log(
+        "[Return from info] exerciseToReplace from state:",
+        state.exerciseToReplace,
+      );
+      console.log(
+        "[Return from info] exerciseToReplace from localStorage:",
+        localStorage.getItem("workout:exerciseToReplace"),
+      );
+      console.log(
+        "[Return from info] current exercises:",
+        exercises.map((e) => ({ id: e.id, name: e.exercise.name })),
+      );
       const payload = state.exercisePayload as Exercise;
-      const toReplace = state.exerciseToReplace;
+      const toReplace =
+        state.exerciseToReplace ??
+        (() => {
+          try {
+            return localStorage.getItem("workout:exerciseToReplace");
+          } catch {
+            return null;
+          }
+        })();
+
+      try {
+        localStorage.removeItem("workout:exerciseToReplace");
+      } catch {}
+
       if (toReplace) {
-        replaceExerciseForCard(toReplace, payload);
+        // Defer the replace until after exercises are restored from storage
+        pendingReplaceRef.current = {
+          workoutExerciseId: toReplace,
+          newExercise: payload,
+        };
       } else {
         addExercise(payload);
       }
@@ -450,6 +521,19 @@ export default function NewWorkout() {
       : [];
     if (routineExercises.length === 0) return;
 
+    const isUserRoutine = (() => {
+      try {
+        const raw = localStorage.getItem("user:routines");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            return parsed.some((r) => String(r.id) === String(fromRoutine?.id));
+          }
+        }
+      } catch (e) {}
+      return String(fromRoutine?.id || "").startsWith("my-");
+    })();
+
     const seeded = routineExercises.map((re: any) => {
       const exercise = re.exercise || re;
       const targetSets = Math.max(1, Number(re.targetSets || 1));
@@ -472,6 +556,8 @@ export default function NewWorkout() {
           cardioDistanceUnit: "km" as const,
           cardioStat: 0,
         }),
+        // mark seeded sets so UI can show a greyed '-' placeholder
+        _seededFromUserRoutine: isUserRoutine,
       };
 
       return {
@@ -701,6 +787,42 @@ export default function NewWorkout() {
             "exercises from routine builder storage",
           );
           setExercises(parsed.exercises);
+
+          // Apply any pending replace after exercises are restored
+          if (pendingReplaceRef.current) {
+            const { workoutExerciseId, newExercise } =
+              pendingReplaceRef.current;
+            pendingReplaceRef.current = null;
+            const isCardio = newExercise.muscleGroup === "cardio";
+            const cardioMode = isCardio
+              ? getCardioMode(newExercise.name)
+              : undefined;
+            setExercises((prev) =>
+              prev.map((we) => {
+                if (we.id !== workoutExerciseId) return we;
+                return {
+                  ...we,
+                  exercise: newExercise,
+                  sets: we.sets.map(() => ({
+                    id: crypto.randomUUID(),
+                    reps: 0,
+                    halfReps: 0,
+                    weight: 0,
+                    unit: getUnit(),
+                    isPR: false,
+                    completed: false,
+                    type: "S" as const,
+                    rpe: undefined,
+                    cardioMode,
+                    cardioDistanceUnit: isCardio ? "km" : undefined,
+                    cardioDurationSeconds: isCardio ? 0 : undefined,
+                    cardioDistance: isCardio ? 0 : undefined,
+                    cardioStat: isCardio ? 0 : undefined,
+                  })),
+                };
+              }),
+            );
+          }
         }
       }
     } catch (e) {
@@ -4144,7 +4266,15 @@ export default function NewWorkout() {
                       <button
                         type="button"
                         onClick={() => {
-                          setIsExerciseDialogOpen(false);
+                          const currentExerciseToReplace = exerciseToReplace;
+                          if (currentExerciseToReplace) {
+                            try {
+                              localStorage.setItem(
+                                "workout:exerciseToReplace",
+                                currentExerciseToReplace,
+                              );
+                            } catch {}
+                          }
                           setExerciseSearch("");
                           navigate(`/exercises/${exercise.id}/info`, {
                             state: {
@@ -4152,7 +4282,10 @@ export default function NewWorkout() {
                               returnRoute: "/workouts/new",
                               exerciseName: exercise.name,
                               muscleGroup: exercise.muscleGroup,
-                              exerciseToReplace: exerciseToReplace || null,
+                              exerciseToReplace:
+                                currentExerciseToReplace ?? null,
+                              routine: fromRoutine ?? undefined,
+                              fromNewRoutine: fromNewRoutineFlag ?? undefined,
                             },
                           });
                         }}

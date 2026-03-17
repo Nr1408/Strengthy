@@ -232,7 +232,7 @@ export default function Index() {
               className={`h-1.5 rounded-full transition-all duration-300 ${
                 i === step
                   ? "w-6 bg-primary"
-                  : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                  : "w-1.5 bg-muted-foreground/60 hover:bg-muted-foreground/50"
               }`}
               aria-label={`Go to step ${i + 1}`}
               aria-current={i === step}

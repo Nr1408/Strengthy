@@ -131,6 +131,23 @@ export function SetRow({
       ? set.cardioStat
       : 0;
 
+  const hasSuggestedWeight =
+    typeof (set as any)._suggestedWeight === "number" &&
+    (set as any)._suggestedWeight > 0;
+  const hasSuggestedReps =
+    typeof (set as any)._suggestedReps === "number" &&
+    (set as any)._suggestedReps > 0;
+  const seededFromUserRoutine = !!(set as any)._seededFromUserRoutine;
+
+  // Show '-' placeholder whenever the value is empty (no weight / no reps).
+  // Previously this required suggested/seeded flags; change so dash appears
+  // for any empty value in routine/view mode.
+  const showDashForWeight =
+    set.weight === null || typeof set.weight !== "number" || set.weight === 0;
+
+  const showDashForReps =
+    set.reps === null || typeof set.reps !== "number" || set.reps === 0;
+
   const [timeInput, setTimeInput] = useState<string>("");
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [pickerHours, setPickerHours] = useState(0);
@@ -570,26 +587,35 @@ export function SetRow({
           </div>
         ) : (
           <div className="flex w-full h-8 items-center -space-x-[1px]">
-            <Input
-              type="number"
-              placeholder="0"
-              value={
-                typeof set.weight === "number" && set.weight !== 0
-                  ? String(set.weight)
-                  : ""
-              }
-              onChange={(e) =>
-                !readOnly && onUpdate({ weight: Number(e.target.value) })
-              }
-              disabled={readOnly}
-              /* Added [appearance:textfield] and [&::-webkit-outer-spin-button]:appearance-none to remove arrows */
-              className={cn(
-                "h-8 flex-1 px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] sm:text-[12.5px] rounded-r-none focus-visible:ring-1 focus-visible:ring-offset-0 border-border",
-                readOnly
-                  ? "text-white placeholder:text-muted-foreground/60 disabled:opacity-100 disabled:text-white disabled:[-webkit-text-fill-color:#fff]"
-                  : "text-white disabled:text-white disabled:[-webkit-text-fill-color:#fff]",
-              )}
-            />
+            {readOnly && showDashForWeight ? (
+              <div className="h-8 flex-1 flex items-center justify-center text-xs text-muted-foreground/60 border border-border rounded-l-md bg-neutral-900/60">
+                -
+              </div>
+            ) : (
+              <Input
+                type="number"
+                placeholder={showDashForWeight ? "-" : "0"}
+                value={
+                  typeof set.weight === "number" && set.weight !== 0
+                    ? String(set.weight)
+                    : ""
+                }
+                onChange={(e) =>
+                  !readOnly && onUpdate({ weight: Number(e.target.value) })
+                }
+                disabled={readOnly}
+                /* Added [appearance:textfield] and [&::-webkit-outer-spin-button]:appearance-none to remove arrows */
+                className={cn(
+                  "h-8 flex-1 px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] sm:text-[12.5px] rounded-r-none focus-visible:ring-1 focus-visible:ring-offset-0 border-border",
+                  readOnly
+                    ? "text-white placeholder:text-muted-foreground/60 disabled:opacity-100 disabled:text-white disabled:[-webkit-text-fill-color:#fff]"
+                    : "text-white disabled:text-white disabled:[-webkit-text-fill-color:#fff]",
+                  showDashForWeight
+                    ? "placeholder:text-muted-foreground/60"
+                    : "",
+                )}
+              />
+            )}
             {!readOnly || unitInteractiveWhenReadOnly ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -653,16 +679,22 @@ export function SetRow({
           isHiitBodyweight ? (
             <div className="relative w-full h-8">
               <label className="sr-only">Reps</label>
-              <Input
-                type="number"
-                placeholder="reps"
-                value={set.reps || ""}
-                onChange={(e) =>
-                  !readOnly && onUpdate({ reps: Number(e.target.value) })
-                }
-                disabled={readOnly}
-                className="h-8 w-full px-1 pr-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
-              />
+              {readOnly && showDashForReps ? (
+                <div className="h-8 w-full flex items-center justify-center text-xs text-muted-foreground/60 border border-border rounded-md bg-neutral-900/60">
+                  -
+                </div>
+              ) : (
+                <Input
+                  type="number"
+                  placeholder={showDashForReps ? "-" : "reps"}
+                  value={set.reps || ""}
+                  onChange={(e) =>
+                    !readOnly && onUpdate({ reps: Number(e.target.value) })
+                  }
+                  disabled={readOnly}
+                  className="h-8 w-full px-1 pr-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
+                />
+              )}
             </div>
           ) : (
             <div className="flex w-full h-8 items-center -space-x-[1px]">
@@ -744,7 +776,7 @@ export function SetRow({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[10px] font-bold text-muted-foreground/60">
+                  <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[15px] font-bold text-muted-foreground/60">
                     {cardioDistanceUnit === "flr" ? "flr" : "m"}
                   </div>
                 )
@@ -798,7 +830,7 @@ export function SetRow({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[10px] font-bold text-muted-foreground/60">
+                <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[15px] font-bold text-muted-foreground/60">
                   {cardioDistanceUnit === "mile" ? "mile" : "km"}
                 </div>
               )}
@@ -806,7 +838,7 @@ export function SetRow({
           )
         ) : (
           !readOnly && (
-            <span className="text-[15px] text-muted-foreground/30 select-none">
+            <span className="text-[15px] text-muted-foreground/60 select-none">
               ×
             </span>
           )
@@ -1027,21 +1059,28 @@ export function SetRow({
         ) : (
           <div className="relative w-full h-8">
             <label className="sr-only">Reps</label>
-            <Input
-              type="number"
-              placeholder="0"
-              value={set.reps || ""}
-              onChange={(e) =>
-                !readOnly && onUpdate({ reps: Number(e.target.value) })
-              }
-              disabled={readOnly}
-              className={cn(
-                "h-8 w-full px-1 pr-8 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0",
-                readOnly
-                  ? "text-white placeholder:text-muted-foreground/60 disabled:opacity-100 disabled:text-white disabled:[-webkit-text-fill-color:#fff]"
-                  : "text-white disabled:text-white disabled:[-webkit-text-fill-color:#fff]",
-              )}
-            />
+            {readOnly && showDashForReps ? (
+              <div className="h-8 w-full flex items-center justify-center text-xs text-muted-foreground/60 border border-border rounded-md bg-neutral-900/60 pr-8">
+                -
+              </div>
+            ) : (
+              <Input
+                type="number"
+                placeholder={showDashForReps ? "-" : "0"}
+                value={set.reps || ""}
+                onChange={(e) =>
+                  !readOnly && onUpdate({ reps: Number(e.target.value) })
+                }
+                disabled={readOnly}
+                className={cn(
+                  "h-8 w-full px-1 pr-8 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0",
+                  readOnly
+                    ? "text-white placeholder:text-muted-foreground/60 disabled:opacity-100 disabled:text-white disabled:[-webkit-text-fill-color:#fff]"
+                    : "text-white disabled:text-white disabled:[-webkit-text-fill-color:#fff]",
+                  showDashForReps ? "placeholder:text-muted-foreground/60" : "",
+                )}
+              />
+            )}
             {/* Half-reps button: editable increments when not readOnly; when readOnly
                 and there are partials, open a dialog to show the count. */}
             <div className="absolute right-1 top-1/2 -translate-y-1/2">
@@ -1458,7 +1497,7 @@ export function SetRow({
             </DialogContent>
           </Dialog>
         ) : (
-          <div className="h-8 w-full max-w-[2.25rem] flex items-center justify-center text-xs text-muted-foreground">
+          <div className="h-8 w-full max-w-[2.25rem] flex items-center justify-center text-xs text-muted-foreground/60">
             -
           </div>
         )}
