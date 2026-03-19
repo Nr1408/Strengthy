@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -3132,7 +3132,7 @@ export default function NewWorkout() {
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return;
 
     const updateHeaderHeight = () => {
