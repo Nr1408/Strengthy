@@ -97,6 +97,22 @@ export default function Dashboard() {
     } catch {}
   }, []);
 
+  // Listen for onboarding/profile saves that recompute Next Up in other tabs/components
+  useEffect(() => {
+    const onNextUpUpdated = () => {
+      try {
+        const raw = localStorage.getItem("user:nextSuggestedRoutine");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.id) setNextSuggested(parsed);
+        }
+      } catch {}
+    };
+    window.addEventListener("strengthy:nextUpUpdated", onNextUpUpdated);
+    return () =>
+      window.removeEventListener("strengthy:nextUpUpdated", onNextUpUpdated);
+  }, []);
+
   useEffect(() => {
     // If user has no completed workouts and onboarding is missing, try
     // fetching their profile/onboarding from the server so the Blueprint

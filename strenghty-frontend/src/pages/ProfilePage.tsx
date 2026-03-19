@@ -375,11 +375,48 @@ export default function Profile() {
     } catch {}
   };
 
-  const handleSaveDetails = () => {
+  const handleSaveDetails = async () => {
     try {
       const payload = onboardingInfo ?? DEFAULT_ONBOARDING;
       localStorage.setItem("user:onboarding", JSON.stringify(payload));
       setOnboardingInfo(payload);
+
+      // Recompute Next Up based on new goals/experience/equipment
+      try {
+        const { recommendFirstWorkout } = await import("@/lib/onboarding");
+        console.log("[Profile] recomputing nextUp with:", {
+          goal: (payload.goals?.[0] as any) || "other",
+          equipment: (payload.equipment as any) || "other",
+          experience: (payload.experience as any) || "intermediate",
+        });
+        const rec = recommendFirstWorkout({
+          goal: (payload.goals?.[0] as any) || "other",
+          age: payload.age ? Number(payload.age) : null,
+          height: payload.height ? Number(payload.height) : null,
+          heightUnit: (payload.heightUnit as any) || "cm",
+          weight: payload.currentWeight ? Number(payload.currentWeight) : null,
+          weightUnit:
+            (payload.weightUnit as any) || (payload.weightUnit as any) || "kg",
+          equipment: (payload.equipment as any) || "other",
+          experience: (payload.experience as any) || "intermediate",
+          monthlyWorkouts: Number(payload.monthlyWorkouts) || 12,
+        });
+        console.log(
+          "[Profile] recomputed result:",
+          rec?.routine?.id,
+          rec?.label,
+        );
+        try {
+          localStorage.setItem(
+            "user:nextSuggestedRoutine",
+            JSON.stringify({ id: rec.routine.id, label: rec.label }),
+          );
+          window.dispatchEvent(new CustomEvent("strengthy:nextUpUpdated"));
+        } catch {}
+      } catch (e) {
+        console.error("[Profile] recompute failed:", e);
+      }
+
       toast({
         title: "Details saved",
         description: "Your profile details were updated.",
@@ -955,10 +992,9 @@ export default function Profile() {
                         key={opt.id}
                         type="button"
                         onClick={() => {
-                          const current = onboardingInfo?.goals || [];
-                          const next = isSelected
-                            ? current.filter((g) => g !== opt.id)
-                            : [...current, opt.id];
+                          // Single-select: selecting an option sets it as the sole
+                          // goal; clicking the already-selected option clears it.
+                          const next = isSelected ? [] : [opt.id];
                           updateOnboardingInfo({ goals: next });
                         }}
                         className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${

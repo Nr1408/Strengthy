@@ -129,7 +129,7 @@ export default function ViewRoutine() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between mb-0 mt-4">
+        <div className="flex items-center justify-between mb-0 mt-0">
           <div className="pl-0">
             <button
               type="button"

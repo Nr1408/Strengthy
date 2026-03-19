@@ -117,7 +117,6 @@ export default function Auth({
   }>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [invalidCredsOpen, setInvalidCredsOpen] = useState(false);
-  const [isGoogleAccount, setIsGoogleAccount] = useState(false);
   const [confirmEmailOpen, setConfirmEmailOpen] = useState(false);
   const [confirmEmailAddress, setConfirmEmailAddress] = useState<string | null>(
     null,
@@ -146,6 +145,23 @@ export default function Auth({
 
   const shouldRouteToOnboarding = useCallback(
     async (accessToken: string): Promise<boolean> => {
+      // If we already synced onboarding into localStorage during login,
+      // prefer that cached value to avoid an extra remote lookup and ensure
+      // the app behaves consistently for non-Supabase backends.
+      try {
+        const raw = localStorage.getItem("user:onboarding");
+        if (raw) {
+          const parsed = JSON.parse(raw as string) as any;
+          const hasGoal = !!String(
+            parsed?.goal || parsed?.goals?.[0] || "",
+          ).trim();
+          const hasExperience = !!String(parsed?.experience || "").trim();
+          return !(hasGoal && hasExperience);
+        }
+      } catch (e) {
+        // fall through to remote checks
+      }
+
       if (!SUPABASE_URL_ENV || !SUPABASE_ANON_KEY_ENV || !accessToken) {
         return false;
       }
@@ -310,7 +326,10 @@ export default function Auth({
         // dashboard. New users being sent to onboarding should not see the
         // generic welcome toast.
         if (!goOnboarding) {
-          toast({ title: "Welcome!", description: "Signed in with Google." });
+          toast({
+            title: "Welcome back",
+            description: "Signed in with Google.",
+          });
         }
         navigate(goOnboarding ? "/onboarding" : "/dashboard");
       } finally {
@@ -720,6 +739,21 @@ export default function Auth({
       const msg = String(err?.message || err || "Authentication failed");
 
       if (showSignup) {
+        console.log("[Auth] signup error:", msg);
+        const lower = msg.toLowerCase();
+        const emailExists =
+          lower.includes("already registered") ||
+          lower.includes("already exists") ||
+          lower.includes("user already") ||
+          lower.includes("email already") ||
+          lower.includes("duplicate") ||
+          lower.includes("already in use") ||
+          lower.includes("422") ||
+          lower.includes("registered");
+        if (emailExists) {
+          setInvalidCredsOpen(true);
+          return;
+        }
         openConfirmEmailDialog(formData.email);
         return;
       }
@@ -729,19 +763,9 @@ export default function Auth({
         setConfirmEmailOpen(true);
         return;
       } else if (isGoogleAccountError(msg)) {
-        setIsGoogleAccount(true);
-        setInvalidCredsOpen(true);
-        return;
+          setInvalidCredsOpen(true);
+          return;
       } else if (isInvalidCredentialsError(msg)) {
-        const isGoogle =
-          isGoogleAccountError(msg) ||
-          msg.toLowerCase().includes("for email") ||
-          msg
-            .toLowerCase()
-            .includes("signing in with password is not supported") ||
-          msg.toLowerCase().includes("email link") ||
-          msg.toLowerCase().includes("magic link");
-        setIsGoogleAccount(isGoogle);
         setInvalidCredsOpen(true);
         return;
       }
@@ -1166,9 +1190,7 @@ export default function Auth({
           open={invalidCredsOpen}
           setOpen={(val) => {
             setInvalidCredsOpen(val);
-            if (!val) setIsGoogleAccount(false);
           }}
-          isGoogleAccount={isGoogleAccount}
           onGoogleSignIn={onClickContinueWithGoogle}
         />
 
@@ -1181,5 +1203,3 @@ export default function Auth({
     </div>
   );
 }
-
-

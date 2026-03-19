@@ -401,20 +401,39 @@ export async function upsertProfile(payload: {
   experience?: string | null;
   monthly_workouts?: number | null;
 }) {
-  if (!shouldUseSupabaseApi()) return;
-  const userId = await resolveSupabaseUserId();
-  if (!userId || !SUPABASE_REST_BASE) return;
-  const body = { user_id: userId, ...payload };
-  const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/profiles`, {
-    method: "POST",
-    headers: {
-      ...await supabaseHeadersAsync(true),
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`Upsert profile failed: ${res.status}`);
+  // Try Supabase REST first when configured (keeps previous behavior).
+  if (shouldUseSupabaseApi()) {
+    const userId = await resolveSupabaseUserId();
+    if (!userId || !SUPABASE_REST_BASE) return;
+    const body = { user_id: userId, ...payload };
+    const res = await fetchWithTimeout(`${SUPABASE_REST_BASE}/profiles`, {
+      method: "POST",
+      headers: {
+        ...await supabaseHeadersAsync(true),
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      throw new Error(`Upsert profile failed: ${res.status}`);
+    }
+    return;
+  }
+
+  // Fallback: call the primary API backend when Supabase is not used.
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/profile/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Upsert profile failed: ${res.status} ${text}`);
+    }
+  } catch (e) {
+    // surface the error to callers
+    throw e;
   }
 }
 

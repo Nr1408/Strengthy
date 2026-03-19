@@ -39,7 +39,14 @@ export default function ConfirmEmailDialog({
 
           <p className="mt-4 text-xs text-zinc-500">
             Didn&apos;t receive the email? Check your spam folder or try signing
-            up again.
+            up again. Already have an account?{" "}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="text-orange-400 hover:underline"
+            >
+              Log in instead
+            </button>
           </p>
         </DialogHeader>
       </DialogContent>
