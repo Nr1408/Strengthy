@@ -763,8 +763,8 @@ export default function Auth({
         setConfirmEmailOpen(true);
         return;
       } else if (isGoogleAccountError(msg)) {
-          setInvalidCredsOpen(true);
-          return;
+        setInvalidCredsOpen(true);
+        return;
       } else if (isInvalidCredentialsError(msg)) {
         setInvalidCredsOpen(true);
         return;

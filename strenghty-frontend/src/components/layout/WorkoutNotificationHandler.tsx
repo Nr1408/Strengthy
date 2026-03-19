@@ -108,6 +108,13 @@ export default function WorkoutNotificationHandler() {
       "localNotificationActionPerformed",
       (event) => {
         try {
+          // Mark that the user requested resume so the workout page can
+          // clear the paused flag and resume the timer automatically.
+          try {
+            localStorage.setItem("workout:resumeRequested", "1");
+            localStorage.removeItem("workout:paused");
+          } catch {}
+
           const route =
             (event.notification &&
               event.notification.extra &&

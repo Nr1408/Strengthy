@@ -22,13 +22,15 @@ export function RoutineCard({ routine, onStart, onClick }: RoutineCardProps) {
       onClick={onClick}
     >
       <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <FolderOpen className="h-5 w-5 text-primary" />
             </div>
-            <div className="space-y-1">
-              <h3 className="font-heading font-semibold">{routine.name}</h3>
+            <div className="space-y-1 min-w-0">
+              <h3 className="font-heading font-semibold truncate">
+                {routine.name}
+              </h3>
               {routine.description && (
                 <p className="text-sm text-muted-foreground line-clamp-1">
                   {routine.description}
@@ -36,7 +38,7 @@ export function RoutineCard({ routine, onStart, onClick }: RoutineCardProps) {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="shrink-0">
             <Button
               size="sm"
               onClick={(e) => {
