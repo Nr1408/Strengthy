@@ -3,6 +3,7 @@ import type { Exercise } from "@/types/workout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { muscleGroupColors } from "@/data/mockData";
+import { titleCase } from "@/lib/utils";
 import { getExerciseIconFile } from "@/lib/exerciseIcons";
 
 interface ExerciseCardProps {
@@ -43,9 +44,9 @@ export function ExerciseCard({
                 ]
               }
             >
-              {exercise.muscleGroup === "other"
-                ? "calves"
-                : exercise.muscleGroup}
+              {titleCase(
+                exercise.muscleGroup === "other" ? "calves" : exercise.muscleGroup,
+              )}
             </Badge>
             {exercise.description && (
               <p className="text-sm text-muted-foreground line-clamp-2">

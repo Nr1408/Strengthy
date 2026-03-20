@@ -13,7 +13,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE, login, register, setToken, getToken, fetchAndPersistProfile } from "@/lib/api";
+import {
+  API_BASE,
+  login,
+  register,
+  setToken,
+  getToken,
+  fetchAndPersistProfile,
+} from "@/lib/api";
 import ConfirmEmailDialog from "@/components/ConfirmEmailDialog";
 import InvalidCredentialsDialog from "@/components/InvalidCredentialsDialog";
 import { createClient } from "@supabase/supabase-js";

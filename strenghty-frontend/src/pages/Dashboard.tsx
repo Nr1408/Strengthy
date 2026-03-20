@@ -7,6 +7,7 @@ import {
   Dumbbell,
   TrendingUp,
   Flame,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { mockRoutines } from "@/data/mockData";
@@ -358,6 +359,20 @@ export default function Dashboard() {
 
   // Metrics
   const thisWeekCount = workoutsThisWeek.length;
+  // Count distinct days with at least one workout this week
+  const workoutsThisWeekDistinctDays = useMemo(() => {
+    try {
+      const set = new Set<string>();
+      workoutsThisWeek.forEach((w) => {
+        try {
+          set.add(new Date(w.date).toDateString());
+        } catch (e) {}
+      });
+      return set.size;
+    } catch {
+      return 0;
+    }
+  }, [workoutsThisWeek]);
   const prsThisWeek = (() => {
     if (workoutsThisWeek.length === 0) return 0;
     const strength = Object.values(setsByWorkoutThisWeek).flat();
@@ -547,12 +562,13 @@ export default function Dashboard() {
     });
 
     const justHitTarget =
-      workoutsThisWeek.length > 0 && workoutsThisWeek.length === weeklyTarget;
+      workoutsThisWeekDistinctDays > 0 &&
+      workoutsThisWeekDistinctDays === weeklyTarget;
 
     rescheduleAllNotifications({
       scheduledDays,
       routineNames,
-      workoutsThisWeek: workoutsThisWeek.length,
+      workoutsThisWeek: workoutsThisWeekDistinctDays,
       weeklyTarget,
       currentStreak: weeklyStreak,
       justCompletedWeeklyTarget: justHitTarget,
@@ -640,10 +656,11 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={() => setShowHideDialog(true)}
-                      className="text-zinc-600 hover:text-zinc-400 transition-colors text-xs"
+                      className="text-zinc-600 hover:text-zinc-400 transition-colors"
                       title="Hide suggestions"
+                      aria-label="Hide suggestions"
                     >
-                      ✕
+                      <X className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -755,7 +772,7 @@ export default function Dashboard() {
                   {(() => {
                     const remaining = Math.max(
                       0,
-                      weeklyTarget - workoutsThisWeek.length,
+                      weeklyTarget - workoutsThisWeekDistinctDays,
                     );
                     return remaining > 0 ? (
                       <p className="text-sm text-zinc-400">
@@ -851,7 +868,7 @@ export default function Dashboard() {
 
               {/* Rest day */}
               {!scheduledDays.includes(todayDayOfWeek) &&
-                workoutsThisWeek.length < weeklyTarget && (
+                workoutsThisWeekDistinctDays < weeklyTarget && (
                   <p className="mt-3 text-center text-xs text-zinc-500">
                     Rest day — recovery is part of the plan
                   </p>

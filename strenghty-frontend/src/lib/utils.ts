@@ -67,6 +67,14 @@ export function formatMinutes(totalMinutes?: number | null): string | undefined 
   return `${rem}m`;
 }
 
+export function titleCase(s?: string | null): string {
+  if (!s) return "";
+  return String(s)
+    .split(" ")
+    .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
 // Count the number of distinct PR types represented by a set.
 // Strength sets expose detailed flags like absWeightPR/e1rmPR/volumePR.
 // Cardio sets expose distancePR/pacePR/ascentPR/intensityPR/splitPR.

@@ -475,7 +475,7 @@ export default function Profile() {
     <AppLayout>
       <main className="w-full max-w-4xl mx-auto px-4 pb-32">
         {/* ── Hero ── */}
-        <section className="pt-2 pb-4">
+        <section className="pt-0 -mt-6 pb-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             <button
               type="button"
@@ -483,7 +483,7 @@ export default function Profile() {
                 setTempAvatar(profileInfo.avatar || null);
                 setAvatarDialogOpen(true);
               }}
-              className="relative flex-shrink-0 h-20 w-20 rounded-full bg-orange-500/10 border-2 border-orange-500/25 flex items-center justify-center overflow-hidden transition-all duration-200 hover:border-orange-500/60"
+              className="relative flex-shrink-0 h-20 w-20 rounded-full bg-transparent flex items-center justify-center overflow-hidden transition-all duration-200"
               aria-label="Change avatar"
             >
               {profileInfo.avatar ? (
@@ -493,7 +493,7 @@ export default function Profile() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="text-3xl font-bold text-orange-400 select-none">
+                <span className="text-3xl font-bold text-white select-none">
                   {profileInfo.name.charAt(0).toUpperCase()}
                 </span>
               )}

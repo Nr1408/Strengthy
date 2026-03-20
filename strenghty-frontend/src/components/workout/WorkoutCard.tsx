@@ -39,6 +39,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
   let totalPRs = 0;
   let totalDistanceMeters = 0;
   let totalVolume = 0;
+  let totalCardioSeconds = 0;
   let exerciseBadges: string[] = [];
   let hasStrength = false;
   let hasCardio = false;
@@ -50,29 +51,91 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
   const fetchedStrengthSets = setsQuery.data as UiWorkoutSet[] | undefined;
   const fetchedCardioSets = cardioQuery.data as any[] | undefined;
 
-  if (fetchedStrengthSets && fetchedStrengthSets.length > 0) {
-    totalSets =
-      fetchedStrengthSets.length +
-      (fetchedCardioSets ? fetchedCardioSets.length : 0);
+  if (
+    (fetchedStrengthSets && fetchedStrengthSets.length > 0) ||
+    (fetchedCardioSets && fetchedCardioSets.length > 0)
+  ) {
+    const strengthLen = fetchedStrengthSets ? fetchedStrengthSets.length : 0;
+    const cardioLen = fetchedCardioSets ? fetchedCardioSets.length : 0;
+    totalSets = strengthLen + cardioLen;
     totalPRs =
-      fetchedStrengthSets.reduce(
+      (fetchedStrengthSets || []).reduce(
         (acc: number, s: UiWorkoutSet) => acc + countPrTypesFromSet(s),
         0,
       ) +
-      (fetchedCardioSets
-        ? fetchedCardioSets.reduce(
-            (acc: number, s: any) => acc + countPrTypesFromSet(s),
-            0,
-          )
-        : 0);
-    // Compute volume from canonical server-fetched sets
-    totalVolume = fetchedStrengthSets.reduce((acc, s) => {
+      (fetchedCardioSets || []).reduce(
+        (acc: number, s: any) => acc + countPrTypesFromSet(s),
+        0,
+      );
+    // Compute volume from canonical server-fetched strength sets
+    totalVolume = (fetchedStrengthSets || []).reduce((acc, s) => {
       const w = typeof s.weight === "number" ? s.weight : Number(s.weight || 0);
       const r = typeof s.reps === "number" ? s.reps : Number(s.reps || 0);
       return acc + w * r;
     }, 0);
-    hasStrength = fetchedStrengthSets.length > 0;
-    hasCardio = !!(fetchedCardioSets && fetchedCardioSets.length > 0);
+    hasStrength = (fetchedStrengthSets || []).length > 0;
+    hasCardio = (fetchedCardioSets || []).length > 0;
+
+    // Cardio totals (distance in meters, duration in seconds)
+    totalDistanceMeters = (fetchedCardioSets || []).reduce((acc, c: any) => {
+      // Accept multiple possible cardio distance fields from server and
+      // normalize units:
+      // - distance_meters (meters)
+      // - distance (could be km or meters)
+      // - cardioDistance (could be km or meters)
+      const metersFromMeters =
+        typeof c.distance_meters === "number"
+          ? c.distance_meters
+          : typeof c.distance_meters === "string" &&
+              !isNaN(Number(c.distance_meters))
+            ? Number(c.distance_meters)
+            : 0;
+
+      const rawDistance =
+        typeof c.distance === "number"
+          ? c.distance
+          : typeof c.distance === "string" && !isNaN(Number(c.distance))
+            ? Number(c.distance)
+            : 0;
+      // If rawDistance looks like meters (>1000) treat as meters, else km
+      const metersFromDistance =
+        rawDistance > 1000
+          ? rawDistance
+          : rawDistance > 0
+            ? rawDistance * 1000
+            : 0;
+
+      const rawCardio =
+        typeof c.cardioDistance === "number"
+          ? c.cardioDistance
+          : typeof c.cardioDistance === "string" &&
+              !isNaN(Number(c.cardioDistance))
+            ? Number(c.cardioDistance)
+            : 0;
+      let metersFromCardioDistance = 0;
+      if (rawCardio > 0) {
+        if (rawCardio > 1000) {
+          // already meters
+          metersFromCardioDistance = rawCardio;
+        } else {
+          // assume km for non-stairs values
+          metersFromCardioDistance =
+            c.cardioMode === "stairs" ? 0 : rawCardio * 1000;
+        }
+      }
+
+      const meters =
+        metersFromMeters || metersFromDistance || metersFromCardioDistance;
+      return acc + meters;
+    }, 0);
+    totalCardioSeconds = (fetchedCardioSets || []).reduce((acc, c: any) => {
+      // accept cardioDurationSeconds or split_seconds/duration
+      const s1 = Number(c.cardioDurationSeconds || 0) || 0;
+      const s2 = Number(c.split_seconds || 0) || 0;
+      const s3 = Number(c.duration || 0) || 0;
+      return acc + (s1 || s2 || s3);
+    }, 0);
+
     const uniqueIds = Array.from(
       new Set([
         ...(fetchedStrengthSets || []).map((s) => s.exercise),
@@ -197,14 +260,16 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
         <div className="mt-4 flex flex-wrap sm:flex-nowrap items-center gap-4 text-xs text-muted-foreground">
           <span>{displayedExercisesCount ?? "?"} exercises</span>
           <span>{totalSets} sets</span>
-          {!onlyCardio && workout.duration && (
+          {(workout.duration || totalCardioSeconds > 0) && (
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              {formatMinutes(workout.duration)}
+              {formatMinutes(
+                workout.duration || Math.round(totalCardioSeconds / 60),
+              )}
             </span>
           )}
-          {/* Volume (only show when not-only-cardio) */}
-          {!onlyCardio && (
+          {/* Volume: show when there's non-zero volume data */}
+          {totalVolume > 0 && (
             <span>
               {totalVolume.toLocaleString()} {getUnit()}
             </span>

@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SetRow } from "@/components/workout/SetRow";
+import { titleCase } from "@/lib/utils";
 import { getExerciseIconFile } from "@/lib/exerciseIcons";
 import libraryExercises from "@/data/libraryExercises";
 import { format } from "date-fns";
@@ -118,34 +119,19 @@ export default function ExerciseInfo() {
     return rid;
   }, [id, exercises, nameFromState]);
 
-  const { data: sets = [] } = useQuery({
-    queryKey: ["exercise-sets", resolvedId],
-    queryFn: () => getSetsForExercise(String(resolvedId)),
-    enabled: !!resolvedId && /^\d+$/.test(resolvedId),
-  });
-
-  const { data: workouts = [] } = useQuery({
-    queryKey: ["workouts"],
-    queryFn: getWorkouts,
-  });
-
-  const [graphMetric, setGraphMetric] = useState<"heaviest" | "orm" | "volume">(
-    "heaviest",
-  );
-  const [timeRange, setTimeRange] = useState<"1W" | "1M" | "3M" | "ALL">("ALL");
-
   const selectedExercise = useMemo(() => {
     const byId = exercises.find(
       (e) => String(e.id) === String(resolvedId || id),
     );
     if (byId) {
-      if (!byId.equipment) {
-        const lib = libraryExercises.find(
-          (l) => l.name.toLowerCase() === byId.name.toLowerCase(),
-        );
-        if (lib?.equipment) return { ...byId, equipment: lib.equipment };
-      }
-      return byId;
+      const lib = libraryExercises.find(
+        (l) => l.name.toLowerCase() === byId.name.toLowerCase(),
+      );
+      return {
+        ...byId,
+        equipment: byId.equipment ?? lib?.equipment,
+        muscleGroup: lib?.muscleGroup ?? byId.muscleGroup,
+      };
     }
     const lib = libraryExercises.find(
       (e) => String(e.id) === String(resolvedId || id),
@@ -166,6 +152,41 @@ export default function ExerciseInfo() {
     };
   }, [exercises, id, resolvedId, nameFromState, muscleFromState]);
 
+  const { data: sets = [] } = useQuery({
+    queryKey: ["exercise-sets", resolvedId],
+    queryFn: () => getSetsForExercise(String(resolvedId)),
+    enabled: !!resolvedId && /^\d+$/.test(resolvedId),
+  });
+
+  const { data: cardioSets = [] } = useQuery({
+    queryKey: ["exercise-cardio-sets", resolvedId],
+    queryFn: async () => {
+      try {
+        const { getCardioSetsForExercise } = await import("@/lib/api");
+        return getCardioSetsForExercise(String(resolvedId));
+      } catch (e) {
+        return [] as any[];
+      }
+    },
+    enabled:
+      !!resolvedId &&
+      /^\d+$/.test(resolvedId) &&
+      (((selectedExercise?.muscleGroup || "") as string).toLowerCase() ===
+        "cardio" ||
+        isHiit(selectedExercise?.name || "") ||
+        isHiit(nameFromState)),
+  });
+
+  const { data: workouts = [] } = useQuery({
+    queryKey: ["workouts"],
+    queryFn: getWorkouts,
+  });
+
+  const [graphMetric, setGraphMetric] = useState<
+    "heaviest" | "orm" | "volume" | "duration" | "distance" | "stat" | "reps"
+  >("heaviest");
+  const [timeRange, setTimeRange] = useState<"1W" | "1M" | "3M" | "ALL">("ALL");
+
   const completedIds = useMemo(
     () =>
       new Set(
@@ -174,15 +195,40 @@ export default function ExerciseInfo() {
     [workouts],
   );
 
-  const loggedSets = useMemo(
-    () =>
-      (sets || []).filter((s: any) =>
+  const isHiitExercise = isHiit(selectedExercise?.name || "");
+  const primaryMuscle = isHiitExercise
+    ? "cardio"
+    : selectedExercise.muscleGroup || "other";
+
+  const loggedSets = useMemo(() => {
+    const strengthFiltered = (sets || []).filter((s: any) =>
+      completedIds.has(String(s.workout || s.workoutId || s.workout_id || "")),
+    );
+    const cardioMapped = (cardioSets || [])
+      .filter((s: any) =>
         completedIds.has(
           String(s.workout || s.workoutId || s.workout_id || ""),
         ),
-      ),
-    [sets, completedIds],
-  );
+      )
+      .map((s: any) => ({
+        ...s,
+        cardioMode: s.mode,
+        cardioDurationSeconds: s.durationSeconds,
+        cardioDistance:
+          s.mode === "stairs"
+            ? s.distance
+            : (Number(s.distance ?? 0) || 0) / 1000,
+        cardioStat: s.splitSeconds ?? s.level,
+      }));
+    // Cardio exercises (including HIIT) saved to cardio_sets — show cardioMapped
+    if (
+      ((selectedExercise?.muscleGroup || "") as string).toLowerCase() ===
+        "cardio" ||
+      isHiitExercise
+    )
+      return cardioMapped;
+    return strengthFiltered;
+  }, [sets, cardioSets, completedIds, selectedExercise, isHiitExercise]);
 
   const records = useMemo(() => {
     let hw = 0,
@@ -190,8 +236,12 @@ export default function ExerciseInfo() {
       bs = "-",
       e1 = 0;
     (loggedSets || []).forEach((s: any) => {
-      const w = Number(s.weight || 0),
-        r = Number(s.reps || 0);
+      const w = Number(s.weight || 0);
+      const r = isHiitExercise
+        ? typeof s.floors === "number" && s.floors > 0
+          ? s.floors
+          : Number(s.reps || 0)
+        : Number(s.reps || 0);
       if (w > hw) {
         hw = w;
         hu = String(s.unit || "kg");
@@ -261,10 +311,11 @@ export default function ExerciseInfo() {
     [groupedHistory],
   );
 
-  const primaryMuscle = selectedExercise.muscleGroup || "other";
-  const secondaryMuscles = SECONDARY_BY_PRIMARY[primaryMuscle] || [
-    "Support Muscles",
-  ];
+  const secondaryMuscles = SECONDARY_BY_PRIMARY[
+    isHiit(selectedExercise?.name || "")
+      ? "cardio"
+      : selectedExercise.muscleGroup || "other"
+  ] || ["Support Muscles"];
 
   const progressionPoints = useMemo(() => {
     const dm = new Map<string, { date: Date; value: number }>();
@@ -276,6 +327,70 @@ export default function ExerciseInfo() {
         (g.sets || []).forEach((s: any) => {
           const w = Number(s.weight || 0),
             r = Number(s.reps || 0);
+
+          // Cardio handling: accept multiple field names and normalize units
+          if (s.cardioMode) {
+            // Duration: prefer explicit seconds fields, fallback to split_seconds or duration
+            let durSeconds =
+              Number(
+                s.cardioDurationSeconds ||
+                  s.split_seconds ||
+                  s.duration_seconds ||
+                  0,
+              ) || 0;
+            // If no seconds fields but `duration` exists as a small number, assume minutes
+            if (!durSeconds && s.duration) {
+              const dRaw = Number(s.duration || 0);
+              if (dRaw > 0) {
+                durSeconds = dRaw > 1000 ? dRaw : dRaw * 60;
+              }
+            }
+
+            // Distance: accept meters or km fields and normalize to kilometers for the chart
+            const metersFromMeters =
+              Number(s.distance_meters || s.distance_m || 0) || 0;
+            const rawDistance =
+              Number(s.distance || s.cardioDistance || 0) || 0;
+            let distKm = 0;
+            if (metersFromMeters > 0) distKm = metersFromMeters / 1000;
+            else if (rawDistance > 0) {
+              // If value looks like meters (>1000), convert to km
+              distKm = rawDistance > 1000 ? rawDistance / 1000 : rawDistance;
+            }
+
+            const stat = Number(s.cardioStat || 0);
+            // HIIT (bodyweight) tends to use reps + duration
+            if (isHiitExercise || s.isHiit) {
+              const hiitReps =
+                typeof s.floors === "number" && s.floors > 0 ? s.floors : r;
+              mv = Math.max(mv, graphMetric === "reps" ? hiitReps : durSeconds);
+            } else if (graphMetric === "duration") {
+              mv = Math.max(mv, durSeconds);
+            } else if (graphMetric === "distance") {
+              mv = Math.max(mv, distKm);
+            } else if (graphMetric === "stat") {
+              // Use cardioStat when present, otherwise try to compute pace (sec per km)
+              if (stat > 0) mv = Math.max(mv, stat);
+              else if (durSeconds > 0 && distKm > 0) {
+                mv = Math.max(mv, durSeconds / distKm);
+              }
+            }
+            return;
+          }
+
+          // HIIT strength sets: graph reps or duration directly
+          if (isHiitExercise) {
+            if (graphMetric === "reps" && r > 0) mv = Math.max(mv, r);
+            else if (graphMetric === "duration") {
+              const dur = Number(
+                s.cardioDurationSeconds || s.duration_seconds || 0,
+              );
+              if (dur > 0) mv = Math.max(mv, dur);
+            }
+            return;
+          }
+
+          // Strength handling (existing behavior)
           if (graphMetric === "heaviest") {
             if (w > mv) mv = w;
             return;
@@ -332,8 +447,62 @@ export default function ExerciseInfo() {
     v >= 1000
       ? `${(v / 1000).toFixed(1).replace(".0", "")}k`
       : `${Math.round(v)}`;
+
   const fmtVal = (v: number) =>
-    graphMetric === "volume" ? fmtCompact(v) : String(Math.round(v));
+    graphMetric === "volume" || graphMetric === "distance"
+      ? fmtCompact(v)
+      : graphMetric === "duration" || graphMetric === "stat"
+        ? // duration/stat are seconds-based -> show mm:ss when >=60
+          v >= 60
+          ? (() => {
+              const total = Math.round(v);
+              const h = Math.floor(total / 3600);
+              const m = Math.floor((total % 3600) / 60)
+                .toString()
+                .padStart(2, "0");
+              const s = (total % 60).toString().padStart(2, "0");
+              return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
+            })()
+          : String(Math.round(v))
+        : String(Math.round(v));
+
+  const metricLabel = (m: typeof graphMetric) => {
+    if (m === "heaviest") return "Heaviest";
+    if (m === "orm") return "Est. 1RM";
+    if (m === "volume") return "Volume";
+    if (m === "duration") return "Duration";
+    if (m === "distance") return "Distance";
+    if (m === "stat") return "Pace";
+    if (m === "reps") return "Reps";
+    return "Value";
+  };
+
+  // If this is a cardio or HIIT exercise, default to appropriate metric
+  useEffect(() => {
+    try {
+      if (isHiitExercise) {
+        if (!["duration", "reps"].includes(graphMetric)) {
+          setGraphMetric("reps");
+        }
+      } else if (
+        (selectedExercise?.muscleGroup || "").toLowerCase() === "cardio"
+      ) {
+        if (!["duration", "distance", "stat"].includes(graphMetric)) {
+          setGraphMetric("duration");
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [selectedExercise, isHiitExercise]);
+
+  const metricOptions = useMemo(() => {
+    if (isHiitExercise) return ["duration", "reps"] as const;
+    if ((selectedExercise?.muscleGroup || "").toLowerCase() === "cardio") {
+      return ["duration", "distance", "stat"] as const;
+    }
+    return ["heaviest", "orm", "volume"] as const;
+  }, [selectedExercise, isHiitExercise]);
 
   const chartData = useMemo(
     () =>
@@ -458,7 +627,7 @@ export default function ExerciseInfo() {
                 <span
                   className={`${pill} ${colorMap[primaryMuscle] || colorMap.other}`}
                 >
-                  {String(selectedExercise.muscleGroup || "other")}
+                  {titleCase(String(selectedExercise.muscleGroup || "other"))}
                 </span>
               </div>
             </div>
@@ -486,22 +655,37 @@ export default function ExerciseInfo() {
             <CardTitle className="text-white">Your Records</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-3 px-[18px] py-5">
-            {[
-              {
-                label: "Heaviest Weight",
-                value: `${records.heaviestWeight || 0} ${records.heaviestUnit}`,
-              },
-              { label: "Best Set", value: records.bestSet },
-              {
-                label: "Estimated 1RM",
-                value: `${Math.round(records.estimated1RM || 0)} ${records.heaviestUnit}`,
-              },
-              { label: "Total Workouts", value: String(records.totalWorkouts) },
-              {
-                label: "Last Performed",
-                value: lastPerformed ? format(lastPerformed, "MMM d") : "-",
-              },
-            ].map(({ label, value }) => (
+            {(primaryMuscle === "cardio"
+              ? [
+                  {
+                    label: "Total Workouts",
+                    value: String(records.totalWorkouts),
+                  },
+                  {
+                    label: "Last Performed",
+                    value: lastPerformed ? format(lastPerformed, "MMM d") : "-",
+                  },
+                ]
+              : [
+                  {
+                    label: "Heaviest Weight",
+                    value: `${records.heaviestWeight || 0} ${records.heaviestUnit}`,
+                  },
+                  { label: "Best Set", value: records.bestSet },
+                  {
+                    label: "Estimated 1RM",
+                    value: `${Math.round(records.estimated1RM || 0)} ${records.heaviestUnit}`,
+                  },
+                  {
+                    label: "Total Workouts",
+                    value: String(records.totalWorkouts),
+                  },
+                  {
+                    label: "Last Performed",
+                    value: lastPerformed ? format(lastPerformed, "MMM d") : "-",
+                  },
+                ]
+            ).map(({ label, value }) => (
               <div
                 key={label}
                 className="rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-[14px] space-y-2"
@@ -523,7 +707,9 @@ export default function ExerciseInfo() {
               <div className="mt-2 rounded-xl border border-white/5 bg-zinc-900/60 px-1 pt-2 pb-1">
                 <div className="mb-3 text-sm text-muted-foreground">
                   {latest
-                    ? `${graphMetric === "volume" ? "Latest Volume" : "Latest"}: ${fmtVal(latest.value)} kg • ${latest.date ? format(new Date(latest.date), "MMM d") : "-"}`
+                    ? `${metricLabel(graphMetric) === "Volume" ? "Latest Volume" : "Latest"}: ${fmtVal(
+                        latest.value,
+                      )}${graphMetric === "distance" ? " km" : graphMetric === "stat" ? " / km" : graphMetric === "duration" || isHiitExercise ? "" : " kg"} • ${latest.date ? format(new Date(latest.date), "MMM d") : "-"}`
                     : "Latest: -"}
                 </div>
                 <div className="mb-3 flex gap-1.5">
@@ -539,18 +725,28 @@ export default function ExerciseInfo() {
                   ))}
                 </div>
                 <div className="mb-4 flex flex-wrap gap-2">
-                  {(["heaviest", "orm", "volume"] as const).map((m) => (
+                  {metricOptions.map((m) => (
                     <button
                       key={m}
                       type="button"
-                      onClick={() => setGraphMetric(m)}
+                      onClick={() => setGraphMetric(m as any)}
                       className={`rounded-full border px-3 py-1 text-xs font-semibold ${graphMetric === m ? "border-orange-500/40 bg-orange-500/15 text-orange-400" : "border-white/10 bg-zinc-800/50 text-muted-foreground hover:text-white"}`}
                     >
                       {m === "heaviest"
                         ? "Heaviest Weight"
                         : m === "orm"
                           ? "1RM"
-                          : "Volume"}
+                          : m === "volume"
+                            ? "Volume"
+                            : m === "duration"
+                              ? "Duration"
+                              : m === "distance"
+                                ? "Distance"
+                                : m === "stat"
+                                  ? "Pace"
+                                  : m === "reps"
+                                    ? "Reps"
+                                    : String(m)}
                     </button>
                   ))}
                 </div>
@@ -562,7 +758,13 @@ export default function ExerciseInfo() {
                   /* Fixed Y-axis + scrollable chart body */
                   <div className="flex w-full" style={{ height: 200 }}>
                     {/* Fixed Y-axis panel — never scrolls */}
-                    <div style={{ width: 56, flexShrink: 0, height: "100%" }}>
+                    <div
+                      style={{
+                        width: graphMetric === "stat" ? 80 : 56,
+                        flexShrink: 0,
+                        height: "100%",
+                      }}
+                    >
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
                           data={chartData}
@@ -572,13 +774,21 @@ export default function ExerciseInfo() {
                             tick={{ fill: "#71717a", fontSize: 11 }}
                             tickLine={false}
                             axisLine={false}
-                            width={56}
+                            width={graphMetric === "stat" ? 80 : 56}
                             tickFormatter={(v) =>
                               v <= 0
                                 ? ""
                                 : graphMetric === "volume"
                                   ? `${fmtCompact(v)}kg`
-                                  : `${Math.round(v)}kg`
+                                  : graphMetric === "distance"
+                                    ? `${fmtCompact(v)}km`
+                                    : graphMetric === "stat"
+                                      ? `${fmtVal(v)}/km`
+                                      : graphMetric === "duration"
+                                        ? String(fmtVal(v))
+                                        : isHiitExercise
+                                          ? String(Math.round(v))
+                                          : `${Math.round(v)}kg`
                             }
                             domain={yDomain}
                           />
@@ -659,14 +869,22 @@ export default function ExerciseInfo() {
                                 fontSize: 12,
                                 color: "white",
                               }}
-                              formatter={(value: number) => [
-                                `${fmtVal(value)} kg`,
-                                graphMetric === "heaviest"
-                                  ? "Heaviest"
-                                  : graphMetric === "orm"
-                                    ? "Est. 1RM"
-                                    : "Volume",
-                              ]}
+                              formatter={(value: number) => {
+                                const unit =
+                                  graphMetric === "distance"
+                                    ? " km"
+                                    : graphMetric === "stat"
+                                      ? " / km"
+                                      : graphMetric === "duration"
+                                        ? ""
+                                        : isHiitExercise
+                                          ? ""
+                                          : " kg";
+                                return [
+                                  `${fmtVal(value)}${unit}`,
+                                  metricLabel(graphMetric),
+                                ];
+                              }}
                               labelStyle={{ color: "#a1a1aa", marginBottom: 4 }}
                               cursor={{
                                 stroke: "rgba(249,115,22,0.3)",
@@ -775,7 +993,7 @@ export default function ExerciseInfo() {
                             style={{
                               gridTemplateColumns: (() => {
                                 if (g.sets?.length > 0 && g.sets[0].cardioMode)
-                                  return isHiit(selectedExercise.name || "")
+                                  return isHiitExercise
                                     ? GRID_HIIT
                                     : GRID_CARDIO;
                                 return GRID_STRENGTH;
@@ -783,7 +1001,7 @@ export default function ExerciseInfo() {
                             }}
                           >
                             {g.sets?.[0]?.cardioMode ? (
-                              isHiit(selectedExercise.name || "") ? (
+                              isHiitExercise ? (
                                 <>
                                   <span className="flex justify-center">
                                     SET

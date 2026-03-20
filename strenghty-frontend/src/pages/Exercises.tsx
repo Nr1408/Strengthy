@@ -188,14 +188,26 @@ export default function Exercises() {
       );
     }
     const filtered = allMusclesOrder.filter((m) => present.has(m));
-    setAvailableMuscles(filtered);
+    setAvailableMuscles((prev) => {
+      if (
+        prev.length === filtered.length &&
+        prev.every((v, i) => v === filtered[i])
+      ) {
+        return prev;
+      }
+      return filtered;
+    });
+    // If the currently-selected muscle is no longer available, reset it to 'all'.
     if (
       selectedMuscle !== "all" &&
       !filtered.includes(selectedMuscle as MuscleGroup)
     ) {
       setSelectedMuscle("all");
     }
-  }, [exercises, selectedMuscle, showLibrary]);
+    // Intentionally omit `selectedMuscle` from the dependency list so we only
+    // recompute when the source data changes; selectedMuscle is only read
+    // to decide whether to reset it here.
+  }, [exercises, showLibrary]);
   const availableEquipments = useMemo(() => {
     const set = new Set<string>();
     (exercises as any[]).forEach((e) => {

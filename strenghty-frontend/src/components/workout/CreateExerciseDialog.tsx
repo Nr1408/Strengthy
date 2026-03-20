@@ -146,10 +146,10 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         <div className="relative">
                           <button
                             onClick={() => onEquipmentPickerOpenChange(false)}
-                            className="absolute right-3 top-0 text-zinc-400 hover:text-zinc-200"
+                            className="absolute right-0 top-0 h-7 w-7 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 text-sm font-medium transition-colors"
                             aria-label="Close"
                           >
-                            ×
+                            ✕
                           </button>
                           <h3 className="text-center text-lg font-medium text-zinc-100">
                             Equipment
@@ -160,8 +160,8 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         <button
                           className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
                             newExerciseEquipment === "all"
-                              ? "bg-white/5 text-white"
-                              : "text-zinc-300 hover:bg-white/3"
+                              ? "bg-orange-500/10 border-l-2 border-orange-500 text-white"
+                              : "text-zinc-300 hover:bg-white/5"
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -199,8 +199,8 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                               key={opt}
                               className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
                                 isSelected
-                                  ? "bg-white/5 text-white"
-                                  : "text-zinc-300 hover:bg-white/3"
+                                  ? "bg-orange-500/10 border-l-2 border-orange-500 text-white"
+                                  : "text-zinc-300 hover:bg-white/5"
                               }`}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -289,10 +289,10 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         <div className="relative">
                           <button
                             onClick={() => onMusclePickerOpenChange(false)}
-                            className="absolute right-3 top-0 text-zinc-400 hover:text-zinc-200"
+                            className="absolute right-0 top-0 h-7 w-7 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 text-sm font-medium transition-colors"
                             aria-label="Close"
                           >
-                            ×
+                            ✕
                           </button>
                           <h3 className="text-center text-lg font-medium text-zinc-100">
                             Muscles
@@ -303,8 +303,8 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                         <button
                           className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
                             !newExerciseMuscle
-                              ? "bg-white/5 text-white"
-                              : "text-zinc-300 hover:bg-white/3"
+                              ? "bg-orange-500/10 border-l-2 border-orange-500 text-white"
+                              : "text-zinc-300 hover:bg-white/5"
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -348,8 +348,8 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                                 key={opt}
                                 className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
                                   isSelected
-                                    ? "bg-white/5 text-white"
-                                    : "text-zinc-300 hover:bg-white/3"
+                                    ? "bg-orange-500/10 border-l-2 border-orange-500 text-white"
+                                    : "text-zinc-300 hover:bg-white/5"
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();

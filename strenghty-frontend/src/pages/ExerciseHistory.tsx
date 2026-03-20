@@ -194,16 +194,17 @@ export default function ExerciseHistory() {
     // Prefer serverSets if available
     if (serverSets && serverSets.length > 0) {
       // serverSets items include workout id and set details
-      const m = new Map<string, any>();
+      const m = new Map<string, { wid: string; sets: any[] }>();
       serverSets.forEach((s: any) => {
         const wid = String(
           s.workout || s.workout_id || s.workoutId || "unknown",
         );
         if (!completedWorkoutIds.has(wid)) return;
-        if (!m.has(wid)) m.set(wid, []);
-        m.get(wid).push(s);
+        const key = s.cardioMode ? `${wid}:cardio` : `${wid}:strength`;
+        if (!m.has(key)) m.set(key, { wid, sets: [] });
+        m.get(key)!.sets.push(s);
       });
-      const arr = Array.from(m.entries()).map(([wid, sets]) => {
+      const arr = Array.from(m.values()).map(({ wid, sets }) => {
         const workout = workouts.find((w: any) => String(w.id) === wid);
         return {
           workoutId: wid,
