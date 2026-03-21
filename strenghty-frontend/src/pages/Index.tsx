@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,21 +12,28 @@ import { ProofStep } from "../../ProofSection";
 type AuthIntent = "login" | "signup";
 
 const stepVariants = {
-  enter: { opacity: 0, y: 24 },
+  enter: { opacity: 0, y: 16 },
   center: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.28, ease: "easeOut" },
+    transition: { duration: 0.2, ease: "easeOut" },
   },
   exit: {
     opacity: 0,
-    y: -24,
-    transition: { duration: 0.28, ease: "easeOut" },
+    y: -16,
+    transition: { duration: 0.15, ease: "easeIn" },
   },
 } as const;
 
 const stepLabels = ["Hero", "Why", "Differentiators", "Proof", "Auth"] as const;
 const TOTAL_STEPS = stepLabels.length;
+
+const differentiators = [
+  "Designed for strength training",
+  "Readable progress, not noisy charts",
+  "Fast logging, zero friction",
+  "Built for lifters, not content",
+];
 
 export default function Index() {
   const navigate = useNavigate();
@@ -55,16 +62,6 @@ export default function Index() {
   const goToStep = (next: number) => {
     setStep(Math.max(0, Math.min(4, next)));
   };
-
-  const differentiators = useMemo(
-    () => [
-      "Designed for strength training",
-      "Readable progress, not noisy charts",
-      "Fast logging, zero friction",
-      "Built for lifters, not content",
-    ],
-    [],
-  );
 
   return (
     <div className="relative bg-background flex h-[100svh] min-h-[100svh] flex-col overflow-hidden">
@@ -97,7 +94,7 @@ export default function Index() {
 
       {/* Main: fixed-height, no-scroll step stack */}
       <main className="relative flex-1 overflow-hidden">
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="sync" initial={false}>
           {step === 0 && (
             <motion.section
               key="step-0"

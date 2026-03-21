@@ -27,8 +27,8 @@ type ProofStepProps = {
 
 export function ProofStep({ onNext }: ProofStepProps) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 pt-10 -translate-y-10 scale-110 sm:pt-0 md:translate-y-0 md:scale-100 lg:scale-110 xl:scale-125">
-      <h2 className="font-heading text-2xl font-bold md:text-3xl text-center text-white">
+    <div className="flex flex-col items-center justify-center px-6 pt-10 sm:pt-0 w-full max-w-lg mx-auto">
+      <h2 className="font-heading text-2xl font-bold md:text-3xl lg:text-4xl text-center text-white">
         See it in action
       </h2>
 
@@ -37,9 +37,9 @@ export function ProofStep({ onNext }: ProofStepProps) {
         {/* Background glow */}
         <div className="pointer-events-none absolute inset-0 -m-8 rounded-full bg-primary/5 blur-[60px]" />
 
-        <div className="relative rounded-2xl border border-border bg-card p-4 shadow-2xl shadow-primary/5">
+        <div className="relative rounded-2xl border border-border bg-card p-4 md:p-6 shadow-2xl shadow-primary/5">
           <div className="mb-3 flex items-center justify-between">
-            <span className="font-heading text-xs font-semibold text-white">
+            <span className="font-heading text-xs md:text-sm font-semibold text-white">
               Weekly Overview
             </span>
             <span className="text-[10px] text-muted-foreground">Feb 2–8</span>
@@ -55,7 +55,7 @@ export function ProofStep({ onNext }: ProofStepProps) {
                     {label}
                   </span>
                 </div>
-                <p className="mt-1.5 font-heading text-base font-medium text-white">
+                <p className="mt-1.5 font-heading text-base md:text-lg font-medium text-white">
                   {value}
                 </p>
                 <p className="text-[10px] text-primary">{sub}</p>
@@ -80,7 +80,7 @@ export function ProofStep({ onNext }: ProofStepProps) {
         </div>
       </div>
 
-      <Button size="sm" className="mt-10 px-4 text-xs" onClick={onNext}>
+      <Button size="lg" className="mt-10 px-8" onClick={onNext}>
         Create your account
         <ArrowRight className="ml-2 h-3.5 w-3.5" />
       </Button>

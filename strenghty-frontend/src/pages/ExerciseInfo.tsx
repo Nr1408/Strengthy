@@ -452,18 +452,15 @@ export default function ExerciseInfo() {
     graphMetric === "volume" || graphMetric === "distance"
       ? fmtCompact(v)
       : graphMetric === "duration" || graphMetric === "stat"
-        ? // duration/stat are seconds-based -> show mm:ss when >=60
-          v >= 60
-          ? (() => {
-              const total = Math.round(v);
-              const h = Math.floor(total / 3600);
-              const m = Math.floor((total % 3600) / 60)
-                .toString()
-                .padStart(2, "0");
-              const s = (total % 60).toString().padStart(2, "0");
-              return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
-            })()
-          : String(Math.round(v))
+        ? (() => {
+            const total = Math.round(v);
+            const h = Math.floor(total / 3600);
+            const m = Math.floor((total % 3600) / 60)
+              .toString()
+              .padStart(2, "0");
+            const s = (total % 60).toString().padStart(2, "0");
+            return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
+          })()
         : String(Math.round(v));
 
   const metricLabel = (m: typeof graphMetric) => {
@@ -705,14 +702,14 @@ export default function ExerciseInfo() {
           <CardContent className="px-2 pt-2 pb-3">
             {progressionPoints.length >= 2 ? (
               <div className="mt-2 rounded-xl border border-white/5 bg-zinc-900/60 px-1 pt-2 pb-1">
-                <div className="mb-3 text-sm text-muted-foreground">
+                <div className="mb-3 px-2 text-sm text-muted-foreground">
                   {latest
                     ? `${metricLabel(graphMetric) === "Volume" ? "Latest Volume" : "Latest"}: ${fmtVal(
                         latest.value,
                       )}${graphMetric === "distance" ? " km" : graphMetric === "stat" ? " / km" : graphMetric === "duration" || isHiitExercise ? "" : " kg"} • ${latest.date ? format(new Date(latest.date), "MMM d") : "-"}`
                     : "Latest: -"}
                 </div>
-                <div className="mb-3 flex gap-1.5">
+                <div className="mb-3 px-2 flex gap-1.5">
                   {(["1W", "1M", "3M", "ALL"] as const).map((r) => (
                     <button
                       key={r}
@@ -724,7 +721,7 @@ export default function ExerciseInfo() {
                     </button>
                   ))}
                 </div>
-                <div className="mb-4 flex flex-wrap gap-2">
+                <div className="mb-4 px-2 flex flex-wrap gap-2">
                   {metricOptions.map((m) => (
                     <button
                       key={m}
@@ -760,7 +757,7 @@ export default function ExerciseInfo() {
                     {/* Fixed Y-axis panel — never scrolls */}
                     <div
                       style={{
-                        width: graphMetric === "stat" ? 80 : 56,
+                        width: graphMetric === "stat" ? 68 : 56,
                         flexShrink: 0,
                         height: "100%",
                       }}
@@ -774,7 +771,7 @@ export default function ExerciseInfo() {
                             tick={{ fill: "#71717a", fontSize: 11 }}
                             tickLine={false}
                             axisLine={false}
-                            width={graphMetric === "stat" ? 80 : 56}
+                            width={graphMetric === "stat" ? 72 : 56}
                             tickFormatter={(v) =>
                               v <= 0
                                 ? ""

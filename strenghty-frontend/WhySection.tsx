@@ -28,13 +28,13 @@ const features = [
 const containerVariants = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.1 },
+    transition: { staggerChildren: 0.06 },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.45 } },
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
 export default function WhySection() {
@@ -58,7 +58,7 @@ export function WhySectionContent({
 
   return (
     <section
-      className={`relative flex flex-col items-center justify-center overflow-hidden px-6 -translate-y-7 ${
+      className={`relative flex flex-col items-center justify-center overflow-hidden px-6 ${
         isStep ? "h-full min-h-0 pt-10 sm:pt-0" : "min-h-[100svh]"
       }`}
     >
@@ -67,12 +67,11 @@ export function WhySectionContent({
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 0.5 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         className="relative z-10 w-full max-w-lg text-center"
       >
-        <h2 className="font-heading text-3xl font-bold md:text-4xl text-white">
+        <h2 className="font-heading text-3xl font-bold md:text-4xl lg:text-5xl text-white">
           Why Strengthy?
         </h2>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -83,23 +82,22 @@ export function WhySectionContent({
       <motion.div
         variants={containerVariants}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.3 }}
-        className="relative z-10 mt-10 grid w-full max-w-lg grid-cols-2 gap-3"
+        animate="visible"
+        className="relative z-10 mt-10 grid w-full max-w-lg md:max-w-xl lg:max-w-2xl grid-cols-2 gap-3 md:gap-4"
       >
         {features.map(({ icon: Icon, title, description }) => (
           <motion.div
             key={title}
             variants={itemVariants}
-            className="rounded-xl border border-border bg-secondary/30 p-4 backdrop-blur-sm transition-colors hover:border-primary/30"
+            className="rounded-xl border border-border bg-secondary/30 p-4 md:p-5 backdrop-blur-sm transition-colors hover:border-primary/30"
           >
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Icon className="h-4.5 w-4.5" />
             </div>
-            <h3 className="font-heading text-sm font-semibold text-white">
+            <h3 className="font-heading text-sm md:text-base font-semibold text-white">
               {title}
             </h3>
-            <p className="mt-1 text-xs font-normal leading-relaxed text-muted-foreground">
+            <p className="mt-1 text-xs md:text-sm font-normal leading-relaxed text-muted-foreground">
               {description}
             </p>
           </motion.div>

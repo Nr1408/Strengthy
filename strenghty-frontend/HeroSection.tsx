@@ -31,13 +31,13 @@ function LiftWordRotator() {
         Deadlifts
       </span>
       <span className="absolute inset-0 flex items-center justify-center overflow-hidden">
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="sync" initial={false}>
           <motion.span
             key={word}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="block whitespace-nowrap font-heading font-bold text-primary"
           >
             {word}
@@ -54,12 +54,12 @@ interface HeroStepProps {
 
 export function HeroStep({ onNext }: HeroStepProps) {
   return (
-    <div className="flex flex-col items-center justify-center text-center px-6 -translate-y-8 scale-110 md:translate-y-0 md:scale-100">
+    <div className="flex flex-col items-center justify-center text-center px-6 w-full max-w-2xl mx-auto">
       {/* Decorative glows */}
       <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 -left-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
 
-      <h1 className="font-heading text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl text-white">
+      <h1 className="font-heading text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl xl:text-7xl text-white">
         <span className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1">
           <span>Track your</span>
           <LiftWordRotator />
@@ -69,7 +69,7 @@ export function HeroStep({ onNext }: HeroStepProps) {
         </span>
       </h1>
 
-      <p className="mx-auto mt-5 max-w-md text-base text-muted-foreground">
+      <p className="mx-auto mt-5 max-w-md text-base md:text-lg text-muted-foreground">
         A minimal workout tracker focused on lifting, not feeds.
       </p>
 
