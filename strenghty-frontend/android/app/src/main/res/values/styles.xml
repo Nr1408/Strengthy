@@ -19,9 +19,9 @@
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <!-- Use app background color instead of the old orange splash image -->
         <item name="windowSplashScreenBackground">@color/appBackground</item>
-        <!-- Show the app launcher icon (ic_launcher) on the splash screen -->
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_animation</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/appBackground</item>
+        <item name="windowSplashScreenAnimationDuration">600</item>
     </style>
 </resources>
