@@ -275,6 +275,54 @@ export default function Auth({
         try {
           await fetchAndPersistProfile();
         } catch {}
+        // Force-sync onboarding state from Supabase so localStorage
+        // is always populated before shouldRouteToOnboarding reads it
+        try {
+          if (SUPABASE_URL_ENV && SUPABASE_ANON_KEY_ENV) {
+            const payload = JSON.parse(
+              atob(
+                accessToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"),
+              ),
+            );
+            const userId = String(payload?.sub || "").trim();
+            if (userId) {
+              const base = SUPABASE_URL_ENV.replace(/\/+$/g, "");
+              const res = await fetch(
+                `${base}/rest/v1/profiles?select=goals,experience,monthly_workouts&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+                {
+                  headers: {
+                    apikey: SUPABASE_ANON_KEY_ENV,
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                },
+              );
+              if (res.ok) {
+                const rows = await res.json();
+                const profile = rows?.[0];
+                if (profile) {
+                  const hasGoals =
+                    Array.isArray(profile.goals) && profile.goals.length > 0;
+                  const hasExperience = !!String(
+                    profile.experience || "",
+                  ).trim();
+                  if (hasGoals && hasExperience) {
+                    // Write to localStorage so future checks are instant
+                    localStorage.setItem(
+                      "user:onboarding",
+                      JSON.stringify({
+                        goal: profile.goals?.[0] || "",
+                        experience: profile.experience || "",
+                      }),
+                    );
+                  } else {
+                    // Clear stale data so shouldRouteToOnboarding sends to onboarding
+                    localStorage.removeItem("user:onboarding");
+                  }
+                }
+              }
+            }
+          }
+        } catch {}
         try {
           let profileName: string | null = null;
           let profileEmail: string | null = null;
