@@ -929,7 +929,7 @@ export default function Auth({
           }`}
         >
           <MotionCard
-            className="w-full rounded-2xl overflow-hidden"
+            className="w-full rounded-2xl overflow-hidden border border-white/10"
             layout
             transition={{
               layout: {
@@ -1034,7 +1034,7 @@ export default function Auth({
                                 placeholder="••••••••"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                className="pl-10 border border-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
                                 required
                                 minLength={6}
                                 disabled={isLoading}
@@ -1057,7 +1057,7 @@ export default function Auth({
                                 onChange={(e) =>
                                   setConfirmNewPassword(e.target.value)
                                 }
-                                className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                className="pl-10 border border-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
                                 required
                                 minLength={6}
                                 disabled={isLoading}
@@ -1081,7 +1081,7 @@ export default function Auth({
                             type="button"
                             onClick={onClickContinueWithGoogle}
                             disabled={isLoading}
-                            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-zinc-800 text-white font-semibold text-sm border border-white/15 hover:bg-zinc-700 transition-colors"
+                            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-zinc-800 text-white font-semibold text-sm border border-white/25 hover:bg-zinc-700 transition-colors"
                           >
                             <svg width="18" height="18" viewBox="0 0 18 18">
                               <path
@@ -1127,7 +1127,7 @@ export default function Auth({
                                   placeholder="John Doe"
                                   value={formData.name}
                                   onChange={handleInputChange}
-                                  className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                  className="pl-10 border border-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
                                   required
                                   disabled={isLoading}
                                 />
@@ -1146,7 +1146,7 @@ export default function Auth({
                                 placeholder="you@example.com"
                                 value={formData.email}
                                 onChange={handleInputChange}
-                                className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                className="pl-10 border border-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
                                 required
                                 disabled={isLoading}
                               />
@@ -1164,7 +1164,7 @@ export default function Auth({
                                 placeholder="••••••••"
                                 value={formData.password}
                                 onChange={handleInputChange}
-                                className="pl-10 border border-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                className="pl-10 border border-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
                                 required
                                 minLength={6}
                                 disabled={isLoading}

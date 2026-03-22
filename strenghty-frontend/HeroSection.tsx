@@ -18,7 +18,7 @@ function LiftWordRotator() {
   useEffect(() => {
     const id = window.setInterval(() => {
       setIndex((prev) => (prev + 1) % liftWords.length);
-    }, 2000);
+    }, 1850);
 
     return () => window.clearInterval(id);
   }, []);
@@ -31,13 +31,13 @@ function LiftWordRotator() {
         Deadlifts
       </span>
       <span className="absolute inset-0 flex items-center justify-center overflow-hidden">
-        <AnimatePresence mode="sync" initial={false}>
+        <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={word}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.45, ease: "easeInOut" }}
             className="block whitespace-nowrap font-heading font-bold text-primary"
           >
             {word}
@@ -60,8 +60,8 @@ export function HeroStep({ onNext }: HeroStepProps) {
       <div className="pointer-events-none absolute -bottom-32 -left-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
 
       <h1 className="font-heading text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl xl:text-7xl text-white">
-        <span className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1">
-          <span>Track your</span>
+        <span className="flex flex-col items-center justify-center gap-y-1">
+          <span className="leading-tight">Track your</span>
           <LiftWordRotator />
         </span>
         <span className="bg-gradient-to-r from-blue-200/80 via-blue-100/70 to-blue-200/60 bg-clip-text text-transparent">

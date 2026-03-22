@@ -774,14 +774,24 @@ export default function Dashboard() {
                       0,
                       weeklyTarget - workoutsThisWeekDistinctDays,
                     );
-                    return remaining > 0 ? (
+                    // Days remaining in the current Mon-Sun week (week ends Sunday)
+                    const daysRemaining =
+                      new Date().getDay() === 0 ? 0 : 7 - new Date().getDay();
+                    const tooLate = remaining > 0 && remaining > daysRemaining;
+
+                    return remaining === 0 ? (
                       <p className="text-sm text-zinc-400">
-                        {remaining} more workout{remaining > 1 ? "s" : ""} to
-                        hit your target this week
+                        Target hit! Keep the streak going next week 🎯
+                      </p>
+                    ) : tooLate ? (
+                      <p className="text-sm text-zinc-400">
+                        {workoutsThisWeekDistinctDays}/{weeklyTarget} this week
+                        · Fresh start Monday 💪
                       </p>
                     ) : (
                       <p className="text-sm text-zinc-400">
-                        Target hit! Keep the streak going next week 🎯
+                        {remaining} more workout{remaining > 1 ? "s" : ""} to
+                        hit your target this week
                       </p>
                     );
                   })()}

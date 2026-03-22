@@ -483,7 +483,7 @@ export default function Profile() {
                 setTempAvatar(profileInfo.avatar || null);
                 setAvatarDialogOpen(true);
               }}
-              className="relative flex-shrink-0 h-20 w-20 rounded-full bg-transparent flex items-center justify-center overflow-hidden transition-all duration-200"
+              className="relative flex-shrink-0 h-20 w-20 rounded-full bg-transparent flex items-center justify-center overflow-hidden transition-all duration-200 ring-1 ring-white"
               aria-label="Change avatar"
             >
               {profileInfo.avatar ? (

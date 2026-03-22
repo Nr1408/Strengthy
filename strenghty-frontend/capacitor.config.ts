@@ -29,16 +29,16 @@ const config: CapacitorConfig & { tsSplashScreen?: any } = {
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,
-      backgroundColor: '#0a0a0a',
-      androidSplashResourceName: 'splash',
+      backgroundColor: '#000000',
+      androidSplashResourceName: 'launch_background',
       showSpinner: false,
     },
   },
   tsSplashScreen: {
-    launchShowDuration: 1500,
+    launchShowDuration: 2000,
     launchAutoHide: true,
-    backgroundColor: '#0a0a0a',
-    androidSplashResourceName: 'splash',
+    backgroundColor: '#000000',
+    androidSplashResourceName: 'launch_background',
     showSpinner: false,
   },
 };
