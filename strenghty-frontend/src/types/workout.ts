@@ -26,6 +26,7 @@ export interface Exercise {
   muscleGroup: MuscleGroup;
   equipment?: string;
   description?: string;
+  logType?: 'strength' | 'timed' | 'timed+reps';
   createdAt: Date;
 }
 

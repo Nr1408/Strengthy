@@ -577,6 +577,8 @@ export default function ExerciseInfo() {
                       id: String(selectedExercise.id),
                       name: selectedExercise.name,
                       muscleGroup: selectedExercise.muscleGroup,
+                      equipment: (selectedExercise as any).equipment,
+                      logType: (selectedExercise as any).logType,
                     },
                     exerciseToReplace: exerciseToReplace || null,
                     routine: routineFromState ?? undefined,
@@ -597,20 +599,17 @@ export default function ExerciseInfo() {
               {selectedExercise.name}
             </h2>
             <div className="mt-2 flex items-center gap-2">
-              {selectedExercise.equipment ? (
+              {selectedExercise.equipment &&
+              selectedExercise.equipment !== "all" ? (
                 <span className="inline-flex items-center rounded-full border border-orange-500/40 bg-orange-500/15 px-3 py-1 text-xs font-semibold text-orange-400 uppercase tracking-wide">
                   {selectedExercise.equipment}
                 </span>
-              ) : (
-                <span className="inline-flex items-center rounded-full border border-red-500/40 bg-red-500/15 px-2 py-1 text-xs font-semibold text-red-400">
-                  No equipment
-                </span>
-              )}
+              ) : null}
             </div>
             <div className="mt-4">
               <div className="h-[100px] w-[100px] rounded-md bg-zinc-800 border border-white/10 p-2 flex items-center justify-center">
                 <img
-                  src={`/icons/${getExerciseIconFile(selectedExercise.name, selectedExercise.muscleGroup || "")}`}
+                  src={`/icons/${getExerciseIconFile(selectedExercise.name, selectedExercise.muscleGroup || "", (selectedExercise as any).custom)}`}
                   alt={selectedExercise.name}
                   className="h-full w-full object-contain"
                 />

@@ -7,6 +7,8 @@ import {
   GRID_TEMPLATE_CARDIO_NO_CHECK,
   GRID_TEMPLATE_HIIT,
   GRID_TEMPLATE_HIIT_NO_CHECK,
+  GRID_TEMPLATE_TIMED,
+  GRID_TEMPLATE_TIMED_NO_CHECK,
   isHiitExerciseName,
 } from "@/components/workout/SetsHeader";
 import type { WorkoutSet } from "@/types/workout";
@@ -47,6 +49,7 @@ interface SetRowProps {
   onUpdate: (updates: Partial<WorkoutSet>) => void;
   onUnitChange?: (unit: "lbs" | "kg") => void;
   onComplete: () => void;
+  logType?: "strength" | "timed" | "timed+reps";
 }
 
 function HeaderCell({ children }: { children: React.ReactNode }) {
@@ -77,6 +80,7 @@ export function SetRow({
   onUpdate,
   onUnitChange,
   onComplete,
+  logType,
 }: SetRowProps) {
   const isCardio = !!set.cardioMode;
   const name = (exerciseName || "").toLowerCase();
@@ -362,6 +366,1200 @@ export function SetRow({
   // they always use the HIIT grid and column semantics (time, reps, RPE)
   // even when the underlying record is a strength set (no cardioMode).
   const isCardioLike = isCardio || isHiitBodyweight;
+
+  const isTimedReps = logType === "timed+reps";
+  const isTimed = logType === "timed";
+
+  // Timed+Reps-specific layout: render a compact 6-column row matching the
+  // timed+reps header (SET, DURATION, REPS, RPE, TROPHY, COMPLETE).
+  if (isTimedReps) {
+    return (
+      <div
+        className="grid gap-1 rounded-lg border border-border px-1 py-1 items-center mx-auto"
+        style={{
+          gridTemplateColumns: GRID_TEMPLATE_TIMED,
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          overflow: "hidden",
+        }}
+      >
+        {/* Column 1: Set type */}
+        <Cell>
+          {!readOnly ? (
+            useDialogForSetType ? (
+              <Dialog
+                open={setTypeDialogOpen}
+                onOpenChange={setSetTypeDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
+                      "translate-x-[0.5px]",
+                      typeClasses[currentType],
+                    )}
+                    aria-label={`Set type ${currentType}`}
+                  >
+                    {currentType === "W"
+                      ? "W"
+                      : currentType === "S"
+                        ? setNumber
+                        : currentType === "F"
+                          ? "F"
+                          : "D"}
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="fixed left-1/2 top-1/2 z-[120] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] max-h-[80vh] overflow-y-auto rounded-[32px] bg-zinc-900/95 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none">
+                  <DialogHeader className="text-center">
+                    <DialogTitle className="text-base font-semibold">
+                      Select Set Type
+                    </DialogTitle>
+                    <DialogDescription className="mt-1 text-xs text-muted-foreground">
+                      Choose how this set should be logged.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="mt-4 w-full divide-y divide-white/10">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdate({ type: "W" });
+                        setSetTypeDialogOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-yellow-400">
+                        W
+                      </span>
+                      <span className="text-sm">Warm Up Set</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdate({ type: "S" });
+                        setSetTypeDialogOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-white">
+                        1
+                      </span>
+                      <span className="text-sm">Normal Set</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdate({ type: "F" });
+                        setSetTypeDialogOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-red-400">
+                        F
+                      </span>
+                      <span className="text-sm">Failure Set</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdate({ type: "D" });
+                        setSetTypeDialogOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-sky-400">
+                        D
+                      </span>
+                      <span className="text-sm">Drop Set</span>
+                    </button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ) : (
+              // reuse dropdown menu trigger
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
+                      typeClasses[currentType],
+                    )}
+                    aria-label={`Set type ${currentType}`}
+                  >
+                    {currentType === "W"
+                      ? "W"
+                      : currentType === "S"
+                        ? setNumber
+                        : currentType === "F"
+                          ? "F"
+                          : "D"}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 p-0">
+                  <div className="space-y-2 rounded-md bg-neutral-900 p-3">
+                    <DropdownMenuLabel className="px-0 text-white">
+                      Select Set Type
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="-mx-3" />
+                    <DropdownMenuItem
+                      onClick={() => onUpdate({ type: "W" })}
+                      className="flex items-center gap-3 py-2 text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-yellow-400">
+                        W
+                      </span>
+                      <span className="text-sm">Warm Up Set</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onUpdate({ type: "S" })}
+                      className="flex items-center gap-3 py-2 text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-white">
+                        1
+                      </span>
+                      <span className="text-sm">Normal Set</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onUpdate({ type: "F" })}
+                      className="flex items-center gap-3 py-2 text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-red-400">
+                        F
+                      </span>
+                      <span className="text-sm">Failure Set</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onUpdate({ type: "D" })}
+                      className="flex items-center gap-3 py-2 text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-sky-400">
+                        D
+                      </span>
+                      <span className="text-sm">Drop Set</span>
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          ) : (
+            <div
+              className={cn(
+                "h-8 w-full rounded-md border px-1 text-[0.7rem] font-semibold flex items-center justify-center",
+                typeClasses[currentType],
+              )}
+            >
+              {currentType === "W"
+                ? "W"
+                : currentType === "S"
+                  ? setNumber
+                  : currentType === "F"
+                    ? "F"
+                    : "D"}
+            </div>
+          )}
+        </Cell>
+
+        {/* Column 2: Duration button */}
+        <Cell>
+          <div className="flex w-full h-8 items-center">
+            <label className="sr-only">Duration</label>
+            <button
+              type="button"
+              disabled={readOnly}
+              onClick={() => {
+                if (!readOnly) setTimePickerOpen(true);
+              }}
+              className="h-8 w-full rounded-md border border-border bg-neutral-900/60 px-2 text-center text-[11px] sm:text-[12.5px] text-white/90"
+            >
+              {timeInput ||
+                formatSecondsToMMSS(cardioDurationSeconds) ||
+                "00:00"}
+            </button>
+          </div>
+        </Cell>
+
+        {/* Column 3: Spacer */}
+        <Cell>
+          {!readOnly && (
+            <span className="text-[15px] text-muted-foreground/60 select-none">
+              ×
+            </span>
+          )}
+        </Cell>
+
+        {/* Column 4: Reps with half-reps button */}
+        <Cell>
+          <div className="relative w-full h-8">
+            <label className="sr-only">Reps</label>
+            {readOnly && showDashForReps ? (
+              <div className="h-8 w-full flex items-center justify-center text-xs text-muted-foreground/60 border border-border rounded-md bg-neutral-900/60 pr-8">
+                -
+              </div>
+            ) : (
+              <Input
+                type="number"
+                placeholder={showDashForReps ? "-" : "0"}
+                value={set.reps || ""}
+                onChange={(e) =>
+                  !readOnly && onUpdate({ reps: Number(e.target.value) })
+                }
+                disabled={readOnly}
+                className={cn(
+                  "h-8 w-full px-1 pr-8 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0",
+                  readOnly
+                    ? "text-white placeholder:text-muted-foreground/60 disabled:opacity-100 disabled:text-white disabled:[-webkit-text-fill-color:#fff]"
+                    : "text-white disabled:text-white disabled:[-webkit-text-fill-color:#fff]",
+                  showDashForReps ? "placeholder:text-muted-foreground/60" : "",
+                )}
+              />
+            )}
+            <div className="absolute right-1 top-1/2 -translate-y-1/2">
+              <Dialog open={halfDialogOpen} onOpenChange={setHalfDialogOpen}>
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={
+                      (set.halfReps || 0) > 0
+                        ? `Half reps: ${Math.min(5, Number(set.halfReps) || 0)}`
+                        : "Add half reps"
+                    }
+                    onClick={() => {
+                      if (readOnly) {
+                        if ((set.halfReps || 0) > 0) setHalfDialogOpen(true);
+                        return;
+                      }
+                      setHalfDialogOpen(true);
+                    }}
+                    className={cn(
+                      "h-6 w-6 rounded-sm text-[11px] font-semibold leading-none flex items-center justify-center select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0",
+                      (set.halfReps || 0) > 0
+                        ? "bg-neutral-900/70 text-orange-500 border border-orange-500"
+                        : "bg-transparent text-muted-foreground/70 hover:text-muted-foreground border border-border",
+                    )}
+                  >
+                    {(set.halfReps || 0) > 0 ? (
+                      <span>{Math.min(5, Number(set.halfReps) || 0)}</span>
+                    ) : (
+                      <span>½</span>
+                    )}
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-xs -translate-x-1/2 -translate-y-1/2 border-none">
+                  {readOnly ? (
+                    <>
+                      <DialogHeader>
+                        <DialogTitle>Partial Reps</DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-2 text-sm">
+                        This set contains{" "}
+                        <span className="font-medium">
+                          {Math.min(5, Number(set.halfReps) || 0)}
+                        </span>{" "}
+                        partial rep{(set.halfReps || 0) === 1 ? "" : "s"}.
+                      </div>
+                    </>
+                  ) : (
+                    <PartialRepsEditor
+                      initialValue={Math.max(
+                        1,
+                        Math.min(5, Number(set.halfReps) || 1),
+                      )}
+                      onCancel={() => setHalfDialogOpen(false)}
+                      onClear={() => {
+                        onUpdate({ halfReps: 0 });
+                        setHalfDialogOpen(false);
+                      }}
+                      onSave={(val) => {
+                        onUpdate({ halfReps: val });
+                        setHalfDialogOpen(false);
+                      }}
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </Cell>
+
+        {/* Column 4: RPE */}
+        <Cell>
+          {!readOnly ? (
+            <Dialog open={rpeDialogOpen} onOpenChange={setRpeDialogOpen}>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-8 w-full items-center justify-center rounded-md border border-border bg-neutral-900/70 px-1 text-[0.7rem] text-white/90"
+                >
+                  {hasRpe ? sliderValue.toFixed(1) : "RPE"}
+                </button>
+              </DialogTrigger>
+              <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 min-h-[280px] pb-20 overflow-visible rounded-[24px] bg-neutral-950 border border-neutral-800/40 text-white backdrop-blur-none">
+                <DialogHeader>
+                  <DialogTitle>Log Set RPE</DialogTitle>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Adjust how hard this set felt.
+                  </div>
+                </DialogHeader>
+
+                <div className="flex flex-col gap-4 py-2">
+                  <div className="text-4xl font-bold text-center text-white">
+                    {(rpeDialogOpen ? localRpe : sliderValue).toFixed(1)}
+                  </div>
+                  <div className="text-sm text-center text-muted-foreground min-h-[2.25rem]">
+                    {
+                      rpeOptions.find(
+                        (o) =>
+                          o.value === (rpeDialogOpen ? localRpe : sliderValue),
+                      )?.label
+                    }
+                  </div>
+                  <div className="px-6 w-full">
+                    <div
+                      className="relative w-full"
+                      style={{ ["--rpe-edge-gap" as any]: "12px" }}
+                    >
+                      <div className="w-full z-10">
+                        <Slider
+                          className="w-full"
+                          min={7}
+                          max={10}
+                          step={0.5}
+                          value={[rpeDialogOpen ? localRpe : sliderValue]}
+                          onValueChange={(vals) =>
+                            setLocalRpe(vals[0] ?? localRpe)
+                          }
+                        />
+                      </div>
+                      <div
+                        className="pointer-events-none"
+                        style={{
+                          position: "absolute",
+                          left: "var(--rpe-edge-gap)",
+                          right: "var(--rpe-edge-gap)",
+                          top: "100%",
+                          marginTop: 8,
+                        }}
+                      >
+                        <div className="relative h-5">
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "0%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            7
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "16.6666667%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            7.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "33.3333333%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            8
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "50%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            8.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "66.6666667%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            9
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "83.3333333%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            9.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "100%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            10
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "var(--rpe-edge-gap)",
+                          right: "var(--rpe-edge-gap)",
+                          top: "calc(100% + 38px)",
+                        }}
+                        className="pointer-events-auto"
+                      >
+                        <Button
+                          className="w-full"
+                          onClick={() => {
+                            onUpdate({ rpe: Number(localRpe) });
+                            setRpeDialogOpen(false);
+                          }}
+                        >
+                          Done
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <div className="flex h-8 w-full items-center justify-center rounded-md border border-border bg-neutral-900/70 px-1 text-[0.7rem] text-white/90">
+              {hasRpe ? sliderValue.toFixed(1) : "RPE"}
+            </div>
+          )}
+        </Cell>
+
+        {/* Column 5: PR */}
+        <Cell className="flex items-center justify-center">
+          {showTrophy ? (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="pr"
+                  size="icon"
+                  className="h-8 w-full max-w-[2.25rem] p-0"
+                >
+                  <Trophy className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg bg-neutral-900 p-5 shadow-lg">
+                <DialogHeader className="px-0 pt-0">
+                  <DialogTitle className="font-heading text-xl font-semibold text-white flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-orange-500" />
+                    <span>Personal Record</span>
+                  </DialogTitle>
+                  {exerciseName && (
+                    <DialogDescription className="mt-1 text-base font-medium text-white">
+                      {exerciseName}
+                    </DialogDescription>
+                  )}
+                  <p className="mt-4 mb-2 text-sm text-muted-foreground">
+                    This set hit the following PR type(s):
+                  </p>
+                </DialogHeader>
+                {prLines.length > 0 ? (
+                  <div className="bg-zinc-900/60 border border-white/5 rounded-xl p-4 space-y-3">
+                    {prLines.map((line) => (
+                      <div
+                        key={line.label}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="text-sm text-muted-foreground">
+                          {line.label}
+                        </div>
+                        <div className="ml-4 text-base font-semibold text-white tabular-nums">
+                          {line.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 text-sm text-muted-foreground">
+                    No personal records for this set.
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <div className="h-8 w-full max-w-[2.25rem] flex items-center justify-center text-xs text-muted-foreground/60">
+              -
+            </div>
+          )}
+        </Cell>
+
+        {/* Column 6: Complete */}
+        <Cell className="flex items-center justify-center">
+          {readOnly ? (
+            <div className="h-8 w-full max-w-[2rem] flex items-center justify-center rounded-md border border-border bg-neutral-900/60 text-xs text-muted-foreground">
+              <Check className="h-4 w-4" />
+            </div>
+          ) : (
+            <Button
+              variant={set.completed ? "success" : "outline"}
+              size="icon"
+              className="h-8 w-full max-w-[2rem] p-0"
+              onClick={() => {
+                triggerHaptic();
+                onComplete();
+              }}
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+          )}
+        </Cell>
+        {/* Duration picker dialog */}
+        {!readOnly && (
+          <Dialog open={timePickerOpen} onOpenChange={setTimePickerOpen}>
+            <DialogContent className="max-w-[360px] rounded-[28px] bg-neutral-950 border border-neutral-800/40 text-white pb-4 pt-2">
+              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-neutral-800" />
+              <DialogHeader className="items-center text-center pb-1">
+                <DialogTitle className="font-heading text-base font-semibold tracking-tight">
+                  Duration
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-1">
+                <div className="relative overflow-hidden rounded-2xl bg-muted/10">
+                  <div className="relative flex items-center justify-center gap-6 py-4">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                        Hr
+                      </span>
+                      <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                        {Array.from({ length: 6 }, (_, i) => i).map((h) => (
+                          <button
+                            key={h}
+                            type="button"
+                            onClick={() => setPickerHours(h)}
+                            className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${h === pickerHours ? "font-semibold text-white bg-neutral-800/80" : "text-muted-foreground"}`}
+                          >
+                            {h}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                        Min
+                      </span>
+                      <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                        {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setPickerMinutes(m)}
+                            className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${m === pickerMinutes ? "font-semibold text-white bg-neutral-800/80" : "text-muted-foreground"}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                        Sec
+                      </span>
+                      <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                        {Array.from({ length: 60 }, (_, i) => i).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setPickerSeconds(s)}
+                            className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${s === pickerSeconds ? "font-semibold text-white bg-neutral-800/80" : "text-muted-foreground"}`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    className="flex-1 text-xs font-medium text-muted-foreground hover:text-white"
+                    onClick={() => setTimePickerOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 text-xs font-semibold"
+                    onClick={() => {
+                      const total =
+                        pickerHours * 3600 + pickerMinutes * 60 + pickerSeconds;
+                      onUpdate({ cardioDurationSeconds: total });
+                      setTimeInput(formatSecondsToMMSS(total));
+                      setTimePickerOpen(false);
+                    }}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+    );
+  }
+
+  // Timed-only layout: render a compact 5-column row (SET, DURATION, RPE, TROPHY, COMPLETE)
+  if (isTimed) {
+    return (
+      <div
+        className="grid gap-1 rounded-lg border border-border px-1 py-1 items-center mx-auto"
+        style={{
+          gridTemplateColumns: GRID_TEMPLATE_TIMED_NO_CHECK,
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          overflow: "hidden",
+        }}
+      >
+        {/* Column 1: Set type */}
+        <Cell>
+          {!readOnly ? (
+            useDialogForSetType ? (
+              <Dialog
+                open={setTypeDialogOpen}
+                onOpenChange={setSetTypeDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
+                      "translate-x-[0.5px]",
+                      typeClasses[currentType],
+                    )}
+                    aria-label={`Set type ${currentType}`}
+                  >
+                    {currentType === "W"
+                      ? "W"
+                      : currentType === "S"
+                        ? setNumber
+                        : currentType === "F"
+                          ? "F"
+                          : "D"}
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="fixed left-1/2 top-1/2 z-[120] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] max-h-[80vh] overflow-y-auto rounded-[32px] bg-zinc-900/95 backdrop-blur-xl border border-white/10 px-4 py-4 sm:px-6 sm:py-6 data-[state=open]:animate-none data-[state=closed]:animate-none">
+                  <DialogHeader className="text-center">
+                    <DialogTitle className="text-base font-semibold">
+                      Select Set Type
+                    </DialogTitle>
+                    <DialogDescription className="mt-1 text-xs text-muted-foreground">
+                      Choose how this set should be logged.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="mt-4 w-full divide-y divide-white/10">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdate({ type: "W" });
+                        setSetTypeDialogOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-yellow-400">
+                        W
+                      </span>
+                      <span className="text-sm">Warm Up Set</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdate({ type: "S" });
+                        setSetTypeDialogOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-white">
+                        1
+                      </span>
+                      <span className="text-sm">Normal Set</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdate({ type: "F" });
+                        setSetTypeDialogOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-red-400">
+                        F
+                      </span>
+                      <span className="text-sm">Failure Set</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdate({ type: "D" });
+                        setSetTypeDialogOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-sky-400">
+                        D
+                      </span>
+                      <span className="text-sm">Drop Set</span>
+                    </button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "h-8 w-full rounded-md border text-[0.7rem] font-semibold focus:outline-none flex items-center justify-center",
+                      typeClasses[currentType],
+                    )}
+                    aria-label={`Set type ${currentType}`}
+                  >
+                    {currentType === "W"
+                      ? "W"
+                      : currentType === "S"
+                        ? setNumber
+                        : currentType === "F"
+                          ? "F"
+                          : "D"}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 p-0">
+                  <div className="space-y-2 rounded-md bg-neutral-900 p-3">
+                    <DropdownMenuLabel className="px-0 text-white">
+                      Select Set Type
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="-mx-3" />
+                    <DropdownMenuItem
+                      onClick={() => onUpdate({ type: "W" })}
+                      className="flex items-center gap-3 py-2 text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-yellow-400">
+                        W
+                      </span>
+                      <span className="text-sm">Warm Up Set</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onUpdate({ type: "S" })}
+                      className="flex items-center gap-3 py-2 text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-white">
+                        1
+                      </span>
+                      <span className="text-sm">Normal Set</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onUpdate({ type: "F" })}
+                      className="flex items-center gap-3 py-2 text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-red-400">
+                        F
+                      </span>
+                      <span className="text-sm">Failure Set</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onUpdate({ type: "D" })}
+                      className="flex items-center gap-3 py-2 text-white"
+                    >
+                      <span className="w-4 text-xs font-bold text-sky-400">
+                        D
+                      </span>
+                      <span className="text-sm">Drop Set</span>
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          ) : (
+            <div
+              className={cn(
+                "h-8 w-full rounded-md border px-1 text-[0.7rem] font-semibold flex items-center justify-center",
+                typeClasses[currentType],
+              )}
+            >
+              {currentType === "W"
+                ? "W"
+                : currentType === "S"
+                  ? setNumber
+                  : currentType === "F"
+                    ? "F"
+                    : "D"}
+            </div>
+          )}
+        </Cell>
+
+        {/* Column 2: Duration button */}
+        <Cell>
+          <div className="flex w-full h-8 items-center">
+            <label className="sr-only">Duration</label>
+            <button
+              type="button"
+              disabled={readOnly}
+              onClick={() => {
+                if (!readOnly) setTimePickerOpen(true);
+              }}
+              className="h-8 w-full rounded-md border border-border bg-neutral-900/60 px-2 text-center text-[11px] sm:text-[12.5px] text-white/90"
+            >
+              {timeInput ||
+                formatSecondsToMMSS(cardioDurationSeconds) ||
+                "00:00"}
+            </button>
+          </div>
+        </Cell>
+
+        {/* Column 3: RPE */}
+        <Cell>
+          {!readOnly ? (
+            <Dialog open={rpeDialogOpen} onOpenChange={setRpeDialogOpen}>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-8 w-full items-center justify-center rounded-md border border-border bg-neutral-900/70 px-1 text-[0.7rem] text-white/90"
+                >
+                  {hasRpe ? sliderValue.toFixed(1) : "RPE"}
+                </button>
+              </DialogTrigger>
+              <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 min-h-[280px] pb-20 overflow-visible rounded-[24px] bg-neutral-950 border border-neutral-800/40 text-white backdrop-blur-none">
+                <DialogHeader>
+                  <DialogTitle>Log Set RPE</DialogTitle>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Adjust how hard this set felt.
+                  </div>
+                </DialogHeader>
+                <div className="flex flex-col gap-4 py-2">
+                  <div className="text-4xl font-bold text-center text-white">
+                    {(rpeDialogOpen ? localRpe : sliderValue).toFixed(1)}
+                  </div>
+                  <div className="text-sm text-center text-muted-foreground min-h-[2.25rem]">
+                    {
+                      rpeOptions.find(
+                        (o) =>
+                          o.value === (rpeDialogOpen ? localRpe : sliderValue),
+                      )?.label
+                    }
+                  </div>
+                  <div className="px-6 w-full">
+                    <div
+                      className="relative w-full"
+                      style={{ ["--rpe-edge-gap" as any]: "12px" }}
+                    >
+                      <div className="w-full z-10">
+                        <Slider
+                          className="w-full"
+                          min={7}
+                          max={10}
+                          step={0.5}
+                          value={[rpeDialogOpen ? localRpe : sliderValue]}
+                          onValueChange={(vals) =>
+                            setLocalRpe(vals[0] ?? localRpe)
+                          }
+                        />
+                      </div>
+                      <div
+                        className="pointer-events-none"
+                        style={{
+                          position: "absolute",
+                          left: "var(--rpe-edge-gap)",
+                          right: "var(--rpe-edge-gap)",
+                          top: "100%",
+                          marginTop: 8,
+                        }}
+                      >
+                        <div className="relative h-5">
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "0%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            7
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "16.6666667%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            7.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "33.3333333%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            8
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "50%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            8.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "66.6666667%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            9
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "83.3333333%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            9.5
+                          </div>
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "100%",
+                              transform: "translateX(-50%)",
+                            }}
+                            className="text-sm text-muted-foreground"
+                          >
+                            10
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "var(--rpe-edge-gap)",
+                          right: "var(--rpe-edge-gap)",
+                          top: "calc(100% + 38px)",
+                        }}
+                        className="pointer-events-auto"
+                      >
+                        <Button
+                          className="w-full"
+                          onClick={() => {
+                            onUpdate({ rpe: Number(localRpe) });
+                            setRpeDialogOpen(false);
+                          }}
+                        >
+                          Done
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <div className="flex h-8 w-full items-center justify-center rounded-md border border-border bg-neutral-900/70 px-1 text-[0.7rem] text-white/90">
+              {hasRpe ? sliderValue.toFixed(1) : "RPE"}
+            </div>
+          )}
+        </Cell>
+
+        {/* Column 4: PR */}
+        <Cell className="flex items-center justify-center">
+          {showTrophy ? (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="pr"
+                  size="icon"
+                  className="h-8 w-full max-w-[2.25rem] p-0"
+                >
+                  <Trophy className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="fixed left-1/2 top-1/2 z-50 max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg bg-neutral-900 p-5 shadow-lg">
+                <DialogHeader className="px-0 pt-0">
+                  <DialogTitle className="font-heading text-xl font-semibold text-white flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-orange-500" />
+                    <span>Personal Record</span>
+                  </DialogTitle>
+                  {exerciseName && (
+                    <DialogDescription className="mt-1 text-base font-medium text-white">
+                      {exerciseName}
+                    </DialogDescription>
+                  )}
+                  <p className="mt-4 mb-2 text-sm text-muted-foreground">
+                    This set hit the following PR type(s):
+                  </p>
+                </DialogHeader>
+                {prLines.length > 0 ? (
+                  <div className="bg-zinc-900/60 border border-white/5 rounded-xl p-4 space-y-3">
+                    {prLines.map((line) => (
+                      <div
+                        key={line.label}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="text-sm text-muted-foreground">
+                          {line.label}
+                        </div>
+                        <div className="ml-4 text-base font-semibold text-white tabular-nums">
+                          {line.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 text-sm text-muted-foreground">
+                    No personal records for this set.
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <div className="h-8 w-full max-w-[2.25rem] flex items-center justify-center text-xs text-muted-foreground/60">
+              -
+            </div>
+          )}
+        </Cell>
+
+        {/* Column 5: Complete */}
+        <Cell className="flex items-center justify-center">
+          {readOnly ? (
+            <div className="h-8 w-full max-w-[2rem] flex items-center justify-center rounded-md border border-border bg-neutral-900/60 text-xs text-muted-foreground">
+              <Check className="h-4 w-4" />
+            </div>
+          ) : (
+            <Button
+              variant={set.completed ? "success" : "outline"}
+              size="icon"
+              className="h-8 w-full max-w-[2rem] p-0"
+              onClick={() => {
+                triggerHaptic();
+                onComplete();
+              }}
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+          )}
+        </Cell>
+
+        {/* Duration picker dialog */}
+        {!readOnly && (
+          <Dialog open={timePickerOpen} onOpenChange={setTimePickerOpen}>
+            <DialogContent className="max-w-[360px] rounded-[28px] bg-neutral-950 border border-neutral-800/40 text-white pb-4 pt-2">
+              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-neutral-800" />
+              <DialogHeader className="items-center text-center pb-1">
+                <DialogTitle className="font-heading text-base font-semibold tracking-tight">
+                  Duration
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-1">
+                <div className="relative overflow-hidden rounded-2xl bg-muted/10">
+                  <div className="relative flex items-center justify-center gap-6 py-4">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                        Hr
+                      </span>
+                      <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                        {Array.from({ length: 6 }, (_, i) => i).map((h) => (
+                          <button
+                            key={h}
+                            type="button"
+                            onClick={() => setPickerHours(h)}
+                            className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${h === pickerHours ? "font-semibold text-white bg-neutral-800/80" : "text-muted-foreground"}`}
+                          >
+                            {h}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                        Min
+                      </span>
+                      <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                        {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setPickerMinutes(m)}
+                            className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${m === pickerMinutes ? "font-semibold text-white bg-neutral-800/80" : "text-muted-foreground"}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                        Sec
+                      </span>
+                      <div className="relative h-32 w-16 overflow-y-auto py-1 scrollbar-hide">
+                        {Array.from({ length: 60 }, (_, i) => i).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setPickerSeconds(s)}
+                            className={`flex h-8 w-full items-center justify-center text-xl transition-colors rounded-md ${s === pickerSeconds ? "font-semibold text-white bg-neutral-800/80" : "text-muted-foreground"}`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    className="flex-1 text-xs font-medium text-muted-foreground hover:text-white"
+                    onClick={() => setTimePickerOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 text-xs font-semibold"
+                    onClick={() => {
+                      const total =
+                        pickerHours * 3600 + pickerMinutes * 60 + pickerSeconds;
+                      onUpdate({ cardioDurationSeconds: total });
+                      setTimeInput(formatSecondsToMMSS(total));
+                      setTimePickerOpen(false);
+                    }}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

@@ -7,18 +7,20 @@ export default function ExerciseHeader({
   muscleGroup,
   onClick,
   trailing,
+  isCustom,
 }: {
   exerciseName: string;
   muscleGroup?: string;
   onClick?: () => void;
   trailing?: React.ReactNode;
+  isCustom?: boolean;
 }) {
   return (
     <div className="flex items-start gap-3">
       <div className="h-12 w-12 flex items-center justify-center rounded-md bg-zinc-800 border border-white/10 shrink-0">
         {exerciseName ? (
           <img
-            src={`/icons/${getExerciseIconFile(exerciseName, muscleGroup || "")}`}
+            src={`/icons/${getExerciseIconFile(exerciseName, muscleGroup || "", isCustom)}`}
             alt={exerciseName}
             className="h-10 w-10 object-contain"
           />

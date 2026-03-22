@@ -200,6 +200,7 @@ export default function ViewRoutine() {
                       <ExerciseHeader
                         exerciseName={we.exercise.name}
                         muscleGroup={normalizedGroup}
+                        isCustom={we.exercise.custom}
                         onClick={() => {
                           try {
                             const exId = String(we.exercise.id);

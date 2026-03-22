@@ -45,7 +45,9 @@ export function ExerciseCard({
               }
             >
               {titleCase(
-                exercise.muscleGroup === "other" ? "calves" : exercise.muscleGroup,
+                exercise.muscleGroup === "other"
+                  ? "calves"
+                  : exercise.muscleGroup,
               )}
             </Badge>
             {exercise.description && (

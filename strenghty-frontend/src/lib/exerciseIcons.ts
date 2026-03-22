@@ -1,7 +1,5 @@
 export function getExerciseIconFile(name: string, muscleGroup?: string, isCustom?: boolean) {
   const n = (name || "").toLowerCase().trim();
-  if (isCustom) return "custom.svg";
-
   // Exact name -> file mapping (lowercase keys)
   const exactMap: Record<string, string> = {
     // Quads
@@ -193,8 +191,13 @@ export function getExerciseIconFile(name: string, muscleGroup?: string, isCustom
     "plank jacks": "plank jacks.svg",
     "skaters": "skaters.svg",
   };
-
   if (exactMap[n]) return exactMap[n];
+
+  // If this exercise is explicitly a user-created custom exercise, prefer
+  // the custom icon — but only after checking known exact-name mappings so
+  // that library exercises accidentally flagged `custom` still show their
+  // intended icons.
+  if (isCustom) return "custom.svg";
   // Cardio-specific icons: only apply for cardio exercises
   if (muscleGroup && muscleGroup.toLowerCase() === "cardio") {
     // Prefer equipment-specific icons when the exercise name references them.

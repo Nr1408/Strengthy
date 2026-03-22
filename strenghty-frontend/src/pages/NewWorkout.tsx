@@ -172,6 +172,9 @@ export default function NewWorkout() {
   const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
   const [newExerciseName, setNewExerciseName] = useState("");
   const [newExerciseMuscle, setNewExerciseMuscle] = useState<string | "">("");
+  const [newExerciseLogType, setNewExerciseLogType] = useState<
+    "strength" | "timed" | "timed+reps"
+  >("strength");
   const [newExerciseEquipment, setNewExerciseEquipment] = useState<
     "all" | string
   >("all");
@@ -250,7 +253,12 @@ export default function NewWorkout() {
         newExerciseName,
         (newExerciseMuscle as any) || "other",
         newExerciseDescription,
-        { custom: true },
+        {
+          custom: true,
+          logType: newExerciseLogType,
+          equipment:
+            newExerciseEquipment !== "all" ? newExerciseEquipment : undefined,
+        },
       ),
     onSuccess: (created: any) => {
       try {
@@ -266,6 +274,7 @@ export default function NewWorkout() {
       setNewExerciseMuscle("");
       setNewExerciseEquipment("all");
       setNewExerciseDescription("");
+      setNewExerciseLogType("strength");
       toast({ title: "Exercise created" });
     },
     onError: (err: any) =>
@@ -3770,6 +3779,7 @@ export default function NewWorkout() {
                             <ExerciseHeader
                               exerciseName={workoutExercise.exercise.name}
                               muscleGroup={workoutExercise.exercise.muscleGroup}
+                              isCustom={workoutExercise.exercise.custom}
                               onClick={() => {
                                 try {
                                   isNavigatingAway.current = true;
@@ -3844,6 +3854,7 @@ export default function NewWorkout() {
                 <SetsHeader
                   muscleGroup={workoutExercise.exercise.muscleGroup}
                   exerciseName={workoutExercise.exercise.name}
+                  logType={(workoutExercise.exercise as any).logType}
                 />
                 <div className="space-y-2">
                   {workoutExercise.sets.map((set, index) => (
@@ -3853,6 +3864,7 @@ export default function NewWorkout() {
                       exerciseName={workoutExercise.exercise.name}
                       unit={set.unit || getUnit()}
                       setNumber={index + 1}
+                      logType={(workoutExercise.exercise as any).logType}
                       readOnly={false}
                       unitInteractiveWhenReadOnly={false}
                       onUpdate={(updates) =>
@@ -4041,13 +4053,6 @@ export default function NewWorkout() {
                                 }}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
-                                    <img
-                                      src="/icons/custom.svg"
-                                      alt="All Equipment icon"
-                                      className="h-4 w-4 opacity-70"
-                                    />
-                                  </div>
                                   <span className="text-base font-medium truncate">
                                     All Equipment
                                   </span>
@@ -4175,13 +4180,6 @@ export default function NewWorkout() {
                                 }}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
-                                    <img
-                                      src="/icons/custom.svg"
-                                      alt="All Muscles icon"
-                                      className="h-4 w-4 opacity-70"
-                                    />
-                                  </div>
                                   <span className="text-base font-medium truncate">
                                     All Muscles
                                   </span>
@@ -4293,7 +4291,7 @@ export default function NewWorkout() {
                       >
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
                           <img
-                            src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+                            src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup, (exercise as any).custom)}`}
                             alt={exercise.name}
                             className="h-10 w-10 object-contain"
                           />
@@ -4451,13 +4449,6 @@ export default function NewWorkout() {
                             }}
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
-                                <img
-                                  src="/icons/custom.svg"
-                                  alt="All Equipment icon"
-                                  className="h-4 w-4 opacity-70"
-                                />
-                              </div>
                               <span className="text-base font-medium truncate">
                                 All Equipment
                               </span>
@@ -4593,13 +4584,6 @@ export default function NewWorkout() {
                             }}
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
-                                <img
-                                  src="/icons/custom.svg"
-                                  alt="All Muscles icon"
-                                  className="h-4 w-4 opacity-70"
-                                />
-                              </div>
                               <span className="text-base font-medium truncate">
                                 All Muscles
                               </span>
@@ -4667,6 +4651,47 @@ export default function NewWorkout() {
                   value={newExerciseDescription}
                   onChange={(e) => setNewExerciseDescription(e.target.value)}
                 />
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <Label className="whitespace-nowrap">Log type:</Label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewExerciseLogType("strength")}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
+                      newExerciseLogType === "strength"
+                        ? "bg-orange-500 border-orange-500 text-white"
+                        : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Reps
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setNewExerciseLogType("timed")}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
+                      newExerciseLogType === "timed"
+                        ? "bg-orange-500 border-orange-500 text-white"
+                        : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Timed
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setNewExerciseLogType("timed+reps")}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
+                      newExerciseLogType === "timed+reps"
+                        ? "bg-orange-500 border-orange-500 text-white"
+                        : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Reps + Time
+                  </button>
+                </div>
               </div>
             </div>
 

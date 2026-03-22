@@ -584,6 +584,7 @@ export default function ViewWorkout() {
                   <ExerciseHeader
                     exerciseName={we.exercise.name}
                     muscleGroup={we.exercise.muscleGroup}
+                    isCustom={we.exercise.custom}
                     onClick={() => {
                       try {
                         const exId = String(we.exercise.id);

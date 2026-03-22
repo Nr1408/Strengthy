@@ -2423,6 +2423,7 @@ export default function EditWorkout() {
                             <ExerciseHeader
                               exerciseName={workoutExercise.exercise.name}
                               muscleGroup={workoutExercise.exercise.muscleGroup}
+                              isCustom={workoutExercise.exercise.custom}
                               onClick={() => {
                                 try {
                                   const exId = String(
@@ -2703,13 +2704,6 @@ export default function EditWorkout() {
                                 }}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
-                                    <img
-                                      src="/icons/custom.svg"
-                                      alt="All Equipment icon"
-                                      className="h-4 w-4 opacity-70"
-                                    />
-                                  </div>
                                   <span className="text-base font-medium truncate">
                                     All Equipment
                                   </span>
@@ -2848,13 +2842,6 @@ export default function EditWorkout() {
                               }}
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
-                                  <img
-                                    src="/icons/custom.svg"
-                                    alt="All Muscles icon"
-                                    className="h-4 w-4 opacity-70"
-                                  />
-                                </div>
                                 <span className="text-base font-medium truncate">
                                   All Muscles
                                 </span>
@@ -2958,7 +2945,7 @@ export default function EditWorkout() {
                         >
                           <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-zinc-800 rounded-md border border-white/10">
                             <img
-                              src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup)}`}
+                              src={`/icons/${getExerciseIconFile(exercise.name, exercise.muscleGroup, (exercise as any).custom)}`}
                               alt={exercise.name}
                               className="h-10 w-10 object-contain"
                             />

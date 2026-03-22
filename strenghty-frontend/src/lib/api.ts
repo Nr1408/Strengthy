@@ -596,13 +596,15 @@ export type MuscleGroup =
   | "cardio"
   ;
 
-export interface UiExercise {
+ export interface UiExercise {
   id: string;
   name: string;
   muscleGroup: MuscleGroup;
   description?: string;
   createdAt: Date;
   custom?: boolean;
+  // 'strength' = reps-based exercises, 'timed' = duration-based exercises
+  logType?: 'strength' | 'timed' | 'timed+reps';
 }
 
 interface ApiExercise {
@@ -612,6 +614,8 @@ interface ApiExercise {
   description: string | null;
   custom?: boolean;
   created_at?: string;
+  equipment?: string | null;
+  log_type?: string | null;
 }
 
 export interface UiWorkoutSet {
@@ -958,6 +962,7 @@ function mapExercise(api: ApiExercise): UiExercise {
     LEGS: "quads",
     CORE: "core",
     ARMS: "biceps", // map generic arms to biceps for UI grouping
+    CARDIO: "cardio",
   };
 
   // Basic mapping from backend value
@@ -996,6 +1001,7 @@ function mapExercise(api: ApiExercise): UiExercise {
     description: api.description || "",
     createdAt: api.created_at ? new Date(api.created_at) : new Date(),
     custom: !!api.custom,
+    logType: (api as any).log_type ?? (api as any).logType ?? undefined,
   };
 }
 
@@ -1638,7 +1644,7 @@ export async function getExercises(): Promise<UiExercise[]> {
   } catch (e) {}
   if (shouldUseSupabaseApi()) {
     const res = await fetchWithTimeout(
-      `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at&order=created_at.desc`,
+      `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at,equipment,log_type&order=created_at.desc`,
       { headers: await supabaseHeadersAsync() },
     );
     if (!res.ok) throw new Error(`Load exercises failed: ${res.status}`);
@@ -1652,7 +1658,7 @@ export async function getExercises(): Promise<UiExercise[]> {
   return data.map(mapExercise);
 }
 
-export async function createExercise(name: string, muscleGroup: MuscleGroup, description = "", options?: { custom?: boolean }) {
+export async function createExercise(name: string, muscleGroup: MuscleGroup, description = "", options?: { custom?: boolean; equipment?: string; logType?: 'strength' | 'timed' | 'timed+reps' }) {
   // Map UI muscle groups to backend choices (see Django MUSCLE_GROUP_CHOICES)
   const backendMap: Record<MuscleGroup, string> = {
     chest: "CHEST",
@@ -1665,13 +1671,15 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
     calves: "LEGS",
     forearms: "ARMS",
     core: "CORE",
-    cardio: "OTHER",
+    cardio: "CARDIO",
     other: "OTHER",
   };
   const mg = backendMap[muscleGroup] || "OTHER";
 
   const payload: any = { name, muscle_group: mg, description };
   if (options && typeof options.custom !== 'undefined') payload.custom = !!options.custom;
+  if (options && typeof options.equipment !== 'undefined' && options.equipment) payload.equipment = options.equipment;
+  if (options && typeof options.logType !== 'undefined') payload.log_type = options.logType;
 
   if (shouldUseSupabaseApi()) {
     const userId = await resolveSupabaseUserId();
@@ -1682,13 +1690,28 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
         ...await supabaseHeadersAsync(true),
         Prefer: "resolution=ignore-duplicates,return=representation",
       },
-      body: JSON.stringify({
-        owner_id: userId,
-        name,
-        muscle_group: mg,
-        description,
-        custom: !!options?.custom,
-      }),
+        body: JSON.stringify(
+          (() => {
+            const b: any = {
+              owner_id: userId,
+              name,
+              muscle_group: mg,
+              description,
+            };
+            // Only include `custom` when explicitly provided to avoid sending
+            // unintended default values to Supabase/PostgREST.
+            if (typeof options?.custom !== "undefined") {
+              b.custom = !!options?.custom;
+            }
+            if (typeof options?.equipment !== "undefined" && options?.equipment) {
+              b.equipment = options.equipment;
+            }
+            if (typeof options?.logType !== "undefined") {
+              b.log_type = options.logType;
+            }
+            return b;
+          })(),
+        ),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
@@ -1720,7 +1743,7 @@ export async function createExercise(name: string, muscleGroup: MuscleGroup, des
     try {
       const eqName = encodeURIComponent(name.trim());
       const existingRes = await fetchWithTimeout(
-        `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at&name=eq.${eqName}&limit=1`,
+        `${SUPABASE_REST_BASE}/exercises?select=id,name,muscle_group,description,custom,created_at,equipment,log_type&name=eq.${eqName}&limit=1`,
         { headers: await supabaseHeadersAsync() },
       );
       if (existingRes.ok) {

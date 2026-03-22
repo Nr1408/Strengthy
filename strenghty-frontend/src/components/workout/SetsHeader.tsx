@@ -22,6 +22,12 @@ export const GRID_TEMPLATE_HIIT =
 export const GRID_TEMPLATE_HIIT_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
 
+export const GRID_TEMPLATE_TIMED =
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+
+export const GRID_TEMPLATE_TIMED_NO_CHECK =
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+
 // Shared HIIT name detection — use this everywhere instead of
 // duplicating the inline check.
 export const isHiitExerciseName = (name: string): boolean => {
@@ -53,9 +59,14 @@ export const getCardioMode = (exerciseName: string): CardioMode => {
 interface SetsHeaderProps {
   muscleGroup: string;
   exerciseName: string;
+  logType?: "strength" | "timed" | "timed+reps";
 }
 
-export function SetsHeader({ muscleGroup, exerciseName }: SetsHeaderProps) {
+export function SetsHeader({
+  muscleGroup,
+  exerciseName,
+  logType,
+}: SetsHeaderProps) {
   const isCardio = muscleGroup === "cardio";
   const isHiit = isHiitExerciseName(exerciseName);
   const cardioMode = getCardioMode(exerciseName);
@@ -96,6 +107,57 @@ export function SetsHeader({ muscleGroup, exerciseName }: SetsHeaderProps) {
                 : "LEVEL"}
           </span>
         )}
+        <span className="flex items-center justify-center text-center">
+          <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
+        </span>
+        <div />
+      </div>
+    );
+  }
+
+  // Timed header variants
+  if (logType === "timed+reps") {
+    return (
+      <div
+        className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
+        style={{ gridTemplateColumns: GRID_TEMPLATE_TIMED }}
+      >
+        <span className="flex items-center justify-center text-center translate-x-[2px]">
+          SET
+        </span>
+        <span className="flex items-center justify-center text-center">
+          DURATION
+        </span>
+        <div />
+        <span className="flex items-center justify-center text-center">
+          REPS
+        </span>
+        <span className="flex items-center justify-center text-center">
+          RPE
+        </span>
+        <span className="flex items-center justify-center text-center">
+          <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
+        </span>
+        <div />
+      </div>
+    );
+  }
+
+  if (logType === "timed") {
+    return (
+      <div
+        className="mt-3 mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
+        style={{ gridTemplateColumns: GRID_TEMPLATE_TIMED_NO_CHECK }}
+      >
+        <span className="flex items-center justify-center text-center translate-x-[2px]">
+          SET
+        </span>
+        <span className="flex items-center justify-center text-center">
+          DURATION
+        </span>
+        <span className="flex items-center justify-center text-center">
+          RPE
+        </span>
         <span className="flex items-center justify-center text-center">
           <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
         </span>

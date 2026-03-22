@@ -5,6 +5,7 @@ import {
   DialogPortal,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,8 @@ interface CreateExerciseDialogProps {
   isValidationOpen: boolean;
   onValidationOpenChange: (open: boolean) => void;
   validationMessage: string;
+  newExerciseLogType?: "strength" | "timed" | "timed+reps";
+  setNewExerciseLogType?: (v: "strength" | "timed" | "timed+reps") => void;
 }
 
 export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
@@ -65,6 +68,8 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
     isValidationOpen,
     onValidationOpenChange,
     validationMessage,
+    newExerciseLogType,
+    setNewExerciseLogType,
   } = props;
 
   return (
@@ -170,13 +175,6 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                           }}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
-                              <img
-                                src="/icons/custom.svg"
-                                alt="All Equipment icon"
-                                className="h-4 w-4 opacity-70"
-                              />
-                            </div>
                             <span className="text-base font-medium truncate">
                               All Equipment
                             </span>
@@ -313,13 +311,6 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                           }}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="h-8 w-8 rounded-full bg-zinc-800/30 flex items-center justify-center flex-shrink-0">
-                              <img
-                                src="/icons/custom.svg"
-                                alt="All Muscles icon"
-                                className="h-4 w-4 opacity-70"
-                              />
-                            </div>
                             <span className="text-base font-medium truncate">
                               All Muscles
                             </span>
@@ -385,6 +376,49 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                 value={newExerciseDescription}
                 onChange={(e) => setNewExerciseDescription(e.target.value)}
               />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <Label className="whitespace-nowrap">Log type:</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    (setNewExerciseLogType || (() => {}))("strength")
+                  }
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
+                    (newExerciseLogType || "strength") === "strength"
+                      ? "bg-orange-500 border-orange-500 text-white"
+                      : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  Reps
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (setNewExerciseLogType || (() => {}))("timed")}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
+                    (newExerciseLogType || "strength") === "timed"
+                      ? "bg-orange-500 border-orange-500 text-white"
+                      : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  Timed
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    (setNewExerciseLogType || (() => {}))("timed+reps")
+                  }
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
+                    (newExerciseLogType || "strength") === "timed+reps"
+                      ? "bg-orange-500 border-orange-500 text-white"
+                      : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  Reps + Time
+                </button>
+              </div>
             </div>
           </div>
 

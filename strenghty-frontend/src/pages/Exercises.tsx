@@ -10,6 +10,13 @@ import { createExercise, getExercises, deleteExercise } from "@/lib/api";
 import type { UiExercise } from "@/lib/api";
 import type { MuscleGroup } from "@/types/workout";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -32,6 +39,10 @@ export default function Exercises() {
     "all",
   );
   const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
+  const [newExerciseLogType, setNewExerciseLogType] = useState<
+    "strength" | "timed" | "timed+reps"
+  >("strength");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   // default to user's exercises view when opening the page,
   // but allow explicit tab restore via navigation state.
   const [showLibrary, setShowLibrary] = useState(
@@ -85,6 +96,7 @@ export default function Exercises() {
           custom: true,
           equipment:
             newExerciseEquipment !== "all" ? newExerciseEquipment : undefined,
+          logType: newExerciseLogType,
         },
       ),
     onSuccess: () => {
@@ -97,6 +109,7 @@ export default function Exercises() {
       setNewExerciseMuscle("");
       setNewExerciseEquipment("all");
       setNewExerciseDescription("");
+      setNewExerciseLogType("strength");
       setIsCreateExerciseOpen(false);
     },
     onError: (err: any) => {
@@ -116,10 +129,13 @@ export default function Exercises() {
   });
 
   const handleDelete = async (id: string) => {
-    const ok = window.confirm("Delete this exercise? This cannot be undone.");
-    if (!ok) return;
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteMutation.mutateAsync(id);
+      await deleteMutation.mutateAsync(deleteTarget);
       toast({ title: "Deleted", description: "Exercise deleted." });
     } catch (err: any) {
       toast({
@@ -127,6 +143,8 @@ export default function Exercises() {
         description: err?.message || "Failed to delete",
         variant: "destructive",
       });
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -179,12 +197,20 @@ export default function Exercises() {
     exercises
       .filter((e) => isUserCustomExercise(e))
       .forEach((e) =>
-        present.add(e.muscleGroup === "other" ? "calves" : e.muscleGroup),
+        present.add(
+          e.muscleGroup === "other" || e.muscleGroup === "calves"
+            ? "calves"
+            : e.muscleGroup,
+        ),
       );
     // only include public library groups when in library view
     if (showLibrary) {
       libraryExercises.forEach((e) =>
-        present.add(e.muscleGroup === "other" ? "calves" : e.muscleGroup),
+        present.add(
+          e.muscleGroup === "other" || e.muscleGroup === "calves"
+            ? "calves"
+            : e.muscleGroup,
+        ),
       );
     }
     const filtered = allMusclesOrder.filter((m) => present.has(m));
@@ -359,6 +385,8 @@ export default function Exercises() {
             isValidationOpen={isCreateValidationOpen}
             onValidationOpenChange={setIsCreateValidationOpen}
             validationMessage={createValidationMessage}
+            newExerciseLogType={newExerciseLogType}
+            setNewExerciseLogType={setNewExerciseLogType}
           />
         </div>
 
@@ -477,6 +505,34 @@ export default function Exercises() {
 
         {/* Exercise Grid */}
         {gridContent}
+        <Dialog
+          open={!!deleteTarget}
+          onOpenChange={(o) => {
+            if (!o) setDeleteTarget(null);
+          }}
+        >
+          <DialogContent className="max-w-[360px] rounded-[16px] bg-zinc-900 border border-white/10 text-white p-4">
+            <DialogTitle className="text-base font-semibold">
+              Delete Exercise
+            </DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-muted-foreground">
+              Are you sure you want to delete this exercise? This cannot be
+              undone.
+            </DialogDescription>
+            <div className="mt-4 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteMutation.isLoading}
+              >
+                {deleteMutation.isLoading ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
