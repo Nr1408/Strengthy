@@ -88,7 +88,12 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
         />
       )}
 
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+          setNewExerciseLogType?.("strength");
+        }
+        onOpenChange(open);
+      }}>
         <DialogContent className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-[400px] sm:w-[90vw] sm:max-w-[420px] rounded-[32px] bg-neutral-950 border border-white/10 px-4 py-4 sm:px-6 sm:py-6">
           <div className="text-center">
             <DialogTitle className="text-lg font-semibold">
@@ -378,46 +383,54 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
               <Label className="whitespace-nowrap">Log type:</Label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    (setNewExerciseLogType || (() => {}))("strength")
-                  }
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
-                    (newExerciseLogType || "strength") === "strength"
-                      ? "bg-orange-500 border-orange-500 text-white"
-                      : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  Reps
-                </button>
-                <button
-                  type="button"
-                  onClick={() => (setNewExerciseLogType || (() => {}))("timed")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
-                    (newExerciseLogType || "strength") === "timed"
-                      ? "bg-orange-500 border-orange-500 text-white"
-                      : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  Timed
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    (setNewExerciseLogType || (() => {}))("timed+reps")
-                  }
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap ${
-                    (newExerciseLogType || "strength") === "timed+reps"
-                      ? "bg-orange-500 border-orange-500 text-white"
-                      : "bg-transparent border-white/15 text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  Reps + Time
-                </button>
+              <div className="mt-2 divide-y divide-white/5 rounded-2xl border border-white/10 overflow-hidden">
+                {(
+                  [
+                    {
+                      value: "strength",
+                      label: "Reps & Weight",
+                      description: "Log sets with reps and weight",
+                    },
+                    {
+                      value: "timed",
+                      label: "Duration",
+                      description: "Log sets with duration only",
+                    },
+                    {
+                      value: "timed+reps",
+                      label: "Duration + Reps",
+                      description: "Log sets with duration and reps",
+                    },
+                  ] as const
+                ).map(({ value, label, description }) => {
+                  const isSelected = (newExerciseLogType || "strength") === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => (setNewExerciseLogType || (() => {}))(value)}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
+                        isSelected
+                          ? "bg-orange-500/10"
+                          : "bg-transparent hover:bg-white/5"
+                      }`}
+                    >
+                      <div>
+                        <p className={`text-sm font-semibold ${isSelected ? "text-orange-400" : "text-white"}`}>
+                          {label}
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-0.5">{description}</p>
+                      </div>
+                      <div className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ml-3 flex items-center justify-center ${
+                        isSelected ? "border-orange-500" : "border-zinc-600"
+                      }`}>
+                        {isSelected && <div className="h-2 w-2 rounded-full bg-orange-500" />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

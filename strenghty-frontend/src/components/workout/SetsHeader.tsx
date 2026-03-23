@@ -5,10 +5,10 @@ import type { CardioMode } from "@/types/workout";
 // Import these constants in SetRow.tsx and all workout pages
 // instead of copy-pasting them.
 export const GRID_TEMPLATE_STRENGTH =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 
 export const GRID_TEMPLATE_STRENGTH_NO_CHECK =
-  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
+  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
 
 export const GRID_TEMPLATE_CARDIO =
   "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
@@ -23,10 +23,10 @@ export const GRID_TEMPLATE_HIIT_NO_CHECK =
   "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
 
 export const GRID_TEMPLATE_TIMED =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
 
 export const GRID_TEMPLATE_TIMED_NO_CHECK =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
+  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 0.8fr minmax(25px, 0.25fr) 32px 30px";
 
 // Shared HIIT name detection — use this everywhere instead of
 // duplicating the inline check.
@@ -128,7 +128,6 @@ export function SetsHeader({
         <span className="flex items-center justify-center text-center">
           DURATION
         </span>
-        <div />
         <span className="flex items-center justify-center text-center">
           REPS
         </span>
@@ -155,6 +154,7 @@ export function SetsHeader({
         <span className="flex items-center justify-center text-center">
           DURATION
         </span>
+        <div />
         <span className="flex items-center justify-center text-center">
           RPE
         </span>
@@ -178,7 +178,6 @@ export function SetsHeader({
       <span className="flex items-center justify-center text-center">
         WEIGHT
       </span>
-      <div className="flex items-center justify-center" />
       <span className="flex items-center justify-center text-center">REPS</span>
       <span className="flex items-center justify-center text-center">RPE</span>
       <span className="flex items-center justify-center text-center">

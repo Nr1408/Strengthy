@@ -579,16 +579,7 @@ export function SetRow({
           </div>
         </Cell>
 
-        {/* Column 3: Spacer */}
-        <Cell>
-          {!readOnly && (
-            <span className="text-[15px] text-muted-foreground/60 select-none">
-              ×
-            </span>
-          )}
-        </Cell>
-
-        {/* Column 4: Reps with half-reps button */}
+        {/* Column 3: Reps with half-reps button */}
         <Cell>
           <div className="relative w-full h-8">
             <label className="sr-only">Reps</label>
@@ -1225,7 +1216,14 @@ export function SetRow({
           </div>
         </Cell>
 
-        {/* Column 3: RPE */}
+        {/* Column 3: Spacer */}
+        <Cell>
+          <div className="h-8 w-full flex items-center justify-center rounded-md border border-border bg-neutral-900/60 text-xs text-muted-foreground/60">
+            —
+          </div>
+        </Cell>
+
+        {/* Column 4: RPE */}
         <Cell>
           {!readOnly ? (
             <Dialog open={rpeDialogOpen} onOpenChange={setRpeDialogOpen}>
@@ -1871,67 +1869,122 @@ export function SetRow({
         )}
       </Cell>
 
-      {/* Column 3: Strength spacer OR Cardio distance/floors with unit OR HIIT reps */}
-      <Cell>
-        {isCardioLike ? (
-          isHiitBodyweight ? (
-            <div className="relative w-full h-8">
-              <label className="sr-only">Reps</label>
-              {readOnly && showDashForReps ? (
-                <div className="h-8 w-full flex items-center justify-center text-xs text-muted-foreground/60 border border-border rounded-md bg-neutral-900/60">
-                  -
-                </div>
-              ) : (
-                <Input
-                  type="number"
-                  placeholder={showDashForReps ? "-" : "reps"}
-                  value={set.reps || ""}
-                  onChange={(e) =>
-                    !readOnly && onUpdate({ reps: Number(e.target.value) })
-                  }
-                  disabled={readOnly}
-                  className="h-8 w-full px-1 pr-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
-                />
-              )}
-            </div>
-          ) : (
-            <div className="flex w-full h-8 items-center -space-x-[1px]">
-              <div className="flex-1">
-                <label className="sr-only">
-                  {set.cardioMode === "stairs" ? "Floors" : "Distance"}
-                </label>
-                <Input
-                  type="number"
-                  placeholder={
-                    set.cardioMode === "stairs"
-                      ? cardioDistanceUnit === "flr"
-                        ? "floors"
-                        : "meters"
-                      : "dist"
-                  }
-                  value={
-                    cardioDistance && cardioDistance > 0
-                      ? String(cardioDistance)
-                      : ""
-                  }
-                  onChange={(e) =>
-                    !readOnly &&
-                    onUpdate({ cardioDistance: Number(e.target.value) || 0 })
-                  }
-                  disabled={readOnly}
-                  className="h-8 w-full px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] sm:text-[12.5px] rounded-r-none focus-visible:ring-1 focus-visible:ring-offset-0 border-border"
-                />
+      {/* Column 3: Cardio distance/floors OR HIIT reps (omitted for strength) */}
+      {isCardioLike && (
+        <Cell>
+          {isCardioLike ? (
+            isHiitBodyweight ? (
+              <div className="relative w-full h-8">
+                <label className="sr-only">Reps</label>
+                {readOnly && showDashForReps ? (
+                  <div className="h-8 w-full flex items-center justify-center text-xs text-muted-foreground/60 border border-border rounded-md bg-neutral-900/60">
+                    -
+                  </div>
+                ) : (
+                  <Input
+                    type="number"
+                    placeholder={showDashForReps ? "-" : "reps"}
+                    value={set.reps || ""}
+                    onChange={(e) =>
+                      !readOnly && onUpdate({ reps: Number(e.target.value) })
+                    }
+                    disabled={readOnly}
+                    className="h-8 w-full px-1 pr-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] leading-none sm:text-[12.5px] focus-visible:ring-1 focus-visible:ring-offset-0"
+                  />
+                )}
               </div>
-              {set.cardioMode === "stairs" ? (
-                // For stairs allow choosing between floors and meters
-                !readOnly ? (
+            ) : (
+              <div className="flex w-full h-8 items-center -space-x-[1px]">
+                <div className="flex-1">
+                  <label className="sr-only">
+                    {set.cardioMode === "stairs" ? "Floors" : "Distance"}
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder={
+                      set.cardioMode === "stairs"
+                        ? cardioDistanceUnit === "flr"
+                          ? "floors"
+                          : "meters"
+                        : "dist"
+                    }
+                    value={
+                      cardioDistance && cardioDistance > 0
+                        ? String(cardioDistance)
+                        : ""
+                    }
+                    onChange={(e) =>
+                      !readOnly &&
+                      onUpdate({ cardioDistance: Number(e.target.value) || 0 })
+                    }
+                    disabled={readOnly}
+                    className="h-8 w-full px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-[11px] sm:text-[12.5px] rounded-r-none focus-visible:ring-1 focus-visible:ring-offset-0 border-border"
+                  />
+                </div>
+                {set.cardioMode === "stairs" ? (
+                  // For stairs allow choosing between floors and meters
+                  !readOnly ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors"
+                        >
+                          {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                          <span className="text-[8px] opacity-50">▼</span>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
+                        style={{ transformOrigin: "top right" }}
+                      >
+                        <DropdownMenuItem
+                          className={cn(
+                            "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                            cardioDistanceUnit === "flr"
+                              ? "text-orange-500"
+                              : "text-muted-foreground",
+                          )}
+                          onClick={() =>
+                            onUpdate({ cardioDistanceUnit: "flr" as any })
+                          }
+                        >
+                          {cardioDistanceUnit === "flr" && (
+                            <Check className="h-4 w-4 text-orange-500" />
+                          )}
+                          <span>floors</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className={cn(
+                            "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
+                            cardioDistanceUnit === "m"
+                              ? "text-orange-500"
+                              : "text-muted-foreground",
+                          )}
+                          onClick={() =>
+                            onUpdate({ cardioDistanceUnit: "m" as any })
+                          }
+                        >
+                          {cardioDistanceUnit === "m" && (
+                            <Check className="h-4 w-4 text-orange-500" />
+                          )}
+                          <span>meters</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[15px] font-bold text-muted-foreground/60">
+                      {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                    </div>
+                  )
+                ) : !readOnly ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
                         className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors"
                       >
-                        {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                        {cardioDistanceUnit === "mile" ? "mile" : "km"}
                         <span className="text-[8px] opacity-50">▼</span>
                       </button>
                     </DropdownMenuTrigger>
@@ -1942,106 +1995,47 @@ export function SetRow({
                       <DropdownMenuItem
                         className={cn(
                           "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
-                          cardioDistanceUnit === "flr"
+                          cardioDistanceUnit === "km"
                             ? "text-orange-500"
                             : "text-muted-foreground",
                         )}
                         onClick={() =>
-                          onUpdate({ cardioDistanceUnit: "flr" as any })
+                          onUpdate({ cardioDistanceUnit: "km" as any })
                         }
                       >
-                        {cardioDistanceUnit === "flr" && (
+                        {cardioDistanceUnit === "km" && (
                           <Check className="h-4 w-4 text-orange-500" />
                         )}
-                        <span>floors</span>
+                        <span>km</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className={cn(
                           "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
-                          cardioDistanceUnit === "m"
+                          cardioDistanceUnit === "mile"
                             ? "text-orange-500"
                             : "text-muted-foreground",
                         )}
                         onClick={() =>
-                          onUpdate({ cardioDistanceUnit: "m" as any })
+                          onUpdate({ cardioDistanceUnit: "mile" as any })
                         }
                       >
-                        {cardioDistanceUnit === "m" && (
+                        {cardioDistanceUnit === "mile" && (
                           <Check className="h-4 w-4 text-orange-500" />
                         )}
-                        <span>meters</span>
+                        <span>mile</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
                   <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[15px] font-bold text-muted-foreground/60">
-                    {cardioDistanceUnit === "flr" ? "flr" : "m"}
+                    {cardioDistanceUnit === "mile" ? "mile" : "km"}
                   </div>
-                )
-              ) : !readOnly ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="h-8 flex items-center justify-center gap-1 rounded-r-md border border-l-0 border-border bg-muted/20 px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors"
-                    >
-                      {cardioDistanceUnit === "mile" ? "mile" : "km"}
-                      <span className="text-[8px] opacity-50">▼</span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
-                    style={{ transformOrigin: "top right" }}
-                  >
-                    <DropdownMenuItem
-                      className={cn(
-                        "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
-                        cardioDistanceUnit === "km"
-                          ? "text-orange-500"
-                          : "text-muted-foreground",
-                      )}
-                      onClick={() =>
-                        onUpdate({ cardioDistanceUnit: "km" as any })
-                      }
-                    >
-                      {cardioDistanceUnit === "km" && (
-                        <Check className="h-4 w-4 text-orange-500" />
-                      )}
-                      <span>km</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className={cn(
-                        "w-full text-center py-3 text-sm flex items-center justify-center gap-2 rounded-sm transition-colors",
-                        cardioDistanceUnit === "mile"
-                          ? "text-orange-500"
-                          : "text-muted-foreground",
-                      )}
-                      onClick={() =>
-                        onUpdate({ cardioDistanceUnit: "mile" as any })
-                      }
-                    >
-                      {cardioDistanceUnit === "mile" && (
-                        <Check className="h-4 w-4 text-orange-500" />
-                      )}
-                      <span>mile</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[15px] font-bold text-muted-foreground/60">
-                  {cardioDistanceUnit === "mile" ? "mile" : "km"}
-                </div>
-              )}
-            </div>
-          )
-        ) : (
-          !readOnly && (
-            <span className="text-[15px] text-muted-foreground/60 select-none">
-              ×
-            </span>
-          )
-        )}
-      </Cell>
+                )}
+              </div>
+            )
+          ) : null}
+        </Cell>
+      )}
 
       {/* Column 4: Strength reps OR Cardio machine-specific stat */}
       <Cell>

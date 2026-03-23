@@ -193,11 +193,6 @@ export function getExerciseIconFile(name: string, muscleGroup?: string, isCustom
   };
   if (exactMap[n]) return exactMap[n];
 
-  // If this exercise is explicitly a user-created custom exercise, prefer
-  // the custom icon — but only after checking known exact-name mappings so
-  // that library exercises accidentally flagged `custom` still show their
-  // intended icons.
-  if (isCustom) return "custom.svg";
   // Cardio-specific icons: only apply for cardio exercises
   if (muscleGroup && muscleGroup.toLowerCase() === "cardio") {
     // Prefer equipment-specific icons when the exercise name references them.
@@ -213,6 +208,13 @@ export function getExerciseIconFile(name: string, muscleGroup?: string, isCustom
     // Default cardio icon when muscleGroup is 'cardio' but no keyword matched
     return "treadmill.svg";
   }
+
+  // If this exercise is explicitly a user-created custom exercise, prefer
+  // the custom icon — but only after checking known exact-name mappings and
+  // cardio-specific icons so that library cardio exercises (or cardio
+  // keywords) still show the appropriate equipment icon even if marked
+  // `custom`.
+  if (isCustom) return "custom.svg";
 
   // Try muscle group fallback for non-cardio exercises
   if (muscleGroup) {
