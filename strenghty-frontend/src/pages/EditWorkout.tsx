@@ -96,8 +96,10 @@ export default function EditWorkout() {
         queryClient.invalidateQueries({ queryKey: ["exercises"] });
       } catch (e) {}
       try {
-        if (replaceTarget) replaceExercise(replaceTarget, created);
-        else addExercise(created);
+        const rt = replaceTargetRef.current;
+        if (rt) {
+          replaceExercise(rt, created);
+        } else addExercise(created);
       } catch (e) {}
       setIsCreateExerciseOpen(false);
       setIsExerciseDialogOpen(false);
@@ -219,6 +221,7 @@ export default function EditWorkout() {
   // Capture location.state at mount so the async data loader can read it
   // after setExercises(grouped) without needing it as a dependency.
   const locationStateRef = useRef<any>((location as any).state);
+  const exercisesLoadedRef = useRef(false);
   const [unusualSet, setUnusualSet] = useState<UnusualSetState | null>(null);
   const recentForced = useRef<Set<string>>(new Set());
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
@@ -239,6 +242,10 @@ export default function EditWorkout() {
     null,
   );
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
+  const replaceTargetRef = useRef<string | null>(replaceTarget);
+  useEffect(() => {
+    replaceTargetRef.current = replaceTarget;
+  }, [replaceTarget]);
   const [replaceFilter, setReplaceFilter] = useState<string | null>(null);
   const [exerciseInfoOpen, setExerciseInfoOpen] = useState(false);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(
@@ -462,6 +469,7 @@ export default function EditWorkout() {
 
   useEffect(() => {
     if (!workoutId) return;
+    if (exercisesLoadedRef.current) return;
     // load workout info and sets
     (async () => {
       try {
@@ -483,6 +491,7 @@ export default function EditWorkout() {
             setDurationMinutes((workout as any).duration as number);
           }
         }
+
         const sets = await getSets(String(workoutId));
         // also fetch cardio sets so cardio exercises appear in edit mode
         const cardioSets = await getCardioSetsForWorkout(String(workoutId));
@@ -675,6 +684,7 @@ export default function EditWorkout() {
           } as WorkoutExercise;
         });
         setExercises(grouped as WorkoutExercise[]);
+        exercisesLoadedRef.current = true;
         // Apply exercise added from the ExerciseInfo picker (if any).
         // Must happen right after setExercises(grouped) so the functional
         // updater chains on top of the loaded exercises, not an empty array.
