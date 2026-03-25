@@ -258,3 +258,41 @@ export async function rescheduleAllNotifications(params: {
     await fireStreakCelebration(params.currentStreak);
   }
 }
+
+/**
+ * Prompt the OS/web to request notification permission from the user.
+ * Returns true when permission is granted.
+ */
+export async function requestNotificationPermission(): Promise<boolean> {
+  try {
+    // Native (Capacitor) path
+    if (isNative()) {
+      try {
+        const req = await LocalNotifications.requestPermissions();
+        try {
+          localStorage.setItem("user:notificationPermissionAsked", "1");
+        } catch {}
+        return req.display === "granted";
+      } catch {
+        // fallthrough to web fallback
+      }
+    }
+
+    // Web fallback
+    if (typeof window !== "undefined" && "Notification" in window) {
+      try {
+        const res = await (Notification as any).requestPermission();
+        try {
+          localStorage.setItem("user:notificationPermissionAsked", "1");
+        } catch {}
+        return res === "granted";
+      } catch {
+        return false;
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}

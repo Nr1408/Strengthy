@@ -20,6 +20,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 interface AppLayoutProps {
   children: ReactNode;
+  noPaddingTop?: boolean;
 }
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -28,7 +29,7 @@ const navItems = [
   { href: "/routines", label: "Routines", icon: FolderOpen },
 ];
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [showPausedDialog, setShowPausedDialog] = useState(false);
@@ -200,7 +201,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <main
         className={cn(
           "w-full px-3 md:max-w-7xl md:mx-auto md:px-6 pb-24 md:pb-6",
-          hideNav ? "pt-0" : "pt-[50px]",
+          hideNav ? "pt-0" : "pt-8",
         )}
       >
         {children}

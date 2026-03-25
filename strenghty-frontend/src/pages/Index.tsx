@@ -12,16 +12,16 @@ import { ProofStep } from "../../ProofSection";
 type AuthIntent = "login" | "signup";
 
 const stepVariants = {
-  enter: { opacity: 0, y: 16 },
+  enter: { opacity: 0, y: 20 },
   center: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.2, ease: "easeOut" },
+    transition: { duration: 0.45, ease: "easeOut" },
   },
   exit: {
     opacity: 0,
-    y: -16,
-    transition: { duration: 0.15, ease: "easeIn" },
+    y: -20,
+    transition: { duration: 0.35, ease: "easeIn" },
   },
 } as const;
 
@@ -69,7 +69,7 @@ export default function Index() {
       <motion.header
         className="border-b border-border pointer-events-auto"
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28, ease: "easeOut" }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
         aria-hidden={false}
       >
         <div
@@ -226,7 +226,7 @@ export default function Index() {
               key={i}
               type="button"
               onClick={() => goToStep(i)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
+              className={`h-1.5 rounded-full transition-all duration-500 ${
                 i === step
                   ? "w-6 bg-primary"
                   : "w-1.5 bg-muted-foreground/60 hover:bg-muted-foreground/50"

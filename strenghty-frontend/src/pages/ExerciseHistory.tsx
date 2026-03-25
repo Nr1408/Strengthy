@@ -245,9 +245,9 @@ export default function ExerciseHistory() {
   }, [serverSets, workouts, localHistory, completedWorkoutIds]);
 
   return (
-    <AppLayout>
-      <div className="space-y-3 -mt-4">
-        <div className="mt-0.5">
+    <AppLayout noPaddingTop>
+      <div className="space-y-3">
+        <div className="mt-0">
           <button
             type="button"
             onClick={() => navigate(-1)}

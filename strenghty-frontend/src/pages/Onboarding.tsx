@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { upsertProfile } from "@/lib/api";
+import { requestNotificationPermission } from "@/lib/notifications";
 import { recommendFirstWorkout } from "@/lib/onboarding";
 import type { UserOnboardingData } from "@/lib/onboarding";
 
@@ -323,6 +324,11 @@ export default function Onboarding() {
     } catch (e) {
       // ignore
     }
+    // After finishing onboarding for new users, prompt for notification permission
+    try {
+      // fire-and-forget: helper records we've asked in localStorage
+      requestNotificationPermission().catch(() => {});
+    } catch {}
   };
 
   const onStartRecommended = async () => {
@@ -1000,4 +1006,3 @@ export default function Onboarding() {
     </div>
   );
 }
-

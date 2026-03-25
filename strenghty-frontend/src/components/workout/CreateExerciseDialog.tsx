@@ -116,6 +116,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
   const [internalValidationOpen, setInternalValidationOpen] = useState(false);
   const [internalValidationMessage, setInternalValidationMessage] =
     useState("");
+  const [logTypePickerOpen, setLogTypePickerOpen] = useState(false);
 
   function handleCreate() {
     const msg = getMissingFieldsMessage(
@@ -446,7 +447,28 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
             {/* Log type */}
             <div className="space-y-1.5">
               <Label>How will you log this?</Label>
-              <div className="flex flex-col gap-2 mt-2">
+
+              {/* Mobile: collapsed trigger, sm+: always expanded */}
+              <button
+                type="button"
+                onClick={() => setLogTypePickerOpen((v) => !v)}
+                className="flex items-center justify-between w-full px-4 py-2.5 rounded-[9999px] text-sm border bg-zinc-900/80 border-white/15 text-zinc-300 hover:bg-zinc-800/90 sm:hidden mt-1.5"
+              >
+                <span>
+                  {
+                    LOG_TYPES.find(
+                      (t) => t.value === (newExerciseLogType || "strength"),
+                    )?.label
+                  }
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 text-zinc-400 transition-transform ${logTypePickerOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              <div
+                className={`flex-col gap-2 mt-2 ${logTypePickerOpen ? "flex" : "hidden"} sm:flex`}
+              >
                 {LOG_TYPES.map(({ value, label, description, tags }) => {
                   const isSelected =
                     (newExerciseLogType || "strength") === value;
@@ -457,37 +479,30 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                       onClick={() => {
                         (setNewExerciseLogType || (() => {}))(value);
                         setInternalValidationOpen(false);
+                        setLogTypePickerOpen(false);
                       }}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-all ${
                         isSelected
                           ? "bg-orange-500/10 border-orange-500/35"
-                          : "bg-white/[0.03] border-white/8 hover:bg-white/[0.06]"
+                          : "bg-white/[0.03] border-transparent hover:bg-white/[0.06]"
                       }`}
                     >
-                      {/* Radio indicator */}
                       <div
-                        className={`h-4 w-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
-                          isSelected ? "border-orange-500" : "border-zinc-600"
-                        }`}
+                        className={`h-4 w-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected ? "border-orange-500" : "border-zinc-600"}`}
                       >
                         {isSelected && (
                           <div className="h-2 w-2 rounded-full bg-orange-500" />
                         )}
                       </div>
-
-                      {/* Text */}
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-sm font-semibold leading-tight ${
-                            isSelected ? "text-orange-400" : "text-white"
-                          }`}
+                          className={`text-sm font-semibold leading-tight ${isSelected ? "text-orange-400" : "text-white"}`}
                         >
                           {label}
                         </p>
                         <p className="text-xs text-zinc-500 mt-0.5 leading-snug">
                           {description}
                         </p>
-                        {/* Tags */}
                         <div className="flex gap-1.5 mt-1.5 flex-wrap">
                           {tags.map((tag) => {
                             const tagColors: Record<string, string> = {
@@ -498,9 +513,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                             return (
                               <span
                                 key={tag}
-                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${
-                                  tagColors[tag] ?? "bg-white/8 text-zinc-400"
-                                }`}
+                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${tagColors[tag] ?? "bg-white/8 text-zinc-400"}`}
                               >
                                 {tag}
                               </span>

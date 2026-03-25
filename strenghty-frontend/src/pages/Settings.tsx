@@ -1,3 +1,5 @@
+import { requestNotificationPermission } from "@/lib/notifications";
+import { triggerHaptic } from "@/lib/haptics";
 import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Switch } from "@/components/ui/switch";
@@ -18,7 +20,29 @@ export default function Settings() {
   }, [settings]);
 
   const toggle = (key: "notifications" | "vibrations") => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+    setSettings((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      // If enabling notifications, prompt OS/web permission
+      try {
+        if (
+          key === "notifications" &&
+          !prev.notifications &&
+          updated.notifications
+        ) {
+          // fire-and-forget
+          requestNotificationPermission().catch(() => {});
+        }
+      } catch {}
+
+      // If enabling vibrations, play a short haptic sample
+      try {
+        if (key === "vibrations" && !prev.vibrations && updated.vibrations) {
+          triggerHaptic(40);
+        }
+      } catch {}
+
+      return updated;
+    });
   };
 
   const setUnit = (

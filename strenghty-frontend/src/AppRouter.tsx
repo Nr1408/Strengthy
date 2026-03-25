@@ -15,6 +15,7 @@ import ScrollManager from "@/components/layout/ScrollManager";
 import SwipeNavigator from "@/components/layout/SwipeNavigator";
 import BackButtonHandler from "@/components/layout/BackButtonHandler";
 import WorkoutNotificationHandler from "@/components/layout/WorkoutNotificationHandler";
+import NotificationPrompter from "@/components/layout/NotificationPrompter";
 import { getToken, isSupabaseJwtUsable, refreshSupabaseToken } from "@/lib/api";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -65,7 +66,7 @@ const pageVariants = {
     opacity: 1,
     scale: 1,
     transition: {
-      duration: 0.2,
+      duration: 0.35,
       ease: [0.25, 0.1, 0.25, 1],
     },
   },
@@ -73,7 +74,7 @@ const pageVariants = {
     opacity: 0,
     scale: 0.98,
     transition: {
-      duration: 0.15,
+      duration: 0.25,
       ease: [0.25, 0.1, 0.25, 1],
     },
   },
@@ -439,6 +440,7 @@ const App = () => (
           <BackButtonHandler />
           <TokenRefresher />
           <WorkoutNotificationHandler />
+          <NotificationPrompter />
           <FirstWorkoutGuard />
           <AnimatedRoutes />
         </BrowserRouter>

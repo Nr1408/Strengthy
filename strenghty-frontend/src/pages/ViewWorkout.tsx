@@ -417,9 +417,9 @@ export default function ViewWorkout() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pt-4">
         {/* Unified Header Row */}
-        <div className="flex items-center gap-3 -mt-8 mb-1">
+        <div className="flex items-center gap-3 mb-1">
           <button
             type="button"
             onClick={() => {
