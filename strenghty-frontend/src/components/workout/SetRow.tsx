@@ -1826,7 +1826,7 @@ export function SetRow({
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent
-                  className="w-24 p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
+                  className="w-24 p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-200 ease-out"
                   style={{ transformOrigin: "top right" }}
                 >
                   <DropdownMenuItem
@@ -1935,7 +1935,7 @@ export function SetRow({
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
-                        className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
+                        className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-200 ease-out"
                         style={{ transformOrigin: "top right" }}
                       >
                         <DropdownMenuItem
@@ -1989,7 +1989,7 @@ export function SetRow({
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                      className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-150 ease-out"
+                      className="w-[120px] p-2 bg-zinc-950 backdrop-blur-sm border border-zinc-800 shadow-2xl rounded-lg origin-top-right transition-transform duration-200 ease-out"
                       style={{ transformOrigin: "top right" }}
                     >
                       <DropdownMenuItem

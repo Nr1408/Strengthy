@@ -475,15 +475,15 @@ export default function Profile() {
     <AppLayout>
       <main className="w-full max-w-4xl mx-auto px-4 pb-32">
         {/* ── Hero ── */}
-        <section className="pt-0 -mt-6 pb-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+        <section className="pt-4 pb-4">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => {
                 setTempAvatar(profileInfo.avatar || null);
                 setAvatarDialogOpen(true);
               }}
-              className="relative flex-shrink-0 h-20 w-20 rounded-full bg-transparent flex items-center justify-center overflow-hidden transition-all duration-200 ring-1 ring-white"
+              className="relative self-start mt-1 flex-shrink-0 h-14 w-14 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden border border-white/15 hover:border-white/30 transition-all duration-200"
               aria-label="Change avatar"
             >
               {profileInfo.avatar ? (
@@ -493,33 +493,36 @@ export default function Profile() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="text-3xl font-bold text-white select-none">
+                <span className="text-xl font-bold text-white select-none">
                   {profileInfo.name.charAt(0).toUpperCase()}
                 </span>
               )}
+              <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="h-4 w-4 text-white" />
+              </div>
             </button>
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold text-white truncate">
+                <h1 className="text-lg font-bold text-white truncate">
                   {profileInfo.name}
                 </h1>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/20">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/20">
                   {onboardingInfo?.experience
                     ? EXPERIENCE_LABELS[onboardingInfo.experience] || "Member"
                     : "Member"}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {completedWorkouts.length > 0
                   ? `Member since ${memberSinceLabel}`
                   : "New member 🎉"}
               </p>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-2.5 flex gap-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 text-xs h-8"
                   onClick={() => setEditing(true)}
                 >
                   Edit Profile
@@ -527,7 +530,7 @@ export default function Profile() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 text-xs h-8"
                   onClick={() => navigate("/profile/account")}
                 >
                   Account Settings
@@ -581,7 +584,7 @@ export default function Profile() {
                 </div>
                 <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-orange-500 transition-all duration-500"
+                    className="h-full rounded-full bg-orange-500 transition-all duration-200"
                     style={{
                       width: `${Math.min((workoutsThisMonth / Math.max(monthlyGoal, 1)) * 100, 100)}%`,
                     }}
@@ -1156,7 +1159,7 @@ export default function Profile() {
             <div className="flex flex-col items-center gap-5 pt-2">
               {/* Avatar preview */}
               <div className="relative">
-                <div className="h-28 w-28 rounded-full bg-orange-500/10 border-2 border-orange-500/25 overflow-hidden flex items-center justify-center">
+                <div className="h-28 w-28 rounded-full bg-zinc-800 border border-white/10 overflow-hidden flex items-center justify-center">
                   {tempAvatar ? (
                     <img
                       src={tempAvatar}
@@ -1164,7 +1167,7 @@ export default function Profile() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="text-4xl font-bold text-orange-400 select-none">
+                    <span className="text-4xl font-bold text-white select-none">
                       {profileInfo.name.charAt(0).toUpperCase()}
                     </span>
                   )}
@@ -1256,23 +1259,20 @@ export default function Profile() {
 
         {/* ── Sign Out confirm dialog ── */}
         <Dialog open={signOutConfirmOpen} onOpenChange={setSignOutConfirmOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Sign out?</DialogTitle>
-              <DialogDescription>
-                You will need to sign in again to access your account.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <div className="flex w-full justify-end gap-3">
+          <DialogContent className="max-w-[340px] rounded-[28px] bg-zinc-950 border-0 p-0 overflow-hidden">
+            <div className="flex flex-col items-center text-center px-6 pt-6 pb-6 gap-4">
+              <div>
+                <DialogTitle className="text-lg font-semibold text-white">
+                  Sign out?
+                </DialogTitle>
+                <DialogDescription className="mt-1.5 text-sm text-zinc-400">
+                  You'll need to sign in again to access your workouts and
+                  progress.
+                </DialogDescription>
+              </div>
+              <div className="w-full flex flex-col gap-2 mt-1">
                 <Button
-                  variant="outline"
-                  onClick={() => setSignOutConfirmOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
+                  className="w-full rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5"
                   onClick={() => {
                     setSignOutConfirmOpen(false);
                     handleSignOut();
@@ -1280,8 +1280,15 @@ export default function Profile() {
                 >
                   Sign Out
                 </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 font-medium"
+                  onClick={() => setSignOutConfirmOpen(false)}
+                >
+                  Cancel
+                </Button>
               </div>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </main>

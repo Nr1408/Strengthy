@@ -3171,10 +3171,10 @@ export default function NewWorkout() {
       {/* PR banner */}
       <div
         className="pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 flex justify-center w-full px-4"
-        style={{ top: "calc(var(--workout-header-h, 64px) + 28px)" }}
+        style={{ top: "calc(var(--workout-header-h, 72px) + 28px)" }}
       >
         <div
-          className={`pointer-events-auto flex items-center gap-3 rounded-full bg-zinc-800 px-4 py-2 shadow-md shadow-black/30 border border-white/25 ring-1 ring-white/5 max-w-xs sm:max-w-md transition-all duration-300 ease-out transform ${
+          className={`pointer-events-auto flex items-center gap-3 rounded-full bg-zinc-800 px-4 py-2 shadow-md shadow-black/30 border border-white/25 ring-1 ring-white/5 max-w-xs sm:max-w-md transition-all duration-200 ease-out transform ${
             prVisible && prBanner
               ? "opacity-100 translate-y-0 scale-100"
               : "opacity-0 -translate-y-2 scale-95"
@@ -3205,7 +3205,7 @@ export default function NewWorkout() {
       {/* Fixed top action bar */}
       <div
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-[60] bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2"
+        className="fixed top-0 left-0 right-0 z-[60] bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2 min-h-[72px]"
       >
         <div className="flex items-center justify-between px-4 py-3">
           {!isFirstWorkout && (
@@ -3267,7 +3267,7 @@ export default function NewWorkout() {
 
       <div
         className="space-y-6"
-        style={{ paddingTop: "calc(var(--workout-header-h, 0px) + 4px)" }}
+        style={{ paddingTop: "calc(var(--workout-header-h, 72px) + 4px)" }}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
@@ -4002,7 +4002,7 @@ export default function NewWorkout() {
                             e.stopPropagation();
                             setIsEquipmentPickerOpen(true);
                           }}
-                          className={`flex items-center gap-2 min-w-0 max-w-full truncate px-2 sm:px-3 py-1.5 rounded-full text-sm border transition-all duration-300 ease-in-out active:scale-95 active:opacity-80 ${
+                          className={`flex items-center gap-2 min-w-0 max-w-full truncate px-2 sm:px-3 py-1.5 rounded-full text-sm border transition-all duration-200 ease-out active:scale-95 active:opacity-80 ${
                             filterEquipment === "all"
                               ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
                               : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
@@ -4135,7 +4135,7 @@ export default function NewWorkout() {
                             e.stopPropagation();
                             setIsMusclePickerOpen(true);
                           }}
-                          className={`flex items-center gap-2 min-w-0 max-w-full truncate px-2 sm:px-3 py-1.5 rounded-full text-sm border transition-all duration-300 ease-in-out active:scale-95 active:opacity-80 ${
+                          className={`flex items-center gap-2 min-w-0 max-w-full truncate px-2 sm:px-3 py-1.5 rounded-full text-sm border transition-all duration-200 ease-out active:scale-95 active:opacity-80 ${
                             filterMuscle === "all"
                               ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
                               : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"

@@ -8,31 +8,15 @@ import { useQuery } from "@tanstack/react-query";
 import { getSetsForExercise, getWorkouts } from "@/lib/api";
 import { format } from "date-fns";
 import { SetRow } from "@/components/workout/SetRow";
+import {
+  GRID_TEMPLATE_STRENGTH_NO_CHECK,
+  GRID_TEMPLATE_CARDIO_NO_CHECK,
+  GRID_TEMPLATE_HIIT_NO_CHECK,
+} from "@/components/workout/SetsHeader";
 import { Trophy, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Exercise history uses a slightly tighter grid so entries align closer
-// to the card edges without affecting other pages.
-// Use the same tightened "no-check" templates from SetRow so the
-// header labels line up exactly with the read-only set boxes below.
-const GRID_TEMPLATE =
-  "minmax(20px, 0.23fr) minmax(50px, 0.65fr) 6px minmax(20px, 0.65fr) minmax(25px, 0.25fr) 32px 30px";
-// same as above but without the final check column
-const GRID_TEMPLATE_STRENGTH_NO_CHECK =
-  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) 6px minmax(22px, 0.65fr) minmax(28px, 0.35fr) 32px";
-
-// Cardio: Set type | Time | Dist/Floors | Level/Split | PR | Check (tightened)
-const GRID_TEMPLATE_CARDIO =
-  "minmax(20px, 0.2fr) minmax(56px, 0.5fr) minmax(56px, 0.65fr) minmax(28px, 0.25fr) 32px 30px";
-const GRID_TEMPLATE_CARDIO_NO_CHECK =
-  "minmax(18px, 0.35fr) minmax(56px, 0.6fr) minmax(56px, 0.8fr) minmax(28px, 0.25fr) 32px";
-
-// HIIT / bodyweight cardio layout: Set type | Time | Reps | RPE | PR | Check
-const GRID_TEMPLATE_HIIT =
-  "minmax(20px, 0.23fr) minmax(60px, 0.65fr) minmax(22px, 0.65fr) minmax(28px, 0.3fr) 32px 30px";
-
-const GRID_TEMPLATE_HIIT_NO_CHECK =
-  "minmax(20px, 0.25fr) minmax(60px, 0.7fr) minmax(48px, 0.7fr) minmax(32px, 0.5fr) 32px";
+// Exercise history uses shared templates from SetsHeader for alignment
 
 const isHiitExerciseName = (value: string) => {
   const name = (value || "").toLowerCase();
@@ -397,7 +381,6 @@ export default function ExerciseHistory() {
                             SET
                           </span>
                           <span className="flex justify-center">WEIGHT</span>
-                          <span />
                           <span className="flex justify-center">REPS</span>
                           <span className="flex justify-center">RPE</span>
                           <span className="flex justify-center">

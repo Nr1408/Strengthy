@@ -1,7 +1,14 @@
 import { useMemo, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Trophy, MoreHorizontal, ArrowLeft } from "lucide-react";
+import {
+  Trophy,
+  MoreHorizontal,
+  ArrowLeft,
+  Pencil,
+  Bookmark,
+  Trash2,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -457,22 +464,18 @@ export default function ViewWorkout() {
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="absolute right-0 top-full mt-1 z-[110] min-w-[160px] rounded-2xl bg-zinc-900/98 backdrop-blur-md border border-white/5 p-0 text-left font-sans text-sm">
+              <DropdownMenuContent className="absolute right-0 top-full mt-1 z-[110] min-w-[180px] rounded-2xl bg-zinc-950 border border-white/[0.06] p-1.5 text-left font-sans text-sm shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
                 <div>
                   <DropdownMenuItem
-                    className="px-4 py-2 text-sm text-zinc-400 hover:bg-white/5 rounded cursor-pointer leading-tight text-left font-medium"
+                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-zinc-200 hover:bg-white/5 hover:text-white rounded-xl cursor-pointer leading-tight font-medium transition-colors focus:bg-white/5 focus:text-white"
                     onClick={() => navigate(`/workouts/${id}/edit`)}
                   >
+                    <Pencil className="h-3.5 w-3.5 text-zinc-500" />
                     Edit workout
                   </DropdownMenuItem>
+
                   <DropdownMenuItem
-                    className="px-4 py-2 text-sm text-red-500 hover:bg-white/5 rounded cursor-pointer border-t border-white/5 leading-tight text-left font-semibold"
-                    onClick={() => setShowDiscardConfirm(true)}
-                  >
-                    Delete workout
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="px-4 py-2 text-sm text-zinc-400 hover:bg-white/5 rounded cursor-pointer leading-tight text-left font-medium"
+                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-zinc-200 hover:bg-white/5 hover:text-white rounded-xl cursor-pointer leading-tight font-medium transition-colors focus:bg-white/5 focus:text-white"
                     onClick={async () => {
                       try {
                         if (!workout) return;
@@ -513,7 +516,18 @@ export default function ViewWorkout() {
                       }
                     }}
                   >
+                    <Bookmark className="h-3.5 w-3.5 text-zinc-500" />
                     Add to routine
+                  </DropdownMenuItem>
+
+                  <div className="my-1 mx-2 border-t border-white/[0.06]" />
+
+                  <DropdownMenuItem
+                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/8 hover:text-red-300 rounded-xl cursor-pointer leading-tight font-medium transition-colors focus:bg-red-500/8 focus:text-red-300"
+                    onClick={() => setShowDiscardConfirm(true)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-red-500/70" />
+                    Delete workout
                   </DropdownMenuItem>
                 </div>
               </DropdownMenuContent>

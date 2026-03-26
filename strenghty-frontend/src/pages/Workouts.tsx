@@ -795,7 +795,7 @@ export default function Workouts() {
     <AppLayout>
       <div className="pointer-events-none fixed left-1/2 top-16 z-40 -translate-x-1/2 flex justify-center w-full px-4">
         <div
-          className={`pointer-events-auto flex items-center gap-3 rounded-full bg-muted px-4 py-2 shadow-lg border border-border max-w-xs sm:max-w-md transition-all duration-300 ease-out transform ${
+          className={`pointer-events-auto flex items-center gap-3 rounded-full bg-muted px-4 py-2 shadow-lg border border-border max-w-xs sm:max-w-md transition-all duration-200 ease-out transform ${
             prVisible && prBanner
               ? "opacity-100 translate-y-0 scale-100"
               : "opacity-0 -translate-y-2 scale-95"

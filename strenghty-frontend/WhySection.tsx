@@ -34,7 +34,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
 };
 
 export default function WhySection() {
@@ -108,7 +108,7 @@ export function WhySectionContent({
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 0.75, y: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
+          transition={{ duration: 0.2, ease: "easeOut", delay: 0.1 }}
           className="relative z-10 mt-5 text-center text-xs text-muted-foreground"
         >
           {trustLine}

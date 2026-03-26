@@ -42,18 +42,19 @@ const DialogContent = React.forwardRef<
       className={cn(
         (() => {
           const isFullscreen =
-            typeof className === "string" && /\bdialog-fullscreen\b/.test(className);
+            typeof className === "string" &&
+            /\bdialog-fullscreen\b/.test(className);
           if (isFullscreen) {
-            return "dialog-content fixed inset-0 z-[220] m-0 grid h-screen w-screen max-h-none max-w-none gap-0 rounded-none border-none bg-neutral-950 text-white p-0 shadow-none duration-300 ease-in-out overflow-y-auto overflow-x-hidden";
+            return "dialog-content fixed inset-0 z-[220] m-0 grid h-screen w-screen max-h-none max-w-none gap-0 rounded-none border-none bg-neutral-950 text-white p-0 shadow-none duration-200 ease-out overflow-y-auto overflow-x-hidden";
           }
           const isSheet =
             typeof className === "string" &&
             /\bbottom-/.test(className) &&
             !/\bfloating-card\b/.test(className || "");
           if (isSheet) {
-            return "dialog-content fixed left-0 right-0 bottom-0 z-50 grid w-full max-w-full max-h-[85vh] gap-3 rounded-t-[32px] border border-white/10 bg-neutral-900/80 backdrop-blur-xl text-white p-3 shadow-2xl duration-300 ease-in-out overflow-y-auto overflow-x-hidden";
+            return "dialog-content fixed left-0 right-0 bottom-0 z-50 grid w-full max-w-full max-h-[85vh] gap-3 rounded-t-[32px] border border-white/10 bg-neutral-900/80 backdrop-blur-xl text-white p-3 shadow-2xl duration-200 ease-out overflow-y-auto overflow-x-hidden";
           }
-          return "dialog-content fixed left-[50%] top-[50%] z-50 grid w-[96vw] max-w-xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-3 rounded-lg border border-white/10 bg-neutral-900/70 backdrop-blur-xl text-white p-2 shadow-2xl duration-300 ease-in-out overflow-y-auto overflow-x-hidden";
+          return "dialog-content fixed left-[50%] top-[50%] z-50 grid w-[96vw] max-w-xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-3 rounded-lg border border-white/10 bg-neutral-900/70 backdrop-blur-xl text-white p-2 shadow-2xl duration-200 ease-out overflow-y-auto overflow-x-hidden";
         })(),
         className,
       )}

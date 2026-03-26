@@ -195,7 +195,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                     e.stopPropagation();
                     onEquipmentPickerOpenChange(true);
                   }}
-                  className={`flex items-center gap-2 w-full truncate px-4 py-2.5 rounded-[9999px] text-sm sm:text-base border transition-all duration-300 ease-in-out active:scale-95 active:opacity-80 ${
+                  className={`flex items-center gap-2 w-full truncate px-4 py-2.5 rounded-[9999px] text-sm sm:text-base border transition-all duration-200 ease-out active:scale-95 active:opacity-80 ${
                     newExerciseEquipment === "all"
                       ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
                       : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"
@@ -332,7 +332,7 @@ export function CreateExerciseDialog(props: CreateExerciseDialogProps) {
                     e.stopPropagation();
                     onMusclePickerOpenChange(true);
                   }}
-                  className={`flex items-center gap-2 w-full truncate px-4 py-2.5 rounded-[9999px] text-sm sm:text-base border transition-all duration-300 ease-in-out active:scale-95 active:opacity-80 ${
+                  className={`flex items-center gap-2 w-full truncate px-4 py-2.5 rounded-[9999px] text-sm sm:text-base border transition-all duration-200 ease-out active:scale-95 active:opacity-80 ${
                     !newExerciseMuscle
                       ? "bg-zinc-900/80 border border-white/15 text-zinc-300 hover:bg-zinc-800/90 hover:border-white/20"
                       : "bg-zinc-800 border-white/25 text-white hover:bg-zinc-700 shadow-[0_6px_18px_rgba(0,0,0,0.6)] ring-1 ring-white/8"

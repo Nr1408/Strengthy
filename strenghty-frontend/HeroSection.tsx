@@ -37,7 +37,7 @@ function LiftWordRotator() {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.45, ease: "easeInOut" }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="block whitespace-nowrap font-heading font-bold text-primary"
           >
             {word}
@@ -100,7 +100,7 @@ export default function HeroSection() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         className="mb-8 flex items-center gap-2"
       >
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/25">
@@ -113,7 +113,7 @@ export default function HeroSection() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.1 }}
+        transition={{ duration: 0.2, delay: 0.1, ease: "easeOut" }}
         className="text-center"
       >
         <h1 className="font-heading text-4xl font-bold tracking-tight md:text-6xl">
@@ -133,7 +133,7 @@ export default function HeroSection() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
+        transition={{ duration: 0.2, delay: 0.3, ease: "easeOut" }}
         className="mt-8 flex flex-col items-center gap-3 sm:flex-row"
       >
         <Link to="/auth?signup=true">
@@ -152,7 +152,7 @@ export default function HeroSection() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.7 }}
-        transition={{ duration: 0.6, delay: 0.5 }}
+        transition={{ duration: 0.2, delay: 0.5, ease: "easeOut" }}
         className="mt-10 flex items-center gap-5"
       >
         {valueStrip.map(({ icon: Icon, label }) => (
@@ -171,7 +171,7 @@ export default function HeroSection() {
         className="absolute bottom-8 flex flex-col items-center gap-1"
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.5 }}
-        transition={{ delay: 1, duration: 0.6 }}
+        transition={{ delay: 1, duration: 0.2, ease: "easeOut" }}
       >
         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
           Scroll

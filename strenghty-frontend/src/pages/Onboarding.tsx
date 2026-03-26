@@ -407,7 +407,7 @@ export default function Onboarding() {
               <div
                 key={index}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-500",
+                  "h-2 rounded-full transition-all duration-200",
                   index === currentStep
                     ? "w-8 bg-primary"
                     : index < currentStep
@@ -426,7 +426,7 @@ export default function Onboarding() {
           {/* Step Title */}
           <div
             className={cn(
-              "mb-8 text-center transition-all duration-300",
+              "mb-8 text-center transition-all duration-200",
               isAnimating && direction === "next" && "opacity-0 -translate-x-8",
               isAnimating && direction === "prev" && "opacity-0 translate-x-8",
             )}
@@ -442,7 +442,7 @@ export default function Onboarding() {
           {/* Step Content */}
           <div
             className={cn(
-              "transition-all duration-300",
+              "transition-all duration-200",
               isAnimating && direction === "next" && "opacity-0 translate-x-12",
               isAnimating &&
                 direction === "prev" &&
@@ -460,7 +460,7 @@ export default function Onboarding() {
                       key={g.id}
                       onClick={() => setUserData((p) => ({ ...p, goal: g.id }))}
                       className={cn(
-                        "group relative flex items-center gap-4 rounded-xl border-2 p-5 text-left transition-all duration-300 hover:scale-[1.01]",
+                        "group relative flex items-center gap-4 rounded-xl border-2 p-5 text-left transition-all duration-200 hover:scale-[1.01]",
                         selected
                           ? "border-primary bg-primary/10"
                           : "border-border bg-card hover:border-primary/50",
@@ -469,7 +469,7 @@ export default function Onboarding() {
                     >
                       <div
                         className={cn(
-                          "flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110",
+                          "flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-200 group-hover:scale-110",
                           g.color,
                         )}
                       >
@@ -492,7 +492,7 @@ export default function Onboarding() {
             {/* Step 1: Personal metrics (age / height / weight) */}
             {currentStep === 1 && (
               <div className="mx-auto max-w-md space-y-3">
-                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-300 hover:border-primary/50">
+                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-200 hover:border-primary/50">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-500">
                       <User className="h-4 w-4 text-white" />
@@ -521,7 +521,7 @@ export default function Onboarding() {
                   </div>
                 </div>
 
-                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-300 hover:border-primary/50">
+                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-200 hover:border-primary/50">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500">
@@ -612,7 +612,7 @@ export default function Onboarding() {
                   </div>
                 </div>
 
-                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-300 hover:border-primary/50">
+                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-200 hover:border-primary/50">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
@@ -688,7 +688,7 @@ export default function Onboarding() {
                 </div>
 
                 {/* Goal Weight card - separate for visual consistency on mobile */}
-                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-300 hover:border-primary/50">
+                <div className="group rounded-xl border border-border bg-card p-3 sm:p-4 transition-all duration-200 hover:border-primary/50">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
                       <Scale className="h-4 w-4 text-white" />
@@ -740,7 +740,7 @@ export default function Onboarding() {
                         }))
                       }
                       className={cn(
-                        "group relative flex w-full items-center gap-4 rounded-xl border-2 p-5 text-left transition-all duration-300 hover:scale-[1.01]",
+                        "group relative flex w-full items-center gap-4 rounded-xl border-2 p-5 text-left transition-all duration-200 hover:scale-[1.01]",
                         isSelected
                           ? "border-primary bg-primary/10"
                           : "border-border bg-card hover:border-primary/50",
@@ -749,7 +749,7 @@ export default function Onboarding() {
                     >
                       <div
                         className={cn(
-                          "flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110",
+                          "flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110",
                           isSelected ? "bg-primary" : "bg-secondary",
                         )}
                       >
@@ -792,7 +792,7 @@ export default function Onboarding() {
                         setUserData((p) => ({ ...p, equipment: option.id }))
                       }
                       className={cn(
-                        "group relative flex items-center gap-4 rounded-xl border-2 p-5 text-left transition-all duration-300 hover:scale-[1.01]",
+                        "group relative flex items-center gap-4 rounded-xl border-2 p-5 text-left transition-all duration-200 hover:scale-[1.01]",
                         isSelected
                           ? "border-primary bg-primary/10"
                           : "border-border bg-card hover:border-primary/50",
@@ -801,7 +801,7 @@ export default function Onboarding() {
                     >
                       <div
                         className={cn(
-                          "flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-110",
+                          "flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-200 group-hover:scale-110",
                           option.color,
                         )}
                       >
@@ -968,7 +968,7 @@ export default function Onboarding() {
               onClick={stepPrev}
               disabled={currentStep === 0}
               className={cn(
-                "transition-opacity duration-300 text-white",
+                "transition-opacity duration-200 text-white",
                 currentStep === 0 && "opacity-0 pointer-events-none",
               )}
             >
@@ -986,7 +986,7 @@ export default function Onboarding() {
               }}
               disabled={!canProceed()}
               size="md"
-              className="min-w-[120px] text-sm px-6 py-2.5 transition-all duration-300 hover:scale-103"
+              className="min-w-[120px] text-sm px-6 py-2.5 transition-all duration-200 hover:scale-103"
             >
               {currentStep === totalSteps - 1 ? (
                 <>
