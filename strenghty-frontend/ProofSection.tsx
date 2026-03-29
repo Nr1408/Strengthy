@@ -40,7 +40,7 @@ export function ProofStep({ onNext }: ProofStepProps) {
         <div className="relative rounded-2xl border border-border bg-card p-4 md:p-6 shadow-2xl shadow-primary/5">
           <div className="mb-3 flex items-center justify-between">
             <span className="font-heading text-xs md:text-sm font-semibold text-white">
-              Weekly Overview
+              Overview
             </span>
             <span className="text-[10px] text-muted-foreground">Feb 2–8</span>
           </div>
@@ -119,9 +119,7 @@ export default function ProofSection() {
       >
         <div className="rounded-2xl border border-border bg-card p-5 shadow-2xl shadow-primary/5">
           <div className="mb-4 flex items-center justify-between">
-            <span className="font-heading text-sm font-semibold">
-              Weekly Overview
-            </span>
+            <span className="font-heading text-sm font-semibold">Overview</span>
             <span className="text-xs text-muted-foreground">Feb 2–8</span>
           </div>
           <div className="grid grid-cols-2 gap-3">

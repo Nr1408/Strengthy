@@ -561,6 +561,13 @@ export default function Dashboard() {
       routineNames[day] = routine?.name ?? "Workout";
     });
 
+    // Ensure today's notification uses the same routine shown in "Next Up"/banner
+    try {
+      if (todayIsScheduled && todayRoutineName) {
+        routineNames[todayDayOfWeek] = todayRoutineName;
+      }
+    } catch {}
+
     const justHitTarget =
       workoutsThisWeekDistinctDays > 0 &&
       workoutsThisWeekDistinctDays === weeklyTarget;
