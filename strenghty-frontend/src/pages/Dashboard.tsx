@@ -500,10 +500,18 @@ export default function Dashboard() {
 
   const todayRoutineName = todayRoutine?.name ?? "Your workout";
 
-  // Banner data: show onboarding blueprint when user has no completed workouts,
-  // otherwise show the persisted 'nextSuggested' routine.
+  // Banner data: prefer the persisted `nextSuggested` so UI appears immediately
+  // on cold start; fall back to the onboarding blueprint when appropriate.
   const bannerData = useMemo(() => {
     try {
+      // If we have a persisted nextSuggested, prefer showing it immediately
+      if (nextSuggested?.id) {
+        const rt = mockRoutines.find((r) => r.id === nextSuggested.id) ?? null;
+        return { routine: rt, label: nextSuggested.label, title: "Next Up" };
+      }
+
+      // If no persisted suggestion and user has no completed workouts,
+      // show the onboarding blueprint (synchronous from localStorage).
       if (completedWorkouts.length === 0) {
         const onboardingRaw = localStorage.getItem("user:onboarding");
         if (onboardingRaw) {
@@ -518,10 +526,6 @@ export default function Dashboard() {
         return null;
       }
 
-      if (nextSuggested?.id) {
-        const rt = mockRoutines.find((r) => r.id === nextSuggested.id) ?? null;
-        return { routine: rt, label: nextSuggested.label, title: "Next Up" };
-      }
       return null;
     } catch (e) {
       return null;
