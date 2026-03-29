@@ -11,6 +11,7 @@ const NOTIFICATION_ID = 1001;
 export default function WorkoutNotificationHandler() {
   const navigate = useNavigate();
   const hasScheduledRef = useRef(false);
+  const STORAGE_KEY = "workout:pauseNotificationScheduled";
 
   useEffect(() => {
     // Only run on native platforms
@@ -54,6 +55,25 @@ export default function WorkoutNotificationHandler() {
         const ok = await ensurePermission();
         if (!ok) return;
 
+        // Reconcile in-memory flag with delivered notifications in case
+        // the user cleared the notification from the system while the
+        // app was backgrounded.
+        if (hasScheduledRef.current) {
+          try {
+            const delivered =
+              await LocalNotifications.getDeliveredNotifications();
+            const found = (delivered.notifications || []).some(
+              (n: any) => Number(n.id) === NOTIFICATION_ID,
+            );
+            if (!found) {
+              hasScheduledRef.current = false;
+              try {
+                localStorage.removeItem(STORAGE_KEY);
+              } catch {}
+            }
+          } catch {}
+        }
+
         // Avoid scheduling duplicates
         if (hasScheduledRef.current) return;
 
@@ -76,6 +96,9 @@ export default function WorkoutNotificationHandler() {
         });
 
         hasScheduledRef.current = true;
+        try {
+          localStorage.setItem(STORAGE_KEY, "1");
+        } catch {}
       } catch {
         // ignore notification errors
       }
@@ -90,6 +113,9 @@ export default function WorkoutNotificationHandler() {
         // ignore
       }
       hasScheduledRef.current = false;
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {}
     };
 
     // Listen for app going to background/foreground
@@ -103,11 +129,22 @@ export default function WorkoutNotificationHandler() {
       removeAppStateListener = () => handle.remove();
     });
 
-    // When user taps the notification, navigate back to the workout
+    // When the notification is acted on (tap) or otherwise changed,
+    // clear our scheduled flag and navigate if appropriate.
     LocalNotifications.addListener(
       "localNotificationActionPerformed",
       (event) => {
         try {
+          // If this was our paused notification, clear the scheduled flag
+          const nid =
+            event?.notification && (event.notification.id as unknown as number);
+          if (Number(nid) === NOTIFICATION_ID) {
+            hasScheduledRef.current = false;
+            try {
+              localStorage.removeItem(STORAGE_KEY);
+            } catch {}
+          }
+
           // Mark that the user requested resume so the workout page can
           // clear the paused flag and resume the timer automatically.
           try {

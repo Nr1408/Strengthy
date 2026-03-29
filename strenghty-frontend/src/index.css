@@ -38,6 +38,7 @@
     --ring: 24 95% 53%;
 
     --radius: 0.75rem;
+    --workout-header-h: 88px;
 
     --sidebar-background: 220 20% 97%;
     --sidebar-foreground: 220 20% 10%;
@@ -50,6 +51,7 @@
   }
 
   .dark {
+    --workout-header-h: 88px;
     --background: 220 20% 7%;
     --foreground: 220 14% 96%;
 
