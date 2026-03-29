@@ -242,7 +242,6 @@ export default function NewWorkout() {
     return null;
   };
 
-
   const hasToken = typeof window !== "undefined" && !!getToken();
 
   const { data: userExercises = [] } = useQuery({
@@ -353,7 +352,24 @@ export default function NewWorkout() {
   });
 
   // Restore in-progress workout if one exists; otherwise create a new one
-  
+  useEffect(() => {
+    if (isRoutineBuilder) return;
+
+    // If we already have a workout id, do nothing here
+    if (workoutId) return;
+
+    try {
+      const inProg = localStorage.getItem("workout:inProgress");
+      if (inProg) {
+        const obj = JSON.parse(inProg);
+        if (obj && obj.id) {
+          setWorkoutId(obj.id);
+          const saved = localStorage.getItem(`workout:state:${obj.id}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            // ALWAYS restore exercises if they exist in localStorage
+            if (
+              parsed.exercises &&
               Array.isArray(parsed.exercises) &&
               parsed.exercises.length > 0
             ) {
@@ -2366,29 +2382,31 @@ export default function NewWorkout() {
       return;
     }
 
-    // Prevent saving when exercises exist but no set has any logged value
-    const hasLoggedSet = exercises.some((ex) =>
-      ex.sets.some((s) => {
-        if (ex.exercise.muscleGroup === "cardio") {
+    if (!isRoutineBuilder) {
+      const hasAtLeastOneLoggedSet = exercises.some((ex) =>
+        ex.sets.some((s) => {
+          if (!s.completed) return false;
+          if (ex.exercise.muscleGroup === "cardio") {
+            return (
+              (s.cardioDurationSeconds ?? 0) > 0 ||
+              (s.cardioDistance ?? 0) > 0 ||
+              (s.cardioStat ?? 0) > 0
+            );
+          }
           return (
-            (!!(s as any).cardioDistance && (s as any).cardioDistance > 0) ||
-            (!!(s as any).cardioDurationSeconds && (s as any).cardioDurationSeconds > 0) ||
-            (!!(s as any).cardioStat && (s as any).cardioStat > 0) ||
-            !!s.completed
+            (s.reps || 0) > 0 || (typeof s.weight === "number" && s.weight > 0)
           );
-        }
-        return !!s.completed || (s.reps || 0) > 0 || (s.weight || 0) > 0;
-      }),
-    );
-
-    if (!hasLoggedSet) {
-      toast({
-        title: "Add a set value",
-        description:
-          "Please add at least one set with reps, weight, or cardio value before saving.",
-        variant: "destructive",
-      });
-      return;
+        }),
+      );
+      if (!hasAtLeastOneLoggedSet) {
+        toast({
+          title: "No sets logged",
+          description:
+            "Please log at least one set before saving your workout.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsSavingWorkout(true);
@@ -3153,8 +3171,6 @@ export default function NewWorkout() {
       setIsSavingWorkout(false);
     }
   };
-
-  
 
   return (
     <AppLayout>

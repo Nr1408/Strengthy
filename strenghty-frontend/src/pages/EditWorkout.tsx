@@ -1866,33 +1866,32 @@ export default function EditWorkout() {
   const saveEditedWorkout = async () => {
     if (isSavingWorkout) return;
     if (!workoutId) return;
-    setIsSavingWorkout(true);
-    // Prevent saving when exercises exist but no set has any logged value
-    const hasLoggedSet = exercises.some((ex) =>
+
+    const hasAtLeastOneLoggedSet = exercises.some((ex) =>
       ex.sets.some((s) => {
+        if (!s.completed) return false;
         if (ex.exercise.muscleGroup === "cardio") {
           return (
-            (!!(s as any).cardioDistance && (s as any).cardioDistance > 0) ||
-            (!!(s as any).cardioDurationSeconds &&
-              (s as any).cardioDurationSeconds > 0) ||
-            (!!(s as any).cardioStat && (s as any).cardioStat > 0) ||
-            !!s.completed
+            (s.cardioDurationSeconds ?? 0) > 0 ||
+            (s.cardioDistance ?? 0) > 0 ||
+            (s.cardioStat ?? 0) > 0
           );
         }
-        return !!s.completed || (s.reps || 0) > 0 || (s.weight || 0) > 0;
+        return (
+          (s.reps || 0) > 0 || (typeof s.weight === "number" && s.weight > 0)
+        );
       }),
     );
-
-    if (!hasLoggedSet) {
+    if (!hasAtLeastOneLoggedSet) {
       toast({
-        title: "Add a set value",
-        description:
-          "Please add at least one set with reps, weight, or cardio value before saving.",
+        title: "No sets logged",
+        description: "Please log at least one set before saving your workout.",
         variant: "destructive",
       });
-      setIsSavingWorkout(false);
       return;
     }
+
+    setIsSavingWorkout(true);
     // Use a mutable local workout id so we can recreate the backend workout
     // and retry set creation if the server reports the workout record is missing.
     let curWorkoutId: string | null = workoutId;
