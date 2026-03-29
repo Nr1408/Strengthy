@@ -10,3 +10,12 @@ backend/strenghty_backend/db.sqlite3
 
 # Frontend build output
 strenghty-frontend/dist/
+
+# Ignore all environment files anywhere
+.env
+.env.development
+.env.production
+*.env
+
+# Ignore Google Services
+google-services.json

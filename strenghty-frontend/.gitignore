@@ -25,3 +25,14 @@ dist-ssr
 
 .vercel
 .env*.local
+android/app/google-services.json
+
+
+# Ignore all environment files anywhere
+.env
+.env.development
+.env.production
+*.env
+
+# Ignore Google Services
+google-services.json
