@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -242,7 +242,6 @@ export default function NewWorkout() {
     return null;
   };
 
-  const headerRef = useRef<HTMLDivElement | null>(null);
 
   const hasToken = typeof window !== "undefined" && !!getToken();
 
@@ -354,24 +353,7 @@ export default function NewWorkout() {
   });
 
   // Restore in-progress workout if one exists; otherwise create a new one
-  useEffect(() => {
-    if (isRoutineBuilder) return;
-
-    // If we already have a workout id, do nothing here
-    if (workoutId) return;
-
-    try {
-      const inProg = localStorage.getItem("workout:inProgress");
-      if (inProg) {
-        const obj = JSON.parse(inProg);
-        if (obj && obj.id) {
-          setWorkoutId(obj.id);
-          const saved = localStorage.getItem(`workout:state:${obj.id}`);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            // ALWAYS restore exercises if they exist in localStorage
-            if (
-              parsed.exercises &&
+  
               Array.isArray(parsed.exercises) &&
               parsed.exercises.length > 0
             ) {
@@ -2384,6 +2366,31 @@ export default function NewWorkout() {
       return;
     }
 
+    // Prevent saving when exercises exist but no set has any logged value
+    const hasLoggedSet = exercises.some((ex) =>
+      ex.sets.some((s) => {
+        if (ex.exercise.muscleGroup === "cardio") {
+          return (
+            (!!(s as any).cardioDistance && (s as any).cardioDistance > 0) ||
+            (!!(s as any).cardioDurationSeconds && (s as any).cardioDurationSeconds > 0) ||
+            (!!(s as any).cardioStat && (s as any).cardioStat > 0) ||
+            !!s.completed
+          );
+        }
+        return !!s.completed || (s.reps || 0) > 0 || (s.weight || 0) > 0;
+      }),
+    );
+
+    if (!hasLoggedSet) {
+      toast({
+        title: "Add a set value",
+        description:
+          "Please add at least one set with reps, weight, or cardio value before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSavingWorkout(true);
 
     try {
@@ -3147,24 +3154,7 @@ export default function NewWorkout() {
     }
   };
 
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updateHeaderHeight = () => {
-      if (!headerRef.current) return;
-      const height = headerRef.current.offsetHeight || 0;
-      if (typeof document !== "undefined") {
-        document.documentElement.style.setProperty(
-          "--workout-header-h",
-          `${height}px`,
-        );
-      }
-    };
-
-    updateHeaderHeight();
-    window.addEventListener("resize", updateHeaderHeight);
-    return () => window.removeEventListener("resize", updateHeaderHeight);
-  }, []);
+  
 
   return (
     <AppLayout>
@@ -3204,8 +3194,17 @@ export default function NewWorkout() {
 
       {/* Fixed top action bar */}
       <div
-        ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-[60] bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2 min-h-[72px]"
+        ref={(el) => {
+          if (!el) return;
+          const height = el.offsetHeight || 0;
+          if (typeof document !== "undefined") {
+            document.documentElement.style.setProperty(
+              "--workout-header-h",
+              `${height}px`,
+            );
+          }
+        }}
+        className="fixed top-0 left-0 right-0 z-[60] bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2 min-h-[88px] will-change-transform"
       >
         <div className="flex items-center justify-between px-4 py-3">
           {!isFirstWorkout && (

@@ -1259,7 +1259,7 @@ export default function Profile() {
 
         {/* ── Sign Out confirm dialog ── */}
         <Dialog open={signOutConfirmOpen} onOpenChange={setSignOutConfirmOpen}>
-          <DialogContent className="max-w-[340px] rounded-[28px] bg-zinc-950 border-0 p-0 overflow-hidden">
+          <DialogContent className="max-w-[340px] rounded-[28px] bg-zinc-900 p-0 overflow-hidden">
             <div className="flex flex-col items-center text-center px-6 pt-6 pb-6 gap-4">
               <div>
                 <DialogTitle className="text-lg font-semibold text-white">

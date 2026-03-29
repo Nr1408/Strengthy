@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   Select,
@@ -307,8 +307,6 @@ export default function EditWorkout() {
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [editDurationHours, setEditDurationHours] = useState<number>(0);
   const [editDurationMinutes, setEditDurationMinutes] = useState<number>(0);
-
-  const headerRef = useRef<HTMLDivElement | null>(null);
 
   const allExercises = useMemo(() => {
     const map = new Map<string, Exercise>();
@@ -1869,6 +1867,32 @@ export default function EditWorkout() {
     if (isSavingWorkout) return;
     if (!workoutId) return;
     setIsSavingWorkout(true);
+    // Prevent saving when exercises exist but no set has any logged value
+    const hasLoggedSet = exercises.some((ex) =>
+      ex.sets.some((s) => {
+        if (ex.exercise.muscleGroup === "cardio") {
+          return (
+            (!!(s as any).cardioDistance && (s as any).cardioDistance > 0) ||
+            (!!(s as any).cardioDurationSeconds &&
+              (s as any).cardioDurationSeconds > 0) ||
+            (!!(s as any).cardioStat && (s as any).cardioStat > 0) ||
+            !!s.completed
+          );
+        }
+        return !!s.completed || (s.reps || 0) > 0 || (s.weight || 0) > 0;
+      }),
+    );
+
+    if (!hasLoggedSet) {
+      toast({
+        title: "Add a set value",
+        description:
+          "Please add at least one set with reps, weight, or cardio value before saving.",
+        variant: "destructive",
+      });
+      setIsSavingWorkout(false);
+      return;
+    }
     // Use a mutable local workout id so we can recreate the backend workout
     // and retry set creation if the server reports the workout record is missing.
     let curWorkoutId: string | null = workoutId;
@@ -2291,25 +2315,6 @@ export default function EditWorkout() {
       ),
     );
 
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updateHeaderHeight = () => {
-      if (!headerRef.current) return;
-      const height = headerRef.current.offsetHeight || 0;
-      if (typeof document !== "undefined") {
-        document.documentElement.style.setProperty(
-          "--workout-header-h",
-          `${height}px`,
-        );
-      }
-    };
-
-    updateHeaderHeight();
-    window.addEventListener("resize", updateHeaderHeight);
-    return () => window.removeEventListener("resize", updateHeaderHeight);
-  }, []);
-
   return (
     <AppLayout>
       {/* PR banner (stays below fixed action bar) */}
@@ -2365,8 +2370,17 @@ export default function EditWorkout() {
       </Dialog>
       {/* Fixed top action bar for Cancel / Save (replaces global header) */}
       <div
-        ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-[60] bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2 min-h-[72px]"
+        ref={(el) => {
+          if (!el) return;
+          const height = el.offsetHeight || 0;
+          if (typeof document !== "undefined") {
+            document.documentElement.style.setProperty(
+              "--workout-header-h",
+              `${height}px`,
+            );
+          }
+        }}
+        className="fixed top-0 left-0 right-0 z-[60] bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2 min-h-[88px] will-change-transform"
       >
         <div className="flex items-center justify-between px-4 py-3">
           <Button
