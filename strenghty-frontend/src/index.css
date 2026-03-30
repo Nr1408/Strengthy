@@ -39,6 +39,7 @@
 
     --radius: 0.75rem;
     --workout-header-h: 88px;
+    --safe-area-top: calc(env(safe-area-inset-top, 0px) + 2px);
 
     --sidebar-background: 220 20% 97%;
     --sidebar-foreground: 220 20% 10%;
@@ -106,7 +107,14 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+
+  /* Apply the shared safe-area top padding globally to header and main
+     unless the body has the `no-safe-area` class (used by pages that
+     intentionally manage their own top inset like New/Edit workout). */
+  header,
+  body:not(.no-safe-area) main {
+    padding-top: var(--safe-area-top);
   }
 
   h1, h2, h3, h4, h5, h6 {

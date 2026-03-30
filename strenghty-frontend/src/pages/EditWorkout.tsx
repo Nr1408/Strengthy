@@ -2319,7 +2319,7 @@ export default function EditWorkout() {
       {/* PR banner (stays below fixed action bar) */}
       <div
         className="pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 flex justify-center w-full px-4"
-        style={{ top: "calc(var(--workout-header-h, 72px) + 28px)" }}
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 92px)" }}
       >
         <div
           className={`pointer-events-auto flex items-center gap-3 rounded-full bg-zinc-800 px-4 py-2 shadow-md shadow-black/30 border border-white/25 ring-1 ring-white/5 max-w-xs sm:max-w-md transition-all duration-200 ease-out transform ${
@@ -2369,17 +2369,8 @@ export default function EditWorkout() {
       </Dialog>
       {/* Fixed top action bar for Cancel / Save (replaces global header) */}
       <div
-        ref={(el) => {
-          if (!el) return;
-          const height = el.offsetHeight || 0;
-          if (typeof document !== "undefined") {
-            document.documentElement.style.setProperty(
-              "--workout-header-h",
-              `${height}px`,
-            );
-          }
-        }}
-        className="fixed top-0 left-0 right-0 z-[60] bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 pt-6 pb-2 min-h-[88px] will-change-transform"
+        className="fixed top-0 left-0 right-0 z-[60] bg-zinc-900 border-b border-white/10 shadow-sm shadow-black/30 will-change-transform"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <div className="flex items-center justify-between px-4 py-3">
           <Button
@@ -2402,7 +2393,7 @@ export default function EditWorkout() {
 
       <div
         className="space-y-6"
-        style={{ paddingTop: "calc(var(--workout-header-h, 72px) + 4px)" }}
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">

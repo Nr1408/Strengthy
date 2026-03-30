@@ -171,7 +171,13 @@ export default function AccountSettings() {
       });
 
       setDeleteConfirmOpen(false);
-      navigate("/auth");
+      try {
+        if (typeof window !== "undefined") {
+          window.location.replace("/auth");
+          return;
+        }
+      } catch (e) {}
+      navigate("/auth", { replace: true });
     } catch (e: any) {
       toast({
         title: "Delete failed",

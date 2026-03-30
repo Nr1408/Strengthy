@@ -61,6 +61,7 @@ export function WhySectionContent({
       className={`relative flex flex-col items-center justify-center overflow-hidden px-6 -mt-2 ${
         isStep ? "h-full min-h-0 pt-10 sm:pt-0" : "min-h-[100svh]"
       }`}
+      style={{ paddingTop: "var(--safe-area-top)" }}
     >
       {/* Background accent */}
       <div className="pointer-events-none absolute inset-0 bg-muted/30" />

@@ -893,7 +893,10 @@ export default function Auth({
       }`}
     >
       {!embedded && (
-        <header className="border-b border-border">
+        <header
+          className="border-b border-border"
+          style={{ paddingTop: "var(--safe-area-top)" }}
+        >
           <div className="flex h-16 items-center px-4">
             <div
               className="flex items-center gap-2"

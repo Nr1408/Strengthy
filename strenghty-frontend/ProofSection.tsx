@@ -90,7 +90,10 @@ export function ProofStep({ onNext }: ProofStepProps) {
 
 export default function ProofSection() {
   return (
-    <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6 -translate-y-8">
+    <section
+      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6 -translate-y-8"
+      style={{ paddingTop: "var(--safe-area-top)" }}
+    >
       {/* Background glow */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[80px] md:h-96 md:w-96 lg:h-[28rem] lg:w-[28rem]" />
 

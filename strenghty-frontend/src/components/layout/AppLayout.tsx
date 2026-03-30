@@ -92,6 +92,27 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
     syncFirstWorkoutFlag();
   }, []);
 
+  // Toggle a body-level class to opt-out of the global safe-area padding
+  // for routes that render their own header/navigation (New/Edit workout).
+  useEffect(() => {
+    try {
+      if (typeof document !== "undefined") {
+        if (hideNav) {
+          document.body.classList.add("no-safe-area");
+        } else {
+          document.body.classList.remove("no-safe-area");
+        }
+      }
+    } catch (e) {}
+    return () => {
+      try {
+        if (typeof document !== "undefined") {
+          document.body.classList.remove("no-safe-area");
+        }
+      } catch (e) {}
+    };
+  }, [hideNav]);
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden isolate">
       {/* Top status bar shelf (minimal height) */}
@@ -101,7 +122,10 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
       />
       {/* Header (hidden on NewWorkout/EditWorkout where a custom bar is used) */}
       {!hideNav && (
-        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header
+          className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+          style={{ paddingTop: "var(--safe-area-top)" }}
+        >
           <div className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 relative h-16 flex items-center justify-center">
             <div
               className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2"
@@ -201,8 +225,8 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
       <main
         className={cn(
           "w-full px-3 md:max-w-7xl md:mx-auto md:px-6 pb-24 md:pb-6",
-          hideNav ? "pt-0" : "pt-8",
         )}
+        style={{ paddingTop: hideNav ? undefined : "var(--safe-area-top)" }}
       >
         {children}
       </main>

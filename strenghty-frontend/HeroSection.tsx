@@ -90,7 +90,10 @@ export function HeroStep({ onNext }: HeroStepProps) {
 
 export default function HeroSection() {
   return (
-    <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6">
+    <section
+      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6"
+      style={{ paddingTop: "var(--safe-area-top)" }}
+    >
       {/* Background glows */}
       <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 -left-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />

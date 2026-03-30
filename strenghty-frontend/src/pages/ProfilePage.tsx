@@ -468,7 +468,15 @@ export default function Profile() {
         console.error("failed to schedule signOut cleanup", e);
       } catch (e) {}
     }
-    navigate("/auth");
+    try {
+      if (typeof window !== "undefined") {
+        // Use a hard redirect to `/auth` so the back button cannot return
+        // to authenticated routes after sign-out.
+        window.location.replace("/auth");
+        return;
+      }
+    } catch (e) {}
+    navigate("/auth", { replace: true });
   };
 
   return (
