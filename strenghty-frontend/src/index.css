@@ -39,7 +39,7 @@
 
     --radius: 0.75rem;
     --workout-header-h: 88px;
-    --safe-area-top: calc(env(safe-area-inset-top, 0px) + 2px);
+    --safe-area-top: calc(env(safe-area-inset-top, 0px) - 4px);
 
     --sidebar-background: 220 20% 97%;
     --sidebar-foreground: 220 20% 10%;

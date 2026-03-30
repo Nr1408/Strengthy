@@ -156,6 +156,27 @@ const OAuthPopupBridge = () => {
   );
 };
 
+const AuthGuard = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    try {
+      const token = getToken();
+      const path = location.pathname || "/";
+      // Public paths that do not require auth
+      const publicPrefixes = ["/auth", "/", "/onboarding", "/google-redirect"];
+      const isPublic = publicPrefixes.some(
+        (p) => path === p || path.startsWith(p),
+      );
+      if (!token && !isPublic) {
+        // Replace navigation so back button cannot return to protected page
+        navigate("/auth", { replace: true });
+      }
+    } catch (e) {}
+  }, [location.pathname, navigate]);
+  return null;
+};
+
 const FirstWorkoutGuard = () => {
   const location = useLocation();
 
@@ -438,6 +459,7 @@ const App = () => (
           <ScrollManager />
           <SwipeNavigator />
           <BackButtonHandler />
+          <AuthGuard />
           <TokenRefresher />
           <WorkoutNotificationHandler />
           <NotificationPrompter />
