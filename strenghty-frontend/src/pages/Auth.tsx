@@ -26,6 +26,8 @@ import InvalidCredentialsDialog from "@/components/InvalidCredentialsDialog";
 import { createClient } from "@supabase/supabase-js";
 import { Browser } from "@capacitor/browser";
 
+import { AuthStep } from "../AuthStep";
+
 type AuthFormData = {
   name: string;
   email: string;
@@ -116,6 +118,13 @@ export default function Auth({
   embedded = false,
   defaultSignup,
 }: AuthProps = {}) {
+  // Show loading spinner immediately if redirected with OAuth hash
+  const [isOAuthCallback, setIsOAuthCallback] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !!window.location.hash &&
+      window.location.hash.includes("access_token"),
+  );
   // Prevent back navigation to protected screens after sign-out
   useEffect(() => {
     if (!getToken()) {
@@ -914,24 +923,28 @@ export default function Auth({
 
   const activeStep = showSignup ? "signup" : "login";
 
+  if (isOAuthCallback) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <p className="text-sm text-muted-foreground">Signing you in…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex flex-col bg-background overflow-x-hidden ${
         embedded ? "h-full" : "h-screen"
       }`}
     >
+      {/* Unified Strengthy header (matches Index/Hero/Why/Proof) */}
       {!embedded && (
-        <header
-          className="border-b border-border"
-          style={{ paddingTop: "var(--safe-area-top)" }}
-        >
-          <div className="flex h-16 items-center px-4">
-            <div
-              className="flex items-center gap-2"
-              role="presentation"
-              aria-hidden="true"
-              tabIndex={-1}
-            >
+        <header className="border-b border-border pointer-events-auto">
+          <div className="flex items-center justify-between px-4 h-16">
+            <div className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg">
                 <img
                   src="/icons/logo.png"

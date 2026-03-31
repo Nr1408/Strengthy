@@ -62,14 +62,14 @@ export default function Settings() {
     <AppLayout>
       <main className="w-full max-w-2xl mx-auto px-4 pb-32">
         {/* Header */}
-        <div className="pt-6 pb-2">
+        <div className="pb-2">
           <h1 className="text-2xl font-bold text-white">Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Adjust notifications, haptics, and measurement units.
           </p>
         </div>
 
-        <div className="space-y-6 mt-6">
+        <div className="space-y-6">
           {/* Preferences */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">

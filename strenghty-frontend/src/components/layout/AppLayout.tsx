@@ -123,7 +123,7 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
       {/* Header (hidden on NewWorkout/EditWorkout where a custom bar is used) */}
       {!hideNav && (
         <header
-          className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+          className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mb-2"
           style={{ paddingTop: "var(--safe-area-top)" }}
         >
           <div className="w-full px-3 md:max-w-7xl md:mx-auto md:px-6 relative h-16 flex items-center justify-center">

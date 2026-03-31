@@ -63,8 +63,8 @@ export function WhySectionContent({
       }`}
       style={{ paddingTop: "var(--safe-area-top)" }}
     >
-      {/* Background accent */}
-      <div className="pointer-events-none absolute inset-0 bg-muted/30" />
+      {/* Background glow to match ProofSection */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[80px] md:h-96 md:w-96 lg:h-[28rem] lg:w-[28rem]" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

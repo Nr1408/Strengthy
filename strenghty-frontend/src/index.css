@@ -40,6 +40,12 @@
     --radius: 0.75rem;
     --workout-header-h: 88px;
     --safe-area-top: max(0px, calc(env(safe-area-inset-top, 0px) - 4px));
+/* On small screens (mobile), clamp the safe-area top to a max of 12px to avoid excessive gap on APK */
+@media (max-width: 600px) {
+  :root {
+    --safe-area-top: min(12px, max(0px, calc(env(safe-area-inset-top, 0px) - 4px)));
+  }
+}
 
     --sidebar-background: 220 20% 97%;
     --sidebar-foreground: 220 20% 10%;
@@ -112,8 +118,7 @@
   /* Apply the shared safe-area top padding globally to header and main
      unless the body has the `no-safe-area` class (used by pages that
      intentionally manage their own top inset like New/Edit workout). */
-  header,
-  body:not(.no-safe-area) main {
+  header {
     padding-top: var(--safe-area-top);
   }
 

@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getToken } from "@/lib/api";
-import Auth from "./Auth";
+import { AuthStep } from "../AuthStep";
 import { HeroStep } from "../../HeroSection";
 import { WhySectionContent } from "../../WhySection";
 import { ProofStep } from "../../ProofSection";
@@ -72,11 +72,7 @@ export default function Index() {
         transition={{ duration: 0.35, ease: [0.0, 0.0, 0.2, 1] }}
         aria-hidden={false}
       >
-        <div
-          className={`flex items-center justify-between px-4 ${
-            step === 4 ? "h-20" : "h-16"
-          }`}
-        >
+        <div className="flex items-center justify-between px-4 h-16">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg">
               <img
@@ -204,18 +200,13 @@ export default function Index() {
             <motion.section
               key="step-4"
               aria-label="Auth"
-              className="absolute inset-0"
+              className="absolute inset-0 flex items-center justify-center"
               variants={stepVariants}
               initial="enter"
               animate="center"
               exit="exit"
             >
-              <section className="relative flex h-full flex-col items-center justify-center overflow-hidden px-4">
-                <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[90px]" />
-                <div className="w-full max-w-md">
-                  <Auth embedded defaultSignup={authIntent === "signup"} />
-                </div>
-              </section>
+              <AuthStep defaultSignup={authIntent === "signup"} />
             </motion.section>
           )}
         </AnimatePresence>
