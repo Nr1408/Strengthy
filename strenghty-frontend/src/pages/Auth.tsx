@@ -116,6 +116,20 @@ export default function Auth({
   embedded = false,
   defaultSignup,
 }: AuthProps = {}) {
+  // Prevent back navigation to protected screens after sign-out
+  useEffect(() => {
+    if (!getToken()) {
+      // Push a dummy state so back always stays here
+      window.history.pushState(null, "", window.location.href);
+      const trap = () => {
+        if (!getToken()) {
+          window.history.pushState(null, "", window.location.href);
+        }
+      };
+      window.addEventListener("popstate", trap);
+      return () => window.removeEventListener("popstate", trap);
+    }
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | {
     kind: "login" | "signup" | "google";
@@ -389,7 +403,14 @@ export default function Auth({
             description: "Signed in with Google.",
           });
         }
-        navigate(goOnboarding ? "/onboarding" : "/dashboard");
+        // Use hard redirect so back button cannot return to auth
+        if (typeof window !== "undefined") {
+          window.location.replace(goOnboarding ? "/onboarding" : "/dashboard");
+        } else {
+          navigate(goOnboarding ? "/onboarding" : "/dashboard", {
+            replace: true,
+          });
+        }
       } finally {
         setPendingAction(null);
         setIsLoading(false);
@@ -789,7 +810,14 @@ export default function Auth({
           toast({ title: "Welcome back", description: "Signed in." });
         }
 
-        navigate(goOnboarding ? "/onboarding" : "/dashboard");
+        // Use hard redirect so back button cannot return to auth
+        if (typeof window !== "undefined") {
+          window.location.replace(goOnboarding ? "/onboarding" : "/dashboard");
+        } else {
+          navigate(goOnboarding ? "/onboarding" : "/dashboard", {
+            replace: true,
+          });
+        }
       } catch {
         navigate("/dashboard");
       }

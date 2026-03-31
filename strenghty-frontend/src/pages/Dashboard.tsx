@@ -36,7 +36,22 @@ import {
 import WorkoutInProgressDialog from "@/components/layout/WorkoutInProgressDialog";
 import { rescheduleAllNotifications } from "@/lib/notifications";
 
+import { getToken } from "@/lib/api";
+
 export default function Dashboard() {
+  // Trap back navigation on dashboard if authenticated
+  useEffect(() => {
+    if (getToken()) {
+      window.history.pushState(null, "", window.location.href);
+      const trap = () => {
+        if (getToken()) {
+          window.history.pushState(null, "", window.location.href);
+        }
+      };
+      window.addEventListener("popstate", trap);
+      return () => window.removeEventListener("popstate", trap);
+    }
+  }, []);
   const { data: workouts = [], isLoading } = useQuery({
     queryKey: ["workouts"],
     queryFn: getWorkouts,
@@ -608,7 +623,7 @@ export default function Dashboard() {
               } catch {}
               return (
                 <>
-                  <h1 className="font-heading text-3xl font-bold text-white leading-tight">
+                  <h1 className="font-heading text-3xl font-bold text-white leading-tight mt-6">
                     {greeting},{" "}
                     <span
                       className="inline-block max-w-[55vw] truncate align-bottom"

@@ -136,6 +136,19 @@ const workoutGoals = [
 ];
 
 export default function Onboarding() {
+  // Prevent back navigation to protected screens after sign-out
+  useEffect(() => {
+    if (!getToken()) {
+      window.history.pushState(null, "", window.location.href);
+      const trap = () => {
+        if (!getToken()) {
+          window.history.pushState(null, "", window.location.href);
+        }
+      };
+      window.addEventListener("popstate", trap);
+      return () => window.removeEventListener("popstate", trap);
+    }
+  }, []);
   // New, step-based onboarding that stores a single `userData` object and
   // deterministically recommends an existing routine. Key behavioral changes:
   // - Step flow: Goal -> Personal metrics -> Equipment -> Experience -> Monthly -> Summary
