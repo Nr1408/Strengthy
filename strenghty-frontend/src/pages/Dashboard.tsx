@@ -810,8 +810,8 @@ export default function Dashboard() {
   const [expandedPR, setExpandedPR] = useState<string | null>(null);
 
   return (
-    <AppLayout>
-      <div className="space-y-8">
+    <AppLayout noPaddingTop>
+      <div className="space-y-8 pt-2">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

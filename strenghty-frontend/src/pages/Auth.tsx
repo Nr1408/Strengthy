@@ -245,6 +245,7 @@ export default function Auth({
       forcePopupContext = false,
     ) => {
       if (!accessToken) return;
+      let didTriggerRedirect = false;
 
       const isPopupWindow =
         forcePopupContext ||
@@ -416,15 +417,21 @@ export default function Auth({
         }
         // Use hard redirect so back button cannot return to auth
         if (typeof window !== "undefined") {
+          didTriggerRedirect = true;
           window.location.replace(goOnboarding ? "/onboarding" : "/dashboard");
+          return;
         } else {
+          didTriggerRedirect = true;
           navigate(goOnboarding ? "/onboarding" : "/dashboard", {
             replace: true,
           });
+          return;
         }
       } finally {
-        setPendingAction(null);
-        setIsLoading(false);
+        if (!didTriggerRedirect) {
+          setPendingAction(null);
+          setIsLoading(false);
+        }
       }
     },
     [navigate, shouldRouteToOnboarding, toast],
@@ -929,7 +936,7 @@ export default function Auth({
 
   const activeStep = showSignup ? "signup" : "login";
 
-  if (isOAuthCallback) {
+  if (isOAuthCallback || (pendingAction?.kind === "google" && !embedded)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">

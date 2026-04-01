@@ -202,8 +202,8 @@ export default function Routines() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <AppLayout noPaddingTop>
+      <div className="space-y-6 pt-2">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

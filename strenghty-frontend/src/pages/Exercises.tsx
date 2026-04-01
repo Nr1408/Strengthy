@@ -336,8 +336,8 @@ export default function Exercises() {
   );
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <AppLayout noPaddingTop>
+      <div className="space-y-6 pt-2">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>

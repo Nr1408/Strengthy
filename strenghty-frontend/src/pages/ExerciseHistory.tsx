@@ -230,7 +230,7 @@ export default function ExerciseHistory() {
 
   return (
     <AppLayout noPaddingTop>
-      <div className="space-y-3">
+      <div className="space-y-3 pt-2">
         <div className="mt-0">
           <button
             type="button"

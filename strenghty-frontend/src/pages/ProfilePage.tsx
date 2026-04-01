@@ -480,7 +480,7 @@ export default function Profile() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout noPaddingTop>
       <main className="w-full max-w-4xl mx-auto px-4 pb-32">
         {/* ── Hero ── */}
         <section className="pt-4 pb-4">

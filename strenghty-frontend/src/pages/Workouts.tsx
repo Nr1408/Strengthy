@@ -792,7 +792,7 @@ export default function Workouts() {
   });
 
   return (
-    <AppLayout>
+    <AppLayout noPaddingTop>
       <div className="pointer-events-none fixed left-1/2 top-16 z-40 -translate-x-1/2 flex justify-center w-full px-4">
         <div
           className={`pointer-events-auto flex items-center gap-3 rounded-full bg-muted px-4 py-2 shadow-lg border border-border max-w-xs sm:max-w-md transition-all duration-200 ease-out transform ${
@@ -814,7 +814,7 @@ export default function Workouts() {
           </div>
         </div>
       </div>
-      <div className="space-y-6">
+      <div className="space-y-6 pt-2">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -136,6 +136,7 @@ export function AuthStep({ defaultSignup = true }: Props) {
   const completeWebGoogleLogin = useCallback(
     async (accessToken: string, idToken?: string | null) => {
       if (!accessToken) return;
+      let didTriggerRedirect = false;
       const isPopupWindow =
         typeof window !== "undefined" &&
         (window.sessionStorage?.getItem("supabase_oauth_popup") === "1" ||
@@ -282,10 +283,14 @@ export function AuthStep({ defaultSignup = true }: Props) {
             title: "Welcome back",
             description: "Signed in with Google.",
           });
+        didTriggerRedirect = true;
         window.location.replace(goOnboarding ? "/onboarding" : "/dashboard");
+        return;
       } finally {
-        setPendingAction(null);
-        setIsLoading(false);
+        if (!didTriggerRedirect) {
+          setPendingAction(null);
+          setIsLoading(false);
+        }
       }
     },
     [navigate, shouldRouteToOnboarding, toast],
@@ -465,6 +470,7 @@ export function AuthStep({ defaultSignup = true }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let didTriggerRedirect = false;
     setPendingAction({
       kind: showSignup ? "signup" : "login",
       title: showSignup ? "Creating your account" : "Signing you in",
@@ -495,6 +501,7 @@ export function AuthStep({ defaultSignup = true }: Props) {
             localStorage.removeItem("user:onboarding");
             localStorage.removeItem("user:monthlyGoal");
           } catch {}
+          didTriggerRedirect = true;
           navigate("/onboarding");
           return;
         }
@@ -504,9 +511,13 @@ export function AuthStep({ defaultSignup = true }: Props) {
           : false;
         if (!goOnboarding)
           toast({ title: "Welcome back", description: "Signed in." });
+        didTriggerRedirect = true;
         window.location.replace(goOnboarding ? "/onboarding" : "/dashboard");
+        return;
       } catch {
+        didTriggerRedirect = true;
         navigate("/dashboard");
+        return;
       }
     } catch (err: any) {
       const msg = String(err?.message || err || "Authentication failed");
@@ -547,8 +558,10 @@ export function AuthStep({ defaultSignup = true }: Props) {
         variant: "destructive",
       });
     } finally {
-      setPendingAction(null);
-      setIsLoading(false);
+      if (!didTriggerRedirect) {
+        setPendingAction(null);
+        setIsLoading(false);
+      }
     }
   };
 

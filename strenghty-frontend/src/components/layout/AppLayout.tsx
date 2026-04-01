@@ -140,7 +140,7 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
                   className="h-9 w-9 rounded-lg"
                 />
               </div>
-              <span className="font-heading text-xl font-bold text-white">
+              <span className="hidden lg:inline font-heading text-xl font-bold text-white">
                 Strengthy
               </span>
             </div>
@@ -154,14 +154,15 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                      "flex items-center justify-center gap-0 lg:justify-start lg:gap-2 rounded-lg px-2.5 lg:px-3 xl:px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors",
                       isActive
                         ? "bg-secondary text-foreground"
                         : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                     )}
                   >
                     <Icon className="h-4 w-4" />
-                    {item.label}
+                    <span className="hidden lg:inline">{item.label}</span>
+                    <span className="sr-only lg:hidden">{item.label}</span>
                   </Link>
                 );
               })}
@@ -191,7 +192,7 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
       {/* Mobile Navigation */}
       {!hideNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background rounded-t-2xl md:hidden">
-          <div className="flex items-center justify-around py-2">
+          <div className="grid grid-cols-4 items-center gap-1 px-2 py-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -205,7 +206,7 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
                   key={item.href}
                   to={item.href}
                   className={cn(
-                    "flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-xs font-medium transition-colors",
+                    "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1.5 text-[10px] leading-tight font-medium transition-colors sm:px-2 sm:text-xs",
                     isActive ? "text-primary" : "text-muted-foreground",
                     isWorkoutsLocked && "pointer-events-none opacity-40",
                   )}
@@ -213,7 +214,7 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
                   tabIndex={isWorkoutsLocked ? -1 : undefined}
                 >
                   <Icon className="h-5 w-5" />
-                  {item.label}
+                  <span className="max-w-full truncate">{item.label}</span>
                 </Link>
               );
             })}
@@ -226,7 +227,10 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
         className={cn(
           "w-full px-3 md:max-w-7xl md:mx-auto md:px-6 pb-24 md:pb-6",
         )}
-        style={{ paddingTop: hideNav ? undefined : "var(--safe-area-top)" }}
+        style={{
+          paddingTop:
+            hideNav || noPaddingTop ? undefined : "var(--safe-area-top)",
+        }}
       >
         {children}
       </main>

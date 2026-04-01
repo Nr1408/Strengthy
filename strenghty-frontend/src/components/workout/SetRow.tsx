@@ -329,6 +329,42 @@ export function SetRow({
     });
   }
 
+  const hasAnyPrFlag = Boolean(
+    set.isPR ||
+    set.e1rmPR ||
+    set.volumePR ||
+    set.absWeightPR ||
+    set.cardioDistancePR ||
+    set.cardioPacePR ||
+    set.cardioAscentPR ||
+    set.cardioIntensityPR ||
+    set.cardioSplitPR,
+  );
+
+  if (hasAnyPrFlag && prLines.length === 0) {
+    const fallbackValue = isCardio
+      ? cardioDistance > 0
+        ? `${cardioDistance} ${
+            cardioDistanceUnit === "mile"
+              ? "mile"
+              : cardioDistanceUnit === "flr"
+                ? "flr"
+                : cardioDistanceUnit === "m"
+                  ? "m"
+                  : "km"
+          }`
+        : cardioDurationSeconds > 0
+          ? formatSecondsToMMSS(cardioDurationSeconds)
+          : "Cardio PR"
+      : weight > 0
+        ? `${weight.toFixed(1)} ${unit}`
+        : reps > 0
+          ? `${reps} reps`
+          : "Set PR";
+
+    prLines.push({ label: "Personal Record", value: fallbackValue });
+  }
+
   const [open, setOpen] = useState(false);
   const [halfDialogOpen, setHalfDialogOpen] = useState(false);
   const [halfSliderValue, setHalfSliderValue] = useState<number>(
@@ -357,10 +393,7 @@ export function SetRow({
   // first-time or HIIT/bodyweight entries that don't have any PR
   // metrics computed.
 
-  const showTrophy =
-    (set.isPR || set.e1rmPR || set.volumePR || set.absWeightPR) &&
-    (readOnly || set.completed) &&
-    prLines.length > 0;
+  const showTrophy = hasAnyPrFlag && (readOnly || set.completed);
 
   // For layout purposes, treat HIIT/bodyweight exercises as cardio-like so
   // they always use the HIIT grid and column semantics (time, reps, RPE)
@@ -1973,7 +2006,7 @@ export function SetRow({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[15px] font-bold text-muted-foreground/60">
+                    <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[11px] sm:text-[12px] font-semibold text-muted-foreground/70">
                       {cardioDistanceUnit === "flr" ? "flr" : "m"}
                     </div>
                   )
@@ -2027,7 +2060,7 @@ export function SetRow({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[15px] font-bold text-muted-foreground/60">
+                  <div className="h-8 flex items-center justify-center rounded-r-md border border-l-0 border-border bg-muted/10 px-2 text-[11px] sm:text-[12px] font-semibold text-muted-foreground/70">
                     {cardioDistanceUnit === "mile" ? "mile" : "km"}
                   </div>
                 )}

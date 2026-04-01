@@ -423,8 +423,8 @@ export default function ViewWorkout() {
   }, [navigate]);
 
   return (
-    <AppLayout>
-      <div className="space-y-6 pt-4">
+    <AppLayout noPaddingTop>
+      <div className="space-y-6 pt-2">
         {/* Unified Header Row */}
         <div className="flex items-center gap-3 mb-1">
           <button

@@ -59,7 +59,7 @@ export default function Settings() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout noPaddingTop>
       <main className="w-full max-w-2xl mx-auto px-4 pb-32">
         {/* Header */}
         <div className="pb-2">

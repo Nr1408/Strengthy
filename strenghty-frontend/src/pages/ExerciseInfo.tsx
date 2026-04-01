@@ -958,128 +958,112 @@ export default function ExerciseInfo() {
               </div>
             ) : (
               <div className="space-y-3">
-                {groupedHistory.map((g, idx) => (
-                  <div
-                    key={`h-${g.workoutId}`}
-                    className={
-                      idx === 0 ? "" : "mt-3 border-t border-white/5 pt-3"
-                    }
-                  >
-                    <Card className="w-full rounded-2xl overflow-hidden">
-                      <CardContent className="px-3 py-[6px] overflow-hidden">
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(`/workouts/${g.workoutId}/view`)
-                            }
-                            className="pt-1 text-lg font-semibold text-white text-left hover:underline"
-                          >
-                            {g.workoutName}
-                          </button>
-                          <div className="mt-0.5 text-xs text-muted-foreground/80">
-                            {g.date
-                              ? format(new Date(g.date), "dd LLL yyyy, HH:mm")
-                              : "-"}
-                          </div>
+                {groupedHistory.map((g) => {
+                  return (
+                    <div
+                      key={`h-${g.workoutId}`}
+                      className="rounded-xl border border-white/5 bg-white/[0.02] p-3"
+                    >
+                      <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/workouts/${g.workoutId}/view`)
+                          }
+                          className="text-base font-semibold text-white text-left hover:underline"
+                        >
+                          {g.workoutName}
+                        </button>
+                        <div className="mt-0.5 text-xs text-muted-foreground/80">
+                          {g.date
+                            ? format(new Date(g.date), "dd LLL yyyy, HH:mm")
+                            : "-"}
                         </div>
-                        <div className="mt-3">
-                          <div
-                            className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
-                            style={{
-                              gridTemplateColumns: (() => {
-                                if (g.sets?.length > 0 && g.sets[0].cardioMode)
-                                  return isHiitExercise
-                                    ? GRID_HIIT
-                                    : GRID_CARDIO;
-                                return GRID_STRENGTH;
-                              })(),
-                            }}
-                          >
-                            {g.sets?.[0]?.cardioMode ? (
-                              isHiitExercise ? (
-                                <>
-                                  <span className="flex justify-center">
-                                    SET
-                                  </span>
-                                  <span className="flex justify-center">
-                                    DURATION
-                                  </span>
-                                  <span className="flex justify-center">
-                                    REPS
-                                  </span>
-                                  <span className="flex justify-center">
-                                    RPE
-                                  </span>
-                                  <span className="flex justify-center">
-                                    PR
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="flex justify-center">
-                                    SET
-                                  </span>
-                                  <span className="flex justify-center">
-                                    DURATION
-                                  </span>
-                                  <span className="flex justify-center">
-                                    DISTANCE
-                                  </span>
-                                  <span className="flex justify-center">
-                                    LEVEL
-                                  </span>
-                                  <span className="flex justify-center">
-                                    PR
-                                  </span>
-                                </>
-                              )
-                            ) : (
+                      </div>
+
+                      <div className="mt-3">
+                        <div
+                          className="mb-1.5 px-1 text-[10px] font-medium text-muted-foreground grid items-center gap-1"
+                          style={{
+                            gridTemplateColumns: (() => {
+                              if (g.sets?.length > 0 && g.sets[0].cardioMode)
+                                return isHiitExercise ? GRID_HIIT : GRID_CARDIO;
+                              return GRID_STRENGTH;
+                            })(),
+                          }}
+                        >
+                          {g.sets?.[0]?.cardioMode ? (
+                            isHiitExercise ? (
                               <>
-                                <span className="flex justify-center translate-x-[2px]">
-                                  SET
-                                </span>
+                                <span className="flex justify-center">SET</span>
                                 <span className="flex justify-center">
-                                  WEIGHT
+                                  DURATION
                                 </span>
-                                <span />
                                 <span className="flex justify-center">
                                   REPS
                                 </span>
                                 <span className="flex justify-center">RPE</span>
-                                <span className="flex justify-center">
-                                  <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
-                                </span>
+                                <span className="flex justify-center">PR</span>
                               </>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            {g.sets
-                              .slice()
-                              .sort(
-                                (a: any, b: any) =>
-                                  (a.setNumber || 0) - (b.setNumber || 0),
-                              )
-                              .map((s: any, si: number) => (
-                                <SetRow
-                                  key={`h-${g.workoutId}-${si}`}
-                                  set={s}
-                                  exerciseName={selectedExercise.name || ""}
-                                  unit={s.unit || "kg"}
-                                  setNumber={s.setNumber ?? si + 1}
-                                  onUpdate={() => {}}
-                                  onUnitChange={() => {}}
-                                  onComplete={() => {}}
-                                  readOnly
-                                  showComplete={false}
-                                />
-                              ))}
-                          </div>
+                            ) : (
+                              <>
+                                <span className="flex justify-center">SET</span>
+                                <span className="flex justify-center">
+                                  DURATION
+                                </span>
+                                <span className="flex justify-center">
+                                  DISTANCE
+                                </span>
+                                <span className="flex justify-center">
+                                  LEVEL
+                                </span>
+                                <span className="flex justify-center">PR</span>
+                              </>
+                            )
+                          ) : (
+                            <>
+                              <span className="flex justify-center translate-x-[2px]">
+                                SET
+                              </span>
+                              <span className="flex justify-center">
+                                WEIGHT
+                              </span>
+                              <span />
+                              <span className="flex justify-center">REPS</span>
+                              <span className="flex justify-center">RPE</span>
+                              <span className="flex justify-center">
+                                <Trophy className="h-3.5 w-3.5 -translate-x-[1px]" />
+                              </span>
+                            </>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ))}
+
+                        <div className="space-y-2">
+                          {g.sets
+                            .slice()
+                            .sort(
+                              (a: any, b: any) =>
+                                (a.setNumber || 0) - (b.setNumber || 0),
+                            )
+                            .map((s: any, si: number) => (
+                              <SetRow
+                                key={`h-${g.workoutId}-${si}`}
+                                set={s}
+                                exerciseName={selectedExercise.name || ""}
+                                unit={s.unit || "kg"}
+                                setNumber={s.setNumber ?? si + 1}
+                                onUpdate={() => {}}
+                                onUnitChange={() => {}}
+                                onComplete={() => {}}
+                                readOnly
+                                showComplete={false}
+                              />
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>
