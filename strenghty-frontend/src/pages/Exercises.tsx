@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
+import { AlertTriangle, Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
@@ -16,7 +16,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -511,25 +510,36 @@ export default function Exercises() {
             if (!o) setDeleteTarget(null);
           }}
         >
-          <DialogContent className="max-w-[360px] rounded-[16px] bg-zinc-900 border border-white/10 text-white p-4">
-            <DialogTitle className="text-base font-semibold">
+          <DialogContent
+            overlayClassName="bg-black/70 backdrop-blur-none [backdrop-filter:none]"
+            className="w-[420px] max-w-[92vw] rounded-[18px] border border-white/10 bg-neutral-900/95 p-7 shadow-2xl"
+          >
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <DialogTitle className="mb-3 text-center text-lg font-semibold text-white">
               Delete Exercise
             </DialogTitle>
-            <DialogDescription className="mt-2 text-sm text-muted-foreground">
+            <DialogDescription className="mb-6 text-center text-sm text-muted-foreground">
               Are you sure you want to delete this exercise? This cannot be
               undone.
             </DialogDescription>
-            <div className="mt-4 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="px-5 py-2.5 rounded-lg border border-white/10 text-white/90 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-0"
+              >
                 Cancel
-              </Button>
-              <Button
-                variant="destructive"
+              </button>
+              <button
+                type="button"
                 onClick={confirmDelete}
                 disabled={deleteMutation.isLoading}
+                className="px-5 py-2.5 rounded-lg bg-red-600 text-white shadow-md shadow-red-600/20 hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleteMutation.isLoading ? "Deleting..." : "Delete"}
-              </Button>
+              </button>
             </div>
           </DialogContent>
         </Dialog>
