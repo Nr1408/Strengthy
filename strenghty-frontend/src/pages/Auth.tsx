@@ -123,7 +123,9 @@ export default function Auth({
     () =>
       typeof window !== "undefined" &&
       !!window.location.hash &&
-      window.location.hash.includes("access_token"),
+      (window.location.hash.includes("access_token") ||
+        window.location.hash.includes("type=recovery") ||
+        window.location.hash.includes("type=signup")),
   );
   // Prevent back navigation to protected screens after sign-out
   useEffect(() => {
@@ -494,6 +496,7 @@ export default function Auth({
         const error = hash.get("error_description") || hash.get("error");
 
         if (error) {
+          setIsOAuthCallback(false);
           toast({
             title: "Google sign-in failed",
             description: String(error),
@@ -524,6 +527,7 @@ export default function Auth({
             const cleanUrl = `${window.location.pathname}${window.location.search}`;
             window.history.replaceState({}, document.title, cleanUrl);
           } catch {}
+          setIsOAuthCallback(false);
           return;
         }
 
@@ -551,8 +555,10 @@ export default function Auth({
                 window.location.pathname,
               );
             } catch {}
+            setIsOAuthCallback(false);
             navigate("/onboarding");
           } catch {
+            setIsOAuthCallback(false);
             navigate("/onboarding");
           }
           return;

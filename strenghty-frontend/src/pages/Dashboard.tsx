@@ -22,6 +22,7 @@ import {
   getWorkouts,
   getCardioSetsForWorkout,
   fetchAndPersistProfile,
+  getExercises,
 } from "@/lib/api";
 import type { UiWorkoutSet, UiWorkout } from "@/lib/api";
 import { countPrTypesFromSet } from "@/lib/utils";
@@ -55,6 +56,13 @@ export default function Dashboard() {
   const { data: workouts = [], isLoading } = useQuery({
     queryKey: ["workouts"],
     queryFn: getWorkouts,
+  });
+
+  const { data: exercises = [] } = useQuery({
+    queryKey: ["exercises"],
+    queryFn: getExercises,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Only consider workouts with an end time as completed/logged
@@ -372,6 +380,42 @@ export default function Dashboard() {
     enabled: workoutsLastWeek.length > 0,
   });
 
+  const { data: allTimeSetsByWorkout = {} } = useQuery({
+    queryKey: [
+      "setsByWorkoutAllTime",
+      completedWorkouts.map((w) => w.id).sort(),
+    ],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        completedWorkouts.map(
+          async (w) => [w.id, await getSets(w.id)] as const,
+        ),
+      );
+      return Object.fromEntries(entries) as Record<string, UiWorkoutSet[]>;
+    },
+    enabled: completedWorkouts.length > 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: allTimeCardioSetsByWorkout = {} } = useQuery({
+    queryKey: [
+      "cardioSetsByWorkoutAllTime",
+      completedWorkouts.map((w) => w.id).sort(),
+    ],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        completedWorkouts.map(
+          async (w) => [w.id, await getCardioSetsForWorkout(w.id)] as const,
+        ),
+      );
+      return Object.fromEntries(entries) as Record<string, any[]>;
+    },
+    enabled: completedWorkouts.length > 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   // Metrics
   const thisWeekCount = workoutsThisWeek.length;
   // Count distinct days with at least one workout this week
@@ -451,6 +495,160 @@ export default function Dashboard() {
     if (durations.length === 0) return 0;
     return Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
   }, [completedWorkouts]);
+
+  const personalRecords = useMemo(() => {
+    type RecordItem = {
+      exerciseId: string;
+      exerciseName: string;
+      value: string;
+      detail: string;
+      prType: string;
+      prTypes: { label: string; value: string }[];
+      score: number;
+      createdAt: number;
+      workoutId: string;
+    };
+
+    const nameByExerciseId = new Map<string, string>(
+      (exercises as Array<{ id: string | number; name: string }>).map((ex) => [
+        String(ex.id),
+        ex.name,
+      ]),
+    );
+
+    const allSets = [
+      ...Object.entries(allTimeSetsByWorkout).flatMap(([wid, sets]) =>
+        sets.map((s) => ({ ...s, _workoutId: wid })),
+      ),
+      ...Object.entries(allTimeCardioSetsByWorkout).flatMap(([wid, sets]) =>
+        sets.map((s: any) => ({ ...s, _workoutId: wid })),
+      ),
+    ];
+
+    const buildTopPerExercise = (requirePrFlag: boolean): RecordItem[] => {
+      const bestByExercise = new Map<string, RecordItem>();
+
+      allSets.forEach((set) => {
+        const hasTypedPr = !!(
+          set.absWeightPR ||
+          set.e1rmPR ||
+          set.volumePR ||
+          set.repPR ||
+          set.distancePR ||
+          set.pacePR ||
+          set.ascentPR ||
+          set.intensityPR ||
+          set.splitPR
+        );
+        if (requirePrFlag && !set.isPR && !hasTypedPr) return;
+
+        const weight = typeof set.weight === "number" ? set.weight : 0;
+        const reps = typeof set.reps === "number" ? set.reps : 0;
+        const distance =
+          typeof (set as any).distance === "number" ? (set as any).distance : 0;
+        const duration =
+          typeof (set as any).durationSeconds === "number"
+            ? (set as any).durationSeconds
+            : 0;
+        if (weight <= 0 && reps <= 0 && distance <= 0 && duration <= 0) return;
+
+        const exerciseId = String(set.exercise);
+        const exerciseName =
+          nameByExerciseId.get(exerciseId) || `Exercise ${exerciseId}`;
+        const prType = set.absWeightPR
+          ? "Heaviest Weight"
+          : set.e1rmPR
+            ? "Best 1RM"
+            : set.volumePR
+              ? "Best Set Volume"
+              : set.distancePR
+                ? "Distance PR"
+                : set.pacePR
+                  ? "Pace PR"
+                  : set.ascentPR
+                    ? "Ascent PR"
+                    : set.intensityPR
+                      ? "Intensity PR"
+                      : set.splitPR
+                        ? "Split PR"
+                        : "PR";
+
+        const value =
+          weight > 0
+            ? `${weight} ${set.unit || "kg"}`
+            : distance > 0
+              ? `${(distance / 1000).toFixed(2)} km`
+              : duration > 0
+                ? `${Math.round(duration / 60)} min`
+                : `${reps} rep${reps === 1 ? "" : "s"}`;
+        const detail =
+          weight > 0
+            ? `${reps} rep${reps === 1 ? "" : "s"}`
+            : duration > 0
+              ? `${Math.round(duration / 60)} min`
+              : "Cardio";
+        const prTypes: { label: string; value: string }[] = [];
+        if (set.absWeightPR) {
+          prTypes.push({
+            label: "Heaviest Weight",
+            value: weight > 0 ? `${weight} ${set.unit || "kg"}` : "-",
+          });
+        }
+        if (set.e1rmPR) {
+          const e1rm = weight > 0 ? (weight * (1 + reps / 30)).toFixed(1) : "-";
+          prTypes.push({
+            label: "Best 1RM",
+            value: weight > 0 ? `${e1rm} ${set.unit || "kg"}` : "-",
+          });
+        }
+        if (set.volumePR) {
+          const vol = weight > 0 ? (weight * reps).toFixed(1) : "-";
+          prTypes.push({
+            label: "Best Set Volume",
+            value: weight > 0 ? `${vol} ${set.unit || "kg"}` : "-",
+          });
+        }
+        if (
+          prTypes.length === 0 &&
+          (set.isPR ||
+            set.distancePR ||
+            set.pacePR ||
+            set.ascentPR ||
+            set.intensityPR ||
+            set.splitPR)
+        ) {
+          prTypes.push({ label: "PR", value });
+        }
+
+        const createdAt =
+          set.createdAt instanceof Date ? set.createdAt.getTime() : 0;
+
+        const candidate: RecordItem = {
+          exerciseId,
+          exerciseName,
+          value,
+          detail,
+          prType,
+          prTypes,
+          score: createdAt,
+          createdAt,
+          workoutId: (set as any)._workoutId || "",
+        };
+
+        const current = bestByExercise.get(exerciseId);
+        if (!current || candidate.createdAt > current.createdAt) {
+          bestByExercise.set(exerciseId, candidate);
+        }
+      });
+
+      return Array.from(bestByExercise.values());
+    };
+
+    const withPrFlag = buildTopPerExercise(true);
+
+    // Sort by most recent first — acts as a "Recent PRs" feed
+    return withPrFlag.sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+  }, [allTimeSetsByWorkout, allTimeCardioSetsByWorkout, exercises]);
 
   // Weekly plan
   const monthlyGoal = useMemo(() => {
@@ -597,6 +795,19 @@ export default function Dashboard() {
       reminderHour: 8,
     });
   }, [completedWorkouts.length, weeklyTarget, weeklyStreak]);
+
+  const relativeTime = (ts: number) => {
+    if (!ts) return null;
+    const diff = Date.now() - ts;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) return `${Math.floor(days / 7)}w ago`;
+    return `${Math.floor(days / 30)}mo ago`;
+  };
+
+  const [expandedPR, setExpandedPR] = useState<string | null>(null);
 
   return (
     <AppLayout>
@@ -980,43 +1191,131 @@ export default function Dashboard() {
         </div>
 
         <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
-            Quick Actions
-          </h2>
-          <div className="rounded-2xl bg-card border border-border p-5">
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    const inProg = localStorage.getItem("workout:inProgress");
-                    if (inProg) {
-                      setShowInProgressDialog(true);
-                      return;
-                    }
-                  } catch {}
-                  navigate("/workouts/new", { state: { forceNew: true } });
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500/15 text-orange-400 text-sm font-semibold border border-orange-500/25 hover:bg-orange-500/25 transition-colors"
-              >
-                <Plus className="h-4 w-4" /> Empty Workout
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/routines")}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 text-white text-sm font-semibold border border-white/10 hover:border-white/25 transition-colors"
-              >
-                Start from Routine
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/exercises")}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 text-white text-sm font-semibold border border-white/10 hover:border-white/25 transition-colors"
-              >
-                Manage Exercises
-              </button>
-            </div>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-heading text-xl font-semibold text-white">
+              Recent PRs
+            </h2>
+            <Link
+              to="/workouts"
+              className="text-xs text-muted-foreground hover:text-white transition-colors"
+            >
+              View history
+            </Link>
           </div>
+
+          {personalRecords.length > 0 ? (
+            <div className="space-y-3">
+              {personalRecords.map((record) => {
+                const isExpanded = expandedPR === record.exerciseId;
+                const prCount = record.prTypes.length;
+                const time = relativeTime(record.createdAt);
+                return (
+                  <div
+                    key={record.exerciseId}
+                    className="rounded-2xl bg-card border border-border overflow-hidden"
+                  >
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedPR(isExpanded ? null : record.exerciseId)
+                        }
+                        className="flex-1 flex items-center justify-between px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="min-w-0 flex items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-yellow-500/10">
+                            <Trophy className="h-3.5 w-3.5 text-yellow-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white leading-tight">
+                              {record.exerciseName}
+                            </p>
+                            <p className="text-xs text-zinc-500 mt-0.5">
+                              {prCount === 1
+                                ? record.prType
+                                : record.prTypes[0].label}
+                              {time && (
+                                <>
+                                  {" "}
+                                  · <span>{time}</span>
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 ml-4 flex items-center gap-2">
+                          {prCount > 1 && (
+                            <span className="text-[10px] font-bold text-orange-400 bg-orange-500/15 border border-orange-500/20 rounded-full px-2 py-0.5">
+                              {prCount} PRs
+                            </span>
+                          )}
+                          <span className="font-heading text-sm font-bold text-white">
+                            {record.value}
+                          </span>
+                        </div>
+                      </button>
+                      {record.workoutId && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/workouts/${record.workoutId}/view`)
+                          }
+                          className="pr-4 pl-1 py-3.5 text-zinc-600 hover:text-zinc-300 transition-colors"
+                          title="View workout"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-3.5 w-3.5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-3 pt-0">
+                        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] divide-y divide-white/[0.05]">
+                          {record.prTypes.map((pt) => (
+                            <div
+                              key={pt.label}
+                              className="flex items-center justify-between px-3 py-2"
+                            >
+                              <span className="text-xs text-zinc-500">
+                                {pt.label}
+                              </span>
+                              <span className="text-xs font-semibold text-white">
+                                {pt.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-card border border-border px-5 py-8 text-center">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800">
+                <Trophy className="h-4 w-4 text-zinc-500" />
+              </div>
+              <p className="text-sm font-semibold text-white">No PRs yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Hit a PR in a workout and it'll show up here.
+              </p>
+            </div>
+          )}
         </section>
       </div>
 

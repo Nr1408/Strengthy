@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getToken } from "@/lib/api";
@@ -10,20 +10,6 @@ import { WhySectionContent } from "../../WhySection";
 import { ProofStep } from "../../ProofSection";
 
 type AuthIntent = "login" | "signup";
-
-const stepVariants = {
-  enter: { opacity: 0, y: 24 },
-  center: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: [0.0, 0.0, 0.2, 1] },
-  },
-  exit: {
-    opacity: 0,
-    y: -24,
-    transition: { duration: 0.35, ease: [0.0, 0.0, 0.2, 1] },
-  },
-} as const;
 
 const stepLabels = ["Hero", "Why", "Differentiators", "Proof", "Auth"] as const;
 const TOTAL_STEPS = stepLabels.length;
@@ -37,8 +23,29 @@ const differentiators = [
 
 export default function Index() {
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
   const [step, setStep] = useState(0);
   const [authIntent] = useState<AuthIntent>("signup");
+
+  const stepVariants = {
+    enter: prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 },
+    center: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: prefersReducedMotion ? 0.14 : 0.22,
+        ease: [0.2, 0.0, 0.2, 1],
+      },
+    },
+    exit: {
+      opacity: 0,
+      y: prefersReducedMotion ? 0 : -12,
+      transition: {
+        duration: prefersReducedMotion ? 0.1 : 0.18,
+        ease: [0.4, 0.0, 1, 1],
+      },
+    },
+  } as const;
 
   useEffect(() => {
     try {
@@ -66,10 +73,8 @@ export default function Index() {
   return (
     <div className="relative bg-background flex h-[100svh] min-h-[100svh] flex-col overflow-hidden">
       {/* Header (visible for steps 0–3; fades out on step 4) */}
-      <motion.header
+      <header
         className="border-b border-border pointer-events-auto"
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.0, 0.0, 0.2, 1] }}
         aria-hidden={false}
       >
         <div className="flex items-center justify-between px-4 h-16">
@@ -86,16 +91,17 @@ export default function Index() {
             </span>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* Main: fixed-height, no-scroll step stack */}
       <main className="relative flex-1 overflow-hidden">
-        <AnimatePresence mode="sync" initial={false}>
+        <AnimatePresence mode="wait" initial={false}>
           {step === 0 && (
             <motion.section
               key="step-0"
               aria-label="Hero"
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 flex transform-gpu items-center justify-center"
+              style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
@@ -109,7 +115,8 @@ export default function Index() {
             <motion.section
               key="step-1"
               aria-label="Why Strengthy"
-              className="absolute inset-0"
+              className="absolute inset-0 transform-gpu"
+              style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
@@ -128,7 +135,8 @@ export default function Index() {
             <motion.section
               key="step-2"
               aria-label="Differentiators"
-              className="absolute inset-0"
+              className="absolute inset-0 transform-gpu"
+              style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
@@ -186,7 +194,8 @@ export default function Index() {
             <motion.section
               key="step-3"
               aria-label="Proof"
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 flex transform-gpu items-center justify-center"
+              style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
@@ -200,7 +209,8 @@ export default function Index() {
             <motion.section
               key="step-4"
               aria-label="Auth"
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 flex transform-gpu items-center justify-center"
+              style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
