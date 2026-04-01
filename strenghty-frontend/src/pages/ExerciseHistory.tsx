@@ -231,14 +231,18 @@ export default function ExerciseHistory() {
   return (
     <AppLayout noPaddingTop>
       <div className="space-y-3 pt-2">
-        <div className="mt-0">
+        <div className="mt-0 flex items-center gap-3">
           <button
             type="button"
             onClick={() => navigate(-1)}
+            aria-label="Back"
             className="h-9 w-9 flex items-center justify-center rounded-full text-white bg-neutral-900/50 border border-neutral-800/60 shadow-sm hover:bg-neutral-900/70"
           >
             ◀
           </button>
+          <h1 className="font-heading text-lg font-semibold text-white leading-none">
+            Exercise History
+          </h1>
         </div>
 
         <div>

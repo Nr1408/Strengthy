@@ -554,17 +554,22 @@ export default function ExerciseInfo() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6 mt-1 px-1 sm:px-0 max-w-3xl mx-auto">
+    <AppLayout noPaddingTop>
+      <div className="space-y-6 pt-2 px-1 sm:px-0 max-w-3xl mx-auto">
         {/* Back / Add */}
         <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="h-9 w-9 flex items-center justify-center rounded-full text-white bg-neutral-900/50 border border-neutral-800/60 shadow-sm hover:bg-neutral-900/70"
-          >
-            ◀
-          </button>
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="h-9 w-9 flex items-center justify-center rounded-full text-white bg-neutral-900/50 border border-neutral-800/60 shadow-sm hover:bg-neutral-900/70"
+            >
+              ◀
+            </button>
+            <h1 className="text-lg sm:text-xl font-semibold text-white">
+              Exercise History
+            </h1>
+          </div>
           {openedFromPicker && (
             <Button
               variant="ghost"

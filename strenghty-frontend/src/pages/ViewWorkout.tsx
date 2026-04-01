@@ -8,6 +8,7 @@ import {
   Pencil,
   Bookmark,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,6 +34,8 @@ import {
 } from "@/lib/api";
 import { getUnit, formatMinutes, countPrTypesFromSet } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 function HeaderCell({ children }: { children: React.ReactNode }) {
   return (
@@ -645,19 +648,23 @@ export default function ViewWorkout() {
 
       {/* ExerciseInfo modal removed; navigation now goes to ExerciseHistory page */}
 
-      {showDiscardConfirm && (
-        <div className="fixed left-1/2 top-1/3 z-[9999] -translate-x-1/2 w-[min(520px,90%)]">
-          <div className="rounded-lg border border-border bg-neutral-900 p-6 shadow-lg">
-            <div className="mb-4 text-center text-lg font-semibold text-white">
-              Delete Workout?
+      <Dialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <DialogPortal>
+          <DialogOverlay className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-none [backdrop-filter:none]" />
+          <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-[10000] -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[92vw] rounded-[18px] border border-white/10 bg-neutral-900/95 p-7 shadow-2xl">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
             </div>
-            <div className="text-sm text-muted-foreground mb-4 text-center">
+            <DialogPrimitive.Title className="mb-3 text-center text-lg font-semibold text-white">
+              Delete Workout?
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Description className="text-sm text-muted-foreground mb-6 text-center">
               Are you sure you want to delete this workout? This cannot be
               undone.
-            </div>
-            <div className="flex items-center justify-center gap-6">
+            </DialogPrimitive.Description>
+            <div className="flex items-center justify-center gap-3">
               <button
-                className="px-4 py-2 rounded bg-red-600 text-white"
+                className="px-5 py-2.5 rounded-lg bg-red-600 text-white shadow-md shadow-red-600/20 hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
                 onClick={() => {
                   if (id) deleteMutation.mutate(id);
                   setShowDiscardConfirm(false);
@@ -667,15 +674,16 @@ export default function ViewWorkout() {
                 {deleteMutation.isLoading ? "Deleting..." : "Delete"}
               </button>
               <button
-                className="px-4 py-2 rounded border border-border text-white bg-transparent"
+                className="px-5 py-2.5 rounded-lg border border-white/10 text-white/90 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
                 onClick={() => setShowDiscardConfirm(false)}
+                disabled={deleteMutation.isLoading}
               >
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
     </AppLayout>
   );
 }
