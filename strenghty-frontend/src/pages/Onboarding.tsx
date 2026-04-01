@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { StrengthyWordmark } from "@/components/layout/StrengthyWordmark";
 import { cn } from "@/lib/utils";
 import { upsertProfile } from "@/lib/api";
 import { requestNotificationPermission } from "@/lib/notifications";
@@ -401,18 +402,7 @@ export default function Onboarding() {
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg">
-              <img
-                src="/icons/logo.png"
-                alt="Strengthy logo"
-                className="h-9 w-9 rounded-lg"
-              />
-            </div>
-            <span className="font-heading text-xl font-bold text-white">
-              Strengthy
-            </span>
-          </div>
+          <StrengthyWordmark />
 
           {/* Progress Indicator */}
           <div className="flex items-center gap-2">

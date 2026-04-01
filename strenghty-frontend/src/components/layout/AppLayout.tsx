@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
+import { StrengthyWordmark } from "@/components/layout/StrengthyWordmark";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 interface AppLayoutProps {
@@ -133,16 +134,7 @@ export function AppLayout({ children, noPaddingTop }: AppLayoutProps) {
               aria-hidden="true"
               tabIndex={-1}
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg">
-                <img
-                  src="/icons/logo.png"
-                  alt="Strengthy logo"
-                  className="h-9 w-9 rounded-lg"
-                />
-              </div>
-              <span className="hidden lg:inline font-heading text-xl font-bold text-white">
-                Strengthy
-              </span>
+              <StrengthyWordmark />
             </div>
 
             <nav className="hidden md:flex items-center gap-1">

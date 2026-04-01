@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getToken } from "@/lib/api";
+import { StrengthyWordmark } from "@/components/layout/StrengthyWordmark";
 import { AuthStep } from "../AuthStep";
 import { HeroStep } from "../../HeroSection";
 import { WhySectionContent } from "../../WhySection";
@@ -78,18 +79,7 @@ export default function Index() {
         aria-hidden={false}
       >
         <div className="flex items-center justify-between px-4 h-16">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg">
-              <img
-                src="/icons/logo.png"
-                alt="Strengthy logo"
-                className="h-9 w-9 rounded-lg"
-              />
-            </div>
-            <span className="font-heading text-xl font-bold text-white">
-              Strengthy
-            </span>
-          </div>
+          <StrengthyWordmark />
         </div>
       </header>
 

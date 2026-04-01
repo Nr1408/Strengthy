@@ -11,6 +11,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { StrengthyWordmark } from "@/components/layout/StrengthyWordmark";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@supabase/supabase-js";
 
@@ -59,21 +60,12 @@ export default function ForgotPassword() {
       <header className="border-b border-border">
         <div className="flex h-16 items-center px-4">
           <div
-            className="flex items-center gap-2"
+            className="flex items-center"
             role="presentation"
             aria-hidden="true"
             tabIndex={-1}
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg">
-              <img
-                src="/icons/logo.png"
-                alt="Strengthy logo"
-                className="h-9 w-9 rounded-lg"
-              />
-            </div>
-            <span className="font-heading text-xl font-bold text-white">
-              Strengthy
-            </span>
+            <StrengthyWordmark />
           </div>
         </div>
       </header>
