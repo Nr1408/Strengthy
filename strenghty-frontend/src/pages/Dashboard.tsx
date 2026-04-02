@@ -1246,7 +1246,7 @@ export default function Dashboard() {
                         onClick={() =>
                           setExpandedPR(isExpanded ? null : record.exerciseId)
                         }
-                        className="flex-1 flex items-center justify-between px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors"
+                        className="min-w-0 flex-1 flex items-center justify-between bg-transparent px-4 py-3.5 text-left focus-visible:outline-none active:bg-transparent [-webkit-tap-highlight-color:transparent]"
                       >
                         <div className="min-w-0 flex items-center gap-3">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-yellow-500/10">
@@ -1270,13 +1270,13 @@ export default function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="shrink-0 ml-4 flex items-center gap-2">
+                        <div className="shrink-0 ml-2 sm:ml-4 flex items-center gap-1.5 sm:gap-2">
                           {prCount > 1 && (
-                            <span className="text-[10px] font-bold text-orange-400 bg-orange-500/15 border border-orange-500/20 rounded-full px-2 py-0.5">
+                            <span className="hidden sm:inline-flex text-[10px] font-bold text-orange-400 bg-orange-500/15 border border-orange-500/20 rounded-full px-2 py-0.5">
                               {prCount} PRs
                             </span>
                           )}
-                          <span className="font-heading text-sm font-bold text-white">
+                          <span className="font-heading text-sm sm:text-base font-bold text-white whitespace-nowrap">
                             {record.value}
                           </span>
                         </div>
@@ -1287,12 +1287,12 @@ export default function Dashboard() {
                           onClick={() =>
                             navigate(`/workouts/${record.workoutId}/view`)
                           }
-                          className="pr-4 pl-1 py-3.5 text-zinc-600 hover:text-zinc-300 transition-colors"
+                          className="shrink-0 pr-3 sm:pr-4 pl-1 py-3.5 text-zinc-400 hover:text-zinc-200 focus-visible:outline-none active:bg-transparent [-webkit-tap-highlight-color:transparent]"
                           title="View workout"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-3.5 w-3.5"
+                            className="h-4 w-4"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -1310,11 +1310,11 @@ export default function Dashboard() {
 
                     {isExpanded && (
                       <div className="px-4 pb-3 pt-0">
-                        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] divide-y divide-white/[0.05]">
+                        <div className="space-y-2">
                           {record.prTypes.map((pt) => (
                             <div
                               key={pt.label}
-                              className="flex items-center justify-between px-3 py-2"
+                              className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2"
                             >
                               <span className="text-xs text-zinc-500">
                                 {pt.label}
