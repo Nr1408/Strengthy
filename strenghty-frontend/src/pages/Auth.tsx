@@ -714,7 +714,7 @@ export default function Auth({
         return;
       }
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth`,
@@ -727,20 +727,6 @@ export default function Auth({
       if (error) {
         throw error;
       }
-
-      // If Supabase returned a redirect URL, open it in a popup so the
-      // main window does not navigate away (prevents Google pages from
-      // polluting the main window history). We mark sessionStorage so the
-      // popup context is recognized by the callback handler.
-      try {
-        const url = data?.url;
-        if (url) {
-          try {
-            window.sessionStorage.setItem("supabase_oauth_popup", "1");
-          } catch {}
-          window.open(url, "supabase_google_oauth", "width=500,height=700");
-        }
-      } catch {}
       return;
     } catch (e: any) {
       toast({
