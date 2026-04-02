@@ -755,6 +755,35 @@ export default function EditWorkout() {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   };
 
+  const parseDateInputValue = (value: string): Date | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+    if (ymd) {
+      const y = Number(ymd[1]);
+      const m = Number(ymd[2]);
+      const d = Number(ymd[3]);
+      return new Date(y, m - 1, d);
+    }
+
+    const dmy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+    if (dmy) {
+      const d = Number(dmy[1]);
+      const m = Number(dmy[2]);
+      const y = Number(dmy[3]);
+      return new Date(y, m - 1, d);
+    }
+
+    const fallback = new Date(trimmed);
+    if (isNaN(fallback.getTime())) return null;
+    return new Date(
+      fallback.getFullYear(),
+      fallback.getMonth(),
+      fallback.getDate(),
+    );
+  };
+
   const setStartDateOnly = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -3185,17 +3214,9 @@ export default function EditWorkout() {
                         value={toLocalWorkoutDate(startTime)}
                         max={toLocalWorkoutDate(new Date())}
                         onChange={(e) => {
-                          const value = e.target.value;
-                          if (!value) return;
-                          const [y, m, d] = value.split("-").map(Number);
-                          if (
-                            !Number.isFinite(y) ||
-                            !Number.isFinite(m) ||
-                            !Number.isFinite(d)
-                          ) {
-                            return;
-                          }
-                          setStartDateOnly(new Date(y, m - 1, d));
+                          const parsed = parseDateInputValue(e.target.value);
+                          if (!parsed) return;
+                          setStartDateOnly(parsed);
                         }}
                         className="mt-1 h-9 rounded-lg bg-neutral-900/60 px-2 text-sm"
                       />

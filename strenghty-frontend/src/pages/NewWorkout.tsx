@@ -1159,6 +1159,35 @@ export default function NewWorkout() {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   };
 
+  const parseDateInputValue = (value: string): Date | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+    if (ymd) {
+      const y = Number(ymd[1]);
+      const m = Number(ymd[2]);
+      const d = Number(ymd[3]);
+      return new Date(y, m - 1, d);
+    }
+
+    const dmy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+    if (dmy) {
+      const d = Number(dmy[1]);
+      const m = Number(dmy[2]);
+      const y = Number(dmy[3]);
+      return new Date(y, m - 1, d);
+    }
+
+    const fallback = new Date(trimmed);
+    if (isNaN(fallback.getTime())) return null;
+    return new Date(
+      fallback.getFullYear(),
+      fallback.getMonth(),
+      fallback.getDate(),
+    );
+  };
+
   const syncWorkoutDate = async (d: Date) => {
     if (!workoutId || isRoutineBuilder) return;
     try {
@@ -1233,31 +1262,6 @@ export default function NewWorkout() {
     if (candidate.getTime() > today.getTime()) continue;
     startDateOptions.push(d);
   }
-
-  const startDateListRef = useRef<HTMLDivElement | null>(null);
-  const startDateScrollTimeout = useRef<number | null>(null);
-
-  const onStartDateScroll = () => {
-    const el = startDateListRef.current;
-    if (!el) return;
-    if (startDateScrollTimeout.current) {
-      window.clearTimeout(startDateScrollTimeout.current);
-    }
-    startDateScrollTimeout.current = window.setTimeout(() => {
-      const rect = el.getBoundingClientRect();
-      const centerY = rect.top + el.clientHeight / 2;
-      const children = Array.from(el.children) as HTMLElement[];
-      for (let i = 0; i < children.length; i++) {
-        const c = children[i];
-        const cr = c.getBoundingClientRect();
-        if (centerY >= cr.top && centerY <= cr.bottom) {
-          const date = startDateOptions[i];
-          if (date) setStartDateOnly(date);
-          break;
-        }
-      }
-    }, 120) as unknown as number;
-  };
 
   const hourOptions = Array.from({ length: 24 }, (_, i) => i);
   const minuteOptions = Array.from({ length: 60 }, (_, i) => i);
@@ -3590,24 +3594,16 @@ export default function NewWorkout() {
                             value={toLocalWorkoutDate(startTime)}
                             max={toLocalWorkoutDate(new Date())}
                             onChange={(e) => {
-                              const value = e.target.value;
-                              if (!value) return;
-                              const [y, m, d] = value.split("-").map(Number);
-                              if (
-                                !Number.isFinite(y) ||
-                                !Number.isFinite(m) ||
-                                !Number.isFinite(d)
-                              ) {
-                                return;
-                              }
-                              setStartDateOnly(new Date(y, m - 1, d));
+                              const parsed = parseDateInputValue(
+                                e.target.value,
+                              );
+                              if (!parsed) return;
+                              setStartDateOnly(parsed);
                             }}
                             className="mt-1 h-9 rounded-lg bg-neutral-900/60 px-2 text-sm"
                           />
                         </div>
                         <div
-                          ref={startDateListRef}
-                          onScroll={onStartDateScroll}
                           className="relative max-h-40 overflow-y-auto py-2 scrollbar-hide"
                           style={{ WebkitOverflowScrolling: "touch" }}
                         >
@@ -3761,13 +3757,10 @@ export default function NewWorkout() {
                         onClick={() => {
                           const total = adjustHours * 3600 + adjustMinutes * 60;
                           setElapsedSec(total);
-                          if (startTimeInput) {
-                            const dt = new Date(startTimeInput);
-                            if (!isNaN(dt.getTime())) {
-                              setStartTime(dt);
-                              void syncWorkoutDate(dt);
-                            }
-                          }
+                          // Date/time pickers update startTime immediately.
+                          // On apply, persist the current startTime instead of
+                          // reparsing a string that can vary by Android WebView locale.
+                          void syncWorkoutDate(startTime);
                           setIsDurationDialogOpen(false);
                         }}
                       >
