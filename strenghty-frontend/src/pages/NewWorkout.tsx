@@ -3581,6 +3581,30 @@ export default function NewWorkout() {
                     </div>
                     {showStartDatePicker && (
                       <div className="relative mt-2 overflow-hidden rounded-2xl bg-white/[0.02]">
+                        <div className="px-2 pt-2 pb-1">
+                          <Label className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                            Pick Specific Date
+                          </Label>
+                          <Input
+                            type="date"
+                            value={toLocalWorkoutDate(startTime)}
+                            max={toLocalWorkoutDate(new Date())}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (!value) return;
+                              const [y, m, d] = value.split("-").map(Number);
+                              if (
+                                !Number.isFinite(y) ||
+                                !Number.isFinite(m) ||
+                                !Number.isFinite(d)
+                              ) {
+                                return;
+                              }
+                              setStartDateOnly(new Date(y, m - 1, d));
+                            }}
+                            className="mt-1 h-9 rounded-lg bg-neutral-900/60 px-2 text-sm"
+                          />
+                        </div>
                         <div
                           ref={startDateListRef}
                           onScroll={onStartDateScroll}

@@ -750,6 +750,11 @@ export default function EditWorkout() {
       year: "numeric",
     });
 
+  const toLocalWorkoutDate = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+
   const setStartDateOnly = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -3171,6 +3176,30 @@ export default function EditWorkout() {
                 </div>
                 {showStartDatePicker && (
                   <div className="relative mt-2 overflow-hidden rounded-2xl bg-white/[0.02]">
+                    <div className="px-2 pt-2 pb-1">
+                      <Label className="text-[10px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
+                        Pick Specific Date
+                      </Label>
+                      <Input
+                        type="date"
+                        value={toLocalWorkoutDate(startTime)}
+                        max={toLocalWorkoutDate(new Date())}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (!value) return;
+                          const [y, m, d] = value.split("-").map(Number);
+                          if (
+                            !Number.isFinite(y) ||
+                            !Number.isFinite(m) ||
+                            !Number.isFinite(d)
+                          ) {
+                            return;
+                          }
+                          setStartDateOnly(new Date(y, m - 1, d));
+                        }}
+                        className="mt-1 h-9 rounded-lg bg-neutral-900/60 px-2 text-sm"
+                      />
+                    </div>
                     <div
                       className="relative max-h-40 overflow-y-auto py-2 scrollbar-hide"
                       style={{ WebkitOverflowScrolling: "touch" }}
