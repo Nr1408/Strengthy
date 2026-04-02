@@ -59,9 +59,9 @@ export function WhySectionContent({
   return (
     <section
       className={`relative flex flex-col items-center justify-center overflow-hidden px-6 -mt-2 ${
-        isStep ? "h-full min-h-0 pt-10 sm:pt-0" : "min-h-[100svh]"
-      }`}
-      style={{ paddingTop: "var(--safe-area-top)" }}
+        isStep ? "h-full min-h-0 pt-10 sm:pt-0" : "min-h-screen pt-16 sm:pt-10"
+      } pb-24 sm:pb-32`}
+      style={{ paddingTop: "var(--safe-area-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {/* Background glow to match ProofSection */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[80px] md:h-96 md:w-96 lg:h-[28rem] lg:w-[28rem]" />
@@ -84,7 +84,7 @@ export function WhySectionContent({
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="relative z-10 mt-10 grid w-full max-w-lg md:max-w-xl lg:max-w-2xl grid-cols-2 gap-3 md:gap-4"
+        className="relative z-10 mt-10 grid w-full max-w-lg md:max-w-xl lg:max-w-2xl grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"
       >
         {features.map(({ icon: Icon, title, description }) => (
           <motion.div
