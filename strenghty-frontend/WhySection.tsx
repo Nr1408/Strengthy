@@ -58,10 +58,13 @@ export function WhySectionContent({
 
   return (
     <section
-      className={`relative flex flex-col items-center justify-center overflow-auto px-6 pt-4 sm:pt-10 ${
+      className={`relative flex flex-col items-center justify-start overflow-auto px-6 pt-4 sm:pt-10 ${
         isStep ? "h-full min-h-0" : "min-h-screen"
       }`}
-      style={{ paddingTop: "calc(var(--safe-area-top, 0px) + 16px)" }}
+      style={{
+        paddingTop: "calc(var(--safe-area-top, 0px) + 72px)",
+        scrollPaddingTop: "calc(var(--safe-area-top, 0px) + 72px)",
+      }}
     >
       {/* Background glow to match ProofSection */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[80px] md:h-96 md:w-96 lg:h-[28rem] lg:w-[28rem]" />
