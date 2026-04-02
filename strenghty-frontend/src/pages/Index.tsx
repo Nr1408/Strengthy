@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { getToken } from "@/lib/api";
 import { StrengthyWordmark } from "@/components/layout/StrengthyWordmark";
 import { AuthStep } from "../AuthStep";
@@ -59,11 +58,11 @@ export default function Index() {
   }, [navigate]);
 
   useEffect(() => {
-    const previousOverflowY = document.body.style.overflowY;
-    document.body.style.overflowY = "hidden";
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflowY = previousOverflowY;
+      document.body.style.overflow = previousOverflow;
     };
   }, []);
 
@@ -71,33 +70,56 @@ export default function Index() {
     setStep(Math.max(0, Math.min(4, next)));
   };
 
+  const renderStepPager = (className = "") => (
+    <div
+      className={`flex items-center justify-center gap-1.5 ${className}`.trim()}
+    >
+      {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+        <button
+          key={index}
+          type="button"
+          onClick={() => goToStep(index)}
+          className={`h-1.5 rounded-full transition-all duration-250 ${
+            index === step
+              ? "w-6 bg-primary"
+              : "w-1.5 bg-muted-foreground/55 hover:bg-muted-foreground/75"
+          }`}
+          aria-label={`Go to ${stepLabels[index]} section`}
+          aria-current={index === step}
+        />
+      ))}
+    </div>
+  );
+
   return (
-    <div className="relative bg-background flex h-[100svh] min-h-[100svh] flex-col overflow-auto">
-      {/* Header (visible for steps 0–3; fades out on step 4) */}
-      <header
-        className="border-b border-border pointer-events-auto"
-        aria-hidden={false}
-      >
-        <div className="flex items-center justify-between px-4 h-16">
+    <div className="relative bg-background flex h-[100svh] min-h-[100svh] flex-col overflow-hidden">
+      {/* Header */}
+      <header className="border-b border-border pointer-events-auto">
+        <div className="flex h-16 items-center justify-between px-4">
           <StrengthyWordmark />
         </div>
       </header>
 
-      {/* Main: fixed-height, no-scroll step stack */}
-      <main className="relative flex-1 overflow-auto">
+      {/* Main: fixed-height, no-scroll step stack; page-level scrolling disabled */}
+      <main className="relative flex-1 overflow-hidden">
         <AnimatePresence mode="wait" initial={false}>
           {step === 0 && (
             <motion.section
               key="step-0"
               aria-label="Hero"
-              className="absolute inset-0 flex transform-gpu items-center justify-center"
+              className="absolute inset-0 transform-gpu overflow-hidden"
               style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
               exit="exit"
             >
-              <HeroStep onNext={() => goToStep(1)} />
+              <div className="flex h-full flex-col overflow-hidden">
+                <div className="pt-3">{renderStepPager()}</div>
+                <div className="flex flex-1 items-center justify-center overflow-hidden">
+                  <HeroStep onNext={() => goToStep(1)} />
+                </div>
+              </div>
             </motion.section>
           )}
 
@@ -105,7 +127,7 @@ export default function Index() {
             <motion.section
               key="step-1"
               aria-label="Why Strengthy"
-              className="absolute inset-0 transform-gpu"
+              className="absolute inset-0 transform-gpu overflow-hidden"
               style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
@@ -117,6 +139,7 @@ export default function Index() {
                 trustLine="No feeds · No subscriptions · Offline-first"
                 primaryLabel="See what's different"
                 onPrimaryAction={() => goToStep(2)}
+                stepPager={renderStepPager()}
               />
             </motion.section>
           )}
@@ -125,58 +148,61 @@ export default function Index() {
             <motion.section
               key="step-2"
               aria-label="Differentiators"
-              className="absolute inset-0 transform-gpu"
+              className="absolute inset-0 transform-gpu overflow-hidden"
               style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
               exit="exit"
             >
-              <section className="relative flex h-full flex-col items-center justify-center overflow-hidden px-6">
-                <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-32 -left-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
-                <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[110px]" />
+              <div className="flex h-full flex-col overflow-hidden">
+                <div className="pt-3">{renderStepPager()}</div>
+                <section className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6">
+                  <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
+                  <div className="pointer-events-none absolute -bottom-32 -left-32 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
+                  <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[110px]" />
 
-                <div className="relative z-10 w-full max-w-lg">
-                  <div className="text-center">
-                    <h2 className="font-heading text-3xl font-bold md:text-4xl text-white">
-                      Built for lifting.
-                    </h2>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      The simplest tracker that still feels serious.
+                  <div className="relative z-10 w-full max-w-lg">
+                    <div className="text-center">
+                      <h2 className="font-heading text-3xl font-bold md:text-4xl text-white">
+                        Built for lifting.
+                      </h2>
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        The simplest tracker that still feels serious.
+                      </p>
+                    </div>
+
+                    <div className="mt-8 rounded-2xl border border-border bg-card/70 p-5 shadow-xl shadow-black/40">
+                      <div className="space-y-3">
+                        {differentiators.map((text) => (
+                          <div key={text} className="flex items-center gap-3">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <Check className="h-4 w-4" />
+                            </div>
+                            <p className="text-sm text-white/90 leading-snug">
+                              {text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-6 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() => goToStep(3)}
+                          className="w-full py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-colors"
+                        >
+                          See how it works
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="mt-5 text-center text-xs text-muted-foreground">
+                      Your training log stays private and focused.
                     </p>
                   </div>
-
-                  <div className="mt-8 rounded-2xl border border-border bg-card/70 p-5 shadow-xl shadow-black/40">
-                    <div className="space-y-3">
-                      {differentiators.map((text) => (
-                        <div key={text} className="flex items-center gap-3">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Check className="h-4 w-4" />
-                          </div>
-                          <p className="text-sm text-white/90 leading-snug">
-                            {text}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-6 flex justify-center">
-                      <button
-                        type="button"
-                        onClick={() => goToStep(3)}
-                        className="w-full py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-colors"
-                      >
-                        See how it works
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="mt-5 text-center text-xs text-muted-foreground">
-                    Your training log stays private and focused.
-                  </p>
-                </div>
-              </section>
+                </section>
+              </div>
             </motion.section>
           )}
 
@@ -184,14 +210,19 @@ export default function Index() {
             <motion.section
               key="step-3"
               aria-label="Proof"
-              className="absolute inset-0 flex transform-gpu items-center justify-center"
+              className="absolute inset-0 transform-gpu overflow-hidden"
               style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
               exit="exit"
             >
-              <ProofStep onNext={() => goToStep(4)} />
+              <div className="flex h-full flex-col overflow-hidden">
+                <div className="pt-3">{renderStepPager()}</div>
+                <div className="flex flex-1 items-center justify-center overflow-hidden">
+                  <ProofStep onNext={() => goToStep(4)} />
+                </div>
+              </div>
             </motion.section>
           )}
 
@@ -199,34 +230,22 @@ export default function Index() {
             <motion.section
               key="step-4"
               aria-label="Auth"
-              className="absolute inset-0 flex transform-gpu items-center justify-center"
+              className="absolute inset-0 transform-gpu overflow-hidden"
               style={{ willChange: "transform, opacity" }}
               variants={stepVariants}
               initial="enter"
               animate="center"
               exit="exit"
             >
-              <AuthStep defaultSignup={authIntent === "signup"} />
+              <div className="flex h-full flex-col overflow-hidden">
+                <div className="pt-3">{renderStepPager()}</div>
+                <div className="flex flex-1 items-center justify-center overflow-hidden">
+                  <AuthStep defaultSignup={authIntent === "signup"} />
+                </div>
+              </div>
             </motion.section>
           )}
         </AnimatePresence>
-
-        <div className="relative z-20 flex items-center justify-center gap-1.5 py-3">
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => goToStep(i)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === step
-                  ? "w-6 bg-primary"
-                  : "w-1.5 bg-muted-foreground/60 hover:bg-muted-foreground/50"
-              }`}
-              aria-label={`Go to step ${i + 1}`}
-              aria-current={i === step}
-            />
-          ))}
-        </div>
       </main>
     </div>
   );

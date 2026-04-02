@@ -1,5 +1,6 @@
 import { Zap, Trophy, VolumeX, Dumbbell } from "lucide-react";
 import { motion } from "framer-motion";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 const features = [
@@ -35,7 +36,7 @@ const containerVariants = {
 const itemVariants = {
   hidden: { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
-};
+} as const;
 
 export default function WhySection() {
   return <WhySectionContent />;
@@ -46,6 +47,7 @@ type WhySectionProps = {
   onPrimaryAction?: () => void;
   primaryLabel?: string;
   trustLine?: string;
+  stepPager?: ReactNode;
 };
 
 export function WhySectionContent({
@@ -53,27 +55,27 @@ export function WhySectionContent({
   onPrimaryAction,
   primaryLabel = "Continue",
   trustLine,
+  stepPager,
 }: WhySectionProps) {
   const isStep = mode === "step";
+  const sectionSpacingClass = isStep ? "pt-3" : "pt-3 sm:pt-6";
 
   return (
     <section
-      className={`relative flex flex-col items-center justify-start overflow-auto px-6 pt-4 sm:pt-10 ${
+      className={`relative flex flex-col items-center justify-start overflow-auto px-6 ${sectionSpacingClass} ${
         isStep ? "h-full min-h-0" : "min-h-screen"
       }`}
-      style={{
-        paddingTop: "calc(var(--safe-area-top, 0px) + 72px)",
-        scrollPaddingTop: "calc(var(--safe-area-top, 0px) + 72px)",
-      }}
     >
       {/* Background glow to match ProofSection */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[80px] md:h-96 md:w-96 lg:h-[28rem] lg:w-[28rem]" />
+
+      {stepPager && <div className="relative z-10 w-full">{stepPager}</div>}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-lg text-center px-2"
+        className="relative z-10 w-full max-w-lg text-center px-2 mt-3"
       >
         <h2 className="font-heading text-3xl font-bold md:text-4xl lg:text-5xl text-white whitespace-normal break-words leading-tight">
           Why Strengthy?
@@ -120,7 +122,7 @@ export function WhySectionContent({
       )}
 
       {isStep && (
-        <div className="relative z-10 mt-3 flex justify-center">
+        <div className="relative z-10 mt-3 mb-6 flex justify-center">
           <Button type="button" size="lg" onClick={onPrimaryAction}>
             {primaryLabel}
           </Button>
