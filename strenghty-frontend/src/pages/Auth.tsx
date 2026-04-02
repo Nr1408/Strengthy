@@ -85,8 +85,11 @@ const SUPABASE_ANON_KEY_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "")
   .trim();
 const REDIRECT_ORIGIN =
   import.meta.env.MODE === "development"
-    ? (typeof window !== "undefined" ? window.location.origin : "http://localhost:5173")
-    : (import.meta.env.VITE_GOOGLE_REDIRECT_ORIGIN ?? "https://strengthy-strengthy-frontend.vercel.app");
+    ? typeof window !== "undefined"
+      ? window.location.origin
+      : "http://localhost:5173"
+    : (import.meta.env.VITE_GOOGLE_REDIRECT_ORIGIN ??
+      "https://strengthy-strengthy-frontend.vercel.app");
 const GOOGLE_REDIRECT_TO = `${REDIRECT_ORIGIN}/auth`;
 const GOOGLE_REDIRECT_TO_NATIVE = "com.strengthy.app://auth";
 
@@ -419,18 +422,30 @@ export default function Auth({
             description: "Signed in with Google.",
           });
         }
-        // Use hard redirect so back button cannot return to auth
-        if (typeof window !== "undefined") {
-          didTriggerRedirect = true;
-          window.location.replace(goOnboarding ? "/onboarding" : "/dashboard");
-          return;
-        } else {
+        // Use SPA navigation on native platforms (Capacitor) to avoid a hard
+        // reload that can lose app state. For web, perform a hard redirect so
+        // the browser back button cannot return to the auth page.
+        const isNative =
+          typeof window !== "undefined" &&
+          (window as any).Capacitor?.isNativePlatform?.() === true;
+        if (isNative) {
           didTriggerRedirect = true;
           navigate(goOnboarding ? "/onboarding" : "/dashboard", {
             replace: true,
           });
           return;
         }
+
+        // Web fallback: hard redirect so back button cannot return to auth
+        didTriggerRedirect = true;
+        try {
+          window.location.replace(goOnboarding ? "/onboarding" : "/dashboard");
+        } catch {
+          navigate(goOnboarding ? "/onboarding" : "/dashboard", {
+            replace: true,
+          });
+        }
+        return;
       } finally {
         if (!didTriggerRedirect) {
           setPendingAction(null);
@@ -714,7 +729,7 @@ export default function Auth({
         return;
       }
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth`,
@@ -727,6 +742,20 @@ export default function Auth({
       if (error) {
         throw error;
       }
+
+      // If Supabase returned a redirect URL, open it in a popup so the
+      // main window does not navigate away (prevents Google pages from
+      // polluting the main window history). We mark sessionStorage so the
+      // popup context is recognized by the callback handler.
+      try {
+        const url = data?.url;
+        if (url) {
+          try {
+            window.sessionStorage.setItem("supabase_oauth_popup", "1");
+          } catch {}
+          window.open(url, "supabase_google_oauth", "width=500,height=700");
+        }
+      } catch {}
       return;
     } catch (e: any) {
       toast({
