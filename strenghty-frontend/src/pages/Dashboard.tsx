@@ -44,12 +44,26 @@ export default function Dashboard() {
   useEffect(() => {
     if (getToken()) {
       try {
-        // Replace current history entry (clean URL) then push a new entry so
-        // the back button first lands on an app-controlled entry instead of
-        // navigating out to the OAuth provider.
+        // If the user landed here from an external OAuth provider (Google/Supabase),
+        // `document.referrer` will include the provider host. Replace the current
+        // history entry to remove that external page so Back won't return there.
+        const ref = String(document.referrer || "").toLowerCase();
+        const isFromOAuth =
+          ref.includes("accounts.google.com") ||
+          ref.includes("supabase.co") ||
+          ref.includes("googleusercontent.com");
+
         const clean = `${window.location.pathname}${window.location.search}`;
-        window.history.replaceState({}, document.title, clean);
-        window.history.pushState({}, document.title, window.location.href);
+        if (isFromOAuth) {
+          try {
+            window.history.replaceState({}, document.title, clean);
+          } catch {}
+        }
+
+        // Push an internal entry to make a stable in-app back target.
+        try {
+          window.history.pushState({}, document.title, window.location.href);
+        } catch {}
       } catch {
         // ignore
       }
