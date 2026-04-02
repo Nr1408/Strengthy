@@ -72,7 +72,7 @@ export default function Index() {
   };
 
   return (
-    <div className="relative bg-background flex h-[100svh] min-h-[100svh] flex-col overflow-hidden">
+    <div className="relative bg-background flex h-[100svh] min-h-[100svh] flex-col overflow-auto">
       {/* Header (visible for steps 0–3; fades out on step 4) */}
       <header
         className="border-b border-border pointer-events-auto"
@@ -84,7 +84,7 @@ export default function Index() {
       </header>
 
       {/* Main: fixed-height, no-scroll step stack */}
-      <main className="relative flex-1 overflow-hidden">
+      <main className="relative flex-1 overflow-auto">
         <AnimatePresence mode="wait" initial={false}>
           {step === 0 && (
             <motion.section
