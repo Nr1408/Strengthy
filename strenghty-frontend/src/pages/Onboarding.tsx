@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { StrengthyWordmark } from "@/components/layout/StrengthyWordmark";
 import { cn } from "@/lib/utils";
 import { upsertProfile } from "@/lib/api";
+import { getToken } from "@/lib/api";
 import { requestNotificationPermission } from "@/lib/notifications";
 import { recommendFirstWorkout } from "@/lib/onboarding";
 import type { UserOnboardingData } from "@/lib/onboarding";
