@@ -230,6 +230,25 @@ export default function Onboarding() {
     return String(valueStr);
   };
 
+  // Sanitize numeric input strings from keyboard / paste. If `allowDecimal`
+  // is false, strip any decimal points. Keeps only digits and at most one dot.
+  const sanitizeNumber = (value: string | undefined, allowDecimal = false) => {
+    if (!value) return "";
+    let v = String(value);
+    // Remove any non-digit / non-dot characters
+    v = v.replace(/[^0-9.]/g, "");
+    if (!allowDecimal) {
+      v = v.replace(/\./g, "");
+    } else {
+      // Keep only the first decimal point
+      const parts = v.split(".");
+      if (parts.length > 1) {
+        v = parts[0] + "." + parts.slice(1).join("").replace(/\./g, "");
+      }
+    }
+    return v;
+  };
+
   const capitalizeFirst = (s: string | undefined) => {
     if (!s) return "";
     return s.charAt(0).toUpperCase() + s.slice(1);
@@ -515,7 +534,10 @@ export default function Onboarding() {
                       placeholder="25"
                       value={userData.age}
                       onChange={(e) =>
-                        setUserData((p) => ({ ...p, age: e.target.value }))
+                        setUserData((p) => ({
+                          ...p,
+                          age: sanitizeNumber(e.target.value, false),
+                        }))
                       }
                       className="text-lg font-heading h-10 sm:h-11 pr-16"
                     />
@@ -605,7 +627,13 @@ export default function Onboarding() {
                         }
                         value={userData.height}
                         onChange={(e) =>
-                          setUserData((p) => ({ ...p, height: e.target.value }))
+                          setUserData((p) => ({
+                            ...p,
+                            height: sanitizeNumber(
+                              e.target.value,
+                              p.heightUnit === "ft",
+                            ),
+                          }))
                         }
                         className="text-lg font-heading h-10 sm:h-11 pr-14"
                       />
@@ -678,7 +706,10 @@ export default function Onboarding() {
                         placeholder="75"
                         value={userData.weight}
                         onChange={(e) =>
-                          setUserData((p) => ({ ...p, weight: e.target.value }))
+                          setUserData((p) => ({
+                            ...p,
+                            weight: sanitizeNumber(e.target.value, false),
+                          }))
                         }
                         className="text-lg font-heading h-11 pr-14"
                       />
@@ -713,7 +744,7 @@ export default function Onboarding() {
                       onChange={(e) =>
                         setUserData((p) => ({
                           ...p,
-                          goalWeight: e.target.value,
+                          goalWeight: sanitizeNumber(e.target.value, false),
                         }))
                       }
                       className="text-lg font-heading h-10 sm:h-11 pr-14"
