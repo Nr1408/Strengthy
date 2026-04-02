@@ -83,7 +83,10 @@ const SUPABASE_URL_ENV = (import.meta.env.VITE_SUPABASE_URL ?? "")
 const SUPABASE_ANON_KEY_ENV = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "")
   .toString()
   .trim();
-const REDIRECT_ORIGIN = "https://strengthy-strengthy-frontend.vercel.app";
+const REDIRECT_ORIGIN =
+  import.meta.env.MODE === "development"
+    ? (typeof window !== "undefined" ? window.location.origin : "http://localhost:5173")
+    : (import.meta.env.VITE_GOOGLE_REDIRECT_ORIGIN ?? "https://strengthy-strengthy-frontend.vercel.app");
 const GOOGLE_REDIRECT_TO = `${REDIRECT_ORIGIN}/auth`;
 const GOOGLE_REDIRECT_TO_NATIVE = "com.strengthy.app://auth";
 

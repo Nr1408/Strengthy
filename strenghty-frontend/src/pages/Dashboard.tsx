@@ -43,10 +43,22 @@ export default function Dashboard() {
   // Trap back navigation on dashboard if authenticated
   useEffect(() => {
     if (getToken()) {
-      window.history.pushState(null, "", window.location.href);
+      try {
+        // Replace current history entry (clean URL) then push a new entry so
+        // the back button first lands on an app-controlled entry instead of
+        // navigating out to the OAuth provider.
+        const clean = `${window.location.pathname}${window.location.search}`;
+        window.history.replaceState({}, document.title, clean);
+        window.history.pushState({}, document.title, window.location.href);
+      } catch {
+        // ignore
+      }
+
       const trap = () => {
         if (getToken()) {
-          window.history.pushState(null, "", window.location.href);
+          try {
+            window.history.pushState({}, document.title, window.location.href);
+          } catch {}
         }
       };
       window.addEventListener("popstate", trap);
